@@ -1,94 +1,92 @@
 'use client';
 
-import { useState } from 'react';
-import { SectionHeader } from '@/components/ui';
-import { FiActivity, FiFilter, FiDownload, FiAlertTriangle, FiInfo } from 'react-icons/fi';
+import { useState, useEffect, useCallback } from 'react';
+import { SectionHeader, EmptyState, Pagination } from '@/components/ui';
+import { FiActivity, FiFilter, FiAlertTriangle, FiInfo } from 'react-icons/fi';
+import { RefreshCw } from 'lucide-react';
+import { auditApi } from '@/lib/api';
+import { toJalaliDateTime } from '@/lib/utils/format';
+import toast from 'react-hot-toast';
 
-type AuditAction = 'create' | 'update' | 'delete' | 'login' | 'logout' | 'export' | 'setting_change' | 'role_change' | 'ban';
-type AuditSeverity = 'info' | 'warning' | 'critical';
-
+// Backend AuditLog: { id, actorId, action, entity, entityId, beforeJson, afterJson, ip, ua, createdAt, actor:{id,fullName,mobile} }
 interface AuditLog {
   id: string;
-  userId: string;
-  userName: string;
-  userRole: string;
-  action: AuditAction;
-  entity: string;
-  entityId: string;
-  description: string;
-  ipAddress: string;
-  userAgent: string;
-  severity: AuditSeverity;
-  metadata?: Record<string, any>;
+  actorId?: string | null;
+  action: string;
+  entity?: string | null;
+  entityId?: string | null;
+  beforeJson?: Record<string, unknown> | null;
+  afterJson?: Record<string, unknown> | null;
+  ip?: string | null;
+  ua?: string | null;
   createdAt: string;
+  actor?: { id: string; fullName?: string | null; mobile?: string | null } | null;
 }
 
-const MOCK_AUDIT: AuditLog[] = [
-  { id: '1', userId: '1', userName: 'علی محمدی', userRole: 'admin', action: 'setting_change', entity: 'settings', entityId: 'general', description: 'تغییر تنظیمات عمومی: نام سایت', ipAddress: '192.168.1.1', userAgent: 'Chrome 120', severity: 'warning', metadata: { field: 'siteName', old: 'TikTak', new: 'تیک تاک ران' }, createdAt: '۱۴۰۳/۰۴/۱۵ ۱۴:۳۲' },
-  { id: '2', userId: '2', userName: 'مریم احمدی', userRole: 'operator', action: 'update', entity: 'booking', entityId: 'B-1234', description: 'تغییر وضعیت رزرو به لغو شده', ipAddress: '10.0.0.5', userAgent: 'Firefox 118', severity: 'info', metadata: { old: 'confirmed', new: 'cancelled' }, createdAt: '۱۴۰۳/۰۴/۱۵ ۱۳:۱۵' },
-  { id: '3', userId: '1', userName: 'علی محمدی', userRole: 'admin', action: 'delete', entity: 'game', entityId: 'G-55', description: 'حذف بازی "عملیات فرار"', ipAddress: '192.168.1.1', userAgent: 'Chrome 120', severity: 'critical', metadata: { gameName: 'عملیات فرار' }, createdAt: '۱۴۰۳/۰۴/۱۵ ۱۱:۵۰' },
-  { id: '4', userId: '3', userName: 'رضا کریمی', userRole: 'accountant', action: 'export', entity: 'reports', entityId: 'financial', description: 'خروجی گزارش مالی (Excel)', ipAddress: '172.16.0.20', userAgent: 'Edge 119', severity: 'info', createdAt: '۱۴۰۳/۰۴/۱۵ ۱۰:۳۰' },
-  { id: '5', userId: '1', userName: 'علی محمدی', userRole: 'admin', action: 'role_change', entity: 'user', entityId: 'U-789', description: 'تغییر نقش کاربر احمدی', ipAddress: '192.168.1.1', userAgent: 'Chrome 120', severity: 'warning', metadata: { userId: 'U-789', oldRole: 'support', newRole: 'operator' }, createdAt: '۱۴۰۳/۰۴/۱۴ ۱۶:۴۵' },
-  { id: '6', userId: '6', userName: 'زهرا نوری', userRole: 'operator', action: 'login', entity: 'auth', entityId: 'session', description: 'ورود به سیستم', ipAddress: '185.1.2.3', userAgent: 'Mobile Safari', severity: 'info', createdAt: '۱۴۰۳/۰۴/۱۴ ۱۵:۲۰' },
-  { id: '7', userId: '1', userName: 'علی محمدی', userRole: 'admin', action: 'ban', entity: 'user', entityId: 'U-456', description: 'مسدود کردن حساب کاربری', ipAddress: '192.168.1.1', userAgent: 'Chrome 120', severity: 'critical', metadata: { reason: 'تخلف مکرر' }, createdAt: '۱۴۰۳/۰۴/۱۴ ۱۴:۰۰' },
-  { id: '8', userId: '2', userName: 'مریم احمدی', userRole: 'operator', action: 'create', entity: 'booking', entityId: 'B-9876', description: 'ایجاد رزرو دستی', ipAddress: '10.0.0.5', userAgent: 'Firefox 118', severity: 'info', createdAt: '۱۴۰۳/۰۴/۱۴ ۱۱:۱۵' },
-  { id: '9', userId: '1', userName: 'علی محمدی', userRole: 'admin', action: 'setting_change', entity: 'settings', entityId: 'security', description: 'تغییر تنظیمات امنیتی: 2FA اجباری شد', ipAddress: '192.168.1.1', userAgent: 'Chrome 120', severity: 'critical', createdAt: '۱۴۰۳/۰۴/۱۳ ۱۸:۳۰' },
-  { id: '10', userId: '4', userName: 'فاطمه حسینی', userRole: 'support', action: 'update', entity: 'ticket', entityId: 'T-321', description: 'پاسخ به تیکت و بستن آن', ipAddress: '10.0.1.8', userAgent: 'Chrome 120', severity: 'info', createdAt: '۱۴۰۳/۰۴/۱۳ ۱۶:۰۰' },
-];
+const PAGE_SIZE = 50;
 
-const ACTION_LABELS: Record<AuditAction, string> = {
-  create: 'ایجاد',
-  update: 'ویرایش',
-  delete: 'حذف',
-  login: 'ورود',
-  logout: 'خروج',
-  export: 'خروجی',
-  setting_change: 'تغییر تنظیمات',
-  role_change: 'تغییر نقش',
-  ban: 'مسدودسازی',
+type Severity = 'info' | 'warning' | 'critical';
+
+function severityOf(action: string): Severity {
+  const a = action.toLowerCase();
+  if (a.includes('delete') || a.includes('ban') || a.includes('remove')) return 'critical';
+  if (a.includes('update') || a.includes('change') || a.includes('role') || a.includes('setting')) return 'warning';
+  return 'info';
+}
+
+const SEVERITY_CONFIG: Record<Severity, { color: string; bg: string; label: string }> = {
+  info: { color: 'text-blue-400', bg: 'bg-blue-500/10', label: 'اطلاعاتی' },
+  warning: { color: 'text-amber-400', bg: 'bg-amber-500/10', label: 'هشدار' },
+  critical: { color: 'text-red-400', bg: 'bg-red-500/10', label: 'بحرانی' },
 };
 
-const ACTION_COLORS: Record<AuditAction, string> = {
-  create: 'text-green-400 bg-green-500/10',
-  update: 'text-blue-400 bg-blue-500/10',
-  delete: 'text-red-400 bg-red-500/10',
-  login: 'text-slate-400 bg-slate-500/10',
-  logout: 'text-slate-400 bg-slate-500/10',
-  export: 'text-purple-400 bg-purple-500/10',
-  setting_change: 'text-amber-400 bg-amber-500/10',
-  role_change: 'text-orange-400 bg-orange-500/10',
-  ban: 'text-red-400 bg-red-500/10',
-};
-
-const SEVERITY_CONFIG: Record<AuditSeverity, { icon: any; color: string; label: string }> = {
-  info: { icon: FiInfo, color: 'text-blue-400', label: 'اطلاعاتی' },
-  warning: { icon: FiAlertTriangle, color: 'text-amber-400', label: 'هشدار' },
-  critical: { icon: FiAlertTriangle, color: 'text-red-400', label: 'بحرانی' },
-};
+// audit list returns { success, data:[...], total, meta } directly
+function readList(res: { data?: unknown } | null | undefined): { items: AuditLog[]; total: number } {
+  const body = (res as { data?: { data?: AuditLog[]; total?: number; meta?: { total?: number } } } | null | undefined)?.data;
+  if (!body) return { items: [], total: 0 };
+  const items = Array.isArray(body.data) ? body.data : [];
+  const total = body.total ?? body.meta?.total ?? items.length;
+  return { items, total };
+}
 
 export default function AuditPage() {
-  const [logs] = useState<AuditLog[]>(MOCK_AUDIT);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterAction, setFilterAction] = useState('');
-  const [filterSeverity, setFilterSeverity] = useState('');
-  const [filterUser, setFilterUser] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const filtered = logs.filter(l => {
-    const matchSearch = l.description.includes(search) || l.userName.includes(search) || l.ipAddress.includes(search);
-    const matchAction = !filterAction || l.action === filterAction;
-    const matchSeverity = !filterSeverity || l.severity === filterSeverity;
-    const matchUser = !filterUser || l.userId === filterUser;
-    return matchSearch && matchAction && matchSeverity && matchUser;
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, unknown> = { page, limit: PAGE_SIZE };
+      if (filterAction) params.action = filterAction;
+      const res = await auditApi.getAll(params);
+      const { items, total: t } = readList(res);
+      setLogs(items);
+      setTotal(t);
+    } catch {
+      toast.error('خطا در بارگذاری لاگ‌ها');
+      setLogs([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, filterAction]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const filtered = logs.filter((l) => {
+    if (!search) return true;
+    const hay = `${l.action} ${l.entity ?? ''} ${l.entityId ?? ''} ${l.ip ?? ''} ${l.actor?.fullName ?? ''} ${l.actor?.mobile ?? ''}`;
+    return hay.includes(search);
   });
 
-  const uniqueUsers = Array.from(new Set(logs.map(l => ({ id: l.userId, name: l.userName })).map(u => JSON.stringify(u)))).map(u => JSON.parse(u));
-
-  const severityCounts = {
-    info: logs.filter(l => l.severity === 'info').length,
-    warning: logs.filter(l => l.severity === 'warning').length,
-    critical: logs.filter(l => l.severity === 'critical').length,
-  };
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="space-y-6">
@@ -96,61 +94,26 @@ export default function AuditPage() {
         title="لاگ ممیزی"
         subtitle="سابقه تمام اقدامات ادمین‌ها و تغییرات سیستم"
         icon={<FiActivity />}
-        action={
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors text-sm">
-            <FiDownload className="w-4 h-4" />
-            خروجی CSV
-          </button>
-        }
       />
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        {(['info', 'warning', 'critical'] as AuditSeverity[]).map(sev => {
-          const conf = SEVERITY_CONFIG[sev];
-          const Icon = conf.icon;
-          return (
-            <div key={sev} className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${sev === 'info' ? 'bg-blue-500/10' : sev === 'warning' ? 'bg-amber-500/10' : 'bg-red-500/10'}`}>
-                  <Icon className={`w-5 h-5 ${conf.color}`} />
-                </div>
-                <div>
-                  <p className={`text-2xl font-bold ${conf.color}`}>{severityCounts[sev]}</p>
-                  <p className="text-slate-400 text-sm">{conf.label}</p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
 
       {/* Filters */}
       <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 flex flex-wrap gap-3 items-center">
         <FiFilter className="text-slate-400 w-4 h-4" />
         <input
           value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="جستجو در توضیحات، IP..."
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="جستجو در اقدام، موجودیت، IP، کاربر..."
           className="input-field flex-1 min-w-48"
         />
-        <select value={filterAction} onChange={e => setFilterAction(e.target.value)} className="input-field">
-          <option value="">همه اقدامات</option>
-          {Object.entries(ACTION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <select value={filterSeverity} onChange={e => setFilterSeverity(e.target.value)} className="input-field">
-          <option value="">همه سطوح</option>
-          <option value="info">اطلاعاتی</option>
-          <option value="warning">هشدار</option>
-          <option value="critical">بحرانی</option>
-        </select>
-        <select value={filterUser} onChange={e => setFilterUser(e.target.value)} className="input-field">
-          <option value="">همه کاربران</option>
-          {uniqueUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
-        {(search || filterAction || filterSeverity || filterUser) && (
+        <input
+          value={filterAction}
+          onChange={(e) => { setFilterAction(e.target.value); setPage(1); }}
+          placeholder="فیلتر اقدام (مثلا delete)"
+          className="input-field"
+        />
+        {(search || filterAction) && (
           <button
-            onClick={() => { setSearch(''); setFilterAction(''); setFilterSeverity(''); setFilterUser(''); }}
+            onClick={() => { setSearch(''); setFilterAction(''); setPage(1); }}
             className="px-3 py-2 text-sm text-slate-400 hover:text-white border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
           >
             پاک کردن
@@ -158,63 +121,82 @@ export default function AuditPage() {
         )}
       </div>
 
-      {/* Logs List */}
-      <div className="space-y-2">
-        {filtered.map(log => {
-          const sevConf = SEVERITY_CONFIG[log.severity];
-          const SevIcon = sevConf.icon;
-          const isExpanded = expandedId === log.id;
-
-          return (
-            <div
-              key={log.id}
-              className={`bg-slate-800 rounded-xl border transition-all cursor-pointer ${log.severity === 'critical' ? 'border-red-500/30' : log.severity === 'warning' ? 'border-amber-500/20' : 'border-slate-700'}`}
-              onClick={() => setExpandedId(isExpanded ? null : log.id)}
-            >
-              <div className="flex items-center gap-4 p-4">
-                <SevIcon className={`w-4 h-4 ${sevConf.color} flex-shrink-0`} />
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ACTION_COLORS[log.action]}`}>
-                  {ACTION_LABELS[log.action]}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm truncate">{log.description}</p>
-                  <p className="text-slate-400 text-xs mt-0.5">
-                    {log.userName} ({log.userRole}) · {log.entity}/{log.entityId} · {log.ipAddress}
-                  </p>
-                </div>
-                <span className="text-slate-500 text-xs whitespace-nowrap">{log.createdAt}</span>
-              </div>
-
-              {isExpanded && log.metadata && (
-                <div className="px-4 pb-4 border-t border-slate-700 pt-3">
-                  <p className="text-slate-400 text-xs mb-2">جزئیات متادیتا:</p>
-                  <div className="bg-slate-900 rounded-lg p-3 font-mono text-xs text-slate-300">
-                    {Object.entries(log.metadata).map(([k, v]) => (
-                      <div key={k} className="flex gap-2">
-                        <span className="text-slate-500">{k}:</span>
-                        <span className="text-green-400">{JSON.stringify(v)}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-2 flex gap-4 text-xs text-slate-500">
-                    <span>User-Agent: {log.userAgent}</span>
-                    <span>IP: {log.ipAddress}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {filtered.length === 0 && (
-        <div className="text-center py-12">
-          <FiActivity className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-          <p className="text-slate-400">هیچ لاگی یافت نشد</p>
+      {loading ? (
+        <div className="flex items-center justify-center py-24">
+          <RefreshCw className="w-8 h-8 text-red-400 animate-spin" />
         </div>
-      )}
+      ) : filtered.length === 0 ? (
+        <EmptyState title="هیچ لاگی یافت نشد" description="رکوردی برای نمایش وجود ندارد." />
+      ) : (
+        <>
+          <div className="space-y-2">
+            {filtered.map((log) => {
+              const sev = severityOf(log.action);
+              const conf = SEVERITY_CONFIG[sev];
+              const SevIcon = sev === 'info' ? FiInfo : FiAlertTriangle;
+              const isExpanded = expandedId === log.id;
+              const hasDetails = log.beforeJson || log.afterJson;
 
-      <p className="text-slate-500 text-sm text-center">نمایش {filtered.length} از {logs.length} رکورد</p>
+              return (
+                <div
+                  key={log.id}
+                  className={`bg-slate-800 rounded-xl border transition-all cursor-pointer ${sev === 'critical' ? 'border-red-500/30' : sev === 'warning' ? 'border-amber-500/20' : 'border-slate-700'}`}
+                  onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                >
+                  <div className="flex items-center gap-4 p-4">
+                    <SevIcon className={`w-4 h-4 ${conf.color} flex-shrink-0`} />
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${conf.color} ${conf.bg}`}>
+                      {log.action}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm truncate">
+                        {log.entity ?? '-'}{log.entityId ? `/${log.entityId}` : ''}
+                      </p>
+                      <p className="text-slate-400 text-xs mt-0.5">
+                        {log.actor?.fullName ?? log.actorId ?? 'سیستم'}
+                        {log.actor?.mobile ? ` (${log.actor.mobile})` : ''}
+                        {log.ip ? ` · ${log.ip}` : ''}
+                      </p>
+                    </div>
+                    <span className="text-slate-500 text-xs whitespace-nowrap">{toJalaliDateTime(log.createdAt)}</span>
+                  </div>
+
+                  {isExpanded && hasDetails && (
+                    <div className="px-4 pb-4 border-t border-slate-700 pt-3">
+                      {log.beforeJson && (
+                        <>
+                          <p className="text-slate-400 text-xs mb-1">قبل:</p>
+                          <pre className="bg-slate-900 rounded-lg p-3 font-mono text-xs text-amber-400 overflow-x-auto mb-2">
+                            {JSON.stringify(log.beforeJson, null, 2)}
+                          </pre>
+                        </>
+                      )}
+                      {log.afterJson && (
+                        <>
+                          <p className="text-slate-400 text-xs mb-1">بعد:</p>
+                          <pre className="bg-slate-900 rounded-lg p-3 font-mono text-xs text-green-400 overflow-x-auto">
+                            {JSON.stringify(log.afterJson, null, 2)}
+                          </pre>
+                        </>
+                      )}
+                      {log.ua && (
+                        <div className="mt-2 text-xs text-slate-500">User-Agent: {log.ua}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            total={total}
+          />
+        </>
+      )}
     </div>
   );
 }

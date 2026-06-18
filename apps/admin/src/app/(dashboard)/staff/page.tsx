@@ -1,277 +1,262 @@
 'use client';
 
-import { useState } from 'react';
-import { SectionHeader, Modal, ConfirmDialog, StatusBadge, Avatar } from '@/components/ui';
-import { FiUsers, FiPlus, FiEdit2, FiTrash2, FiLock, FiUnlock, FiMail, FiPhone, FiShield } from 'react-icons/fi';
+import { useState, useEffect, useCallback } from 'react';
+import { SectionHeader, Modal, StatusBadge, Avatar, EmptyState, Pagination } from '@/components/ui';
+import { FiUsers, FiPhone, FiShield, FiEdit2 } from 'react-icons/fi';
+import { RefreshCw } from 'lucide-react';
+import { staffApi, rolesApi } from '@/lib/api';
+import { toJalali } from '@/lib/utils/format';
+import toast from 'react-hot-toast';
 
-interface StaffMember {
+interface StaffUser {
   id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
-  roleName: string;
-  status: 'active' | 'inactive' | 'suspended';
-  avatar?: string;
-  lastLogin: string;
-  createdAt: string;
-  department: string;
+  fullName?: string | null;
+  nickname?: string | null;
+  mobile?: string | null;
+  email?: string | null;
+  isBanned?: boolean;
+  createdAt?: string;
+  roles?: string[];
 }
 
-const MOCK_STAFF: StaffMember[] = [
-  { id: '1', name: 'علی محمدی', email: 'ali@tiktakrun.ir', phone: '09121111111', role: 'admin', roleName: 'ادمین', status: 'active', lastLogin: '۲ ساعت پیش', createdAt: '۱۴۰۲/۰۱/۰۱', department: 'فناوری اطلاعات' },
-  { id: '2', name: 'مریم احمدی', email: 'maryam@tiktakrun.ir', phone: '09122222222', role: 'operator', roleName: 'اپراتور', status: 'active', lastLogin: '۱ روز پیش', createdAt: '۱۴۰۲/۰۳/۱۵', department: 'عملیات' },
-  { id: '3', name: 'رضا کریمی', email: 'reza@tiktakrun.ir', phone: '09123333333', role: 'accountant', roleName: 'حسابدار', status: 'active', lastLogin: '۳ روز پیش', createdAt: '۱۴۰۲/۰۴/۰۱', department: 'مالی' },
-  { id: '4', name: 'فاطمه حسینی', email: 'fatemeh@tiktakrun.ir', phone: '09124444444', role: 'support', roleName: 'پشتیبانی', status: 'active', lastLogin: '۵ ساعت پیش', createdAt: '۱۴۰۲/۰۵/۱۰', department: 'پشتیبانی' },
-  { id: '5', name: 'محمد رضایی', email: 'mohammad@tiktakrun.ir', phone: '09125555555', role: 'support', roleName: 'پشتیبانی', status: 'inactive', lastLogin: '۲ هفته پیش', createdAt: '۱۴۰۲/۰۶/۰۱', department: 'پشتیبانی' },
-  { id: '6', name: 'زهرا نوری', email: 'zahra@tiktakrun.ir', phone: '09126666666', role: 'operator', roleName: 'اپراتور', status: 'suspended', lastLogin: '۱ ماه پیش', createdAt: '۱۴۰۲/۰۷/۱۵', department: 'عملیات' },
-];
+interface RoleOption {
+  id: number | string;
+  name: string;
+  displayName?: string;
+}
 
-const ROLES = ['admin', 'operator', 'accountant', 'support'];
-const ROLE_LABELS: Record<string, string> = { admin: 'ادمین', operator: 'اپراتور', accountant: 'حسابدار', support: 'پشتیبانی' };
-const STATUS_MAP: Record<string, string> = { active: 'فعال', inactive: 'غیرفعال', suspended: 'تعلیق' };
-const STATUS_COLOR: Record<string, string> = { active: 'success', inactive: 'default', suspended: 'danger' };
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: 'سوپر ادمین',
+  ADMIN: 'ادمین',
+  SUPPORT: 'پشتیبانی',
+  MARKETING: 'بازاریابی',
+  BRANCH_MANAGER: 'مدیر شعبه',
+  CUSTOMER: 'کاربر عادی',
+};
+
+const PAGE_SIZE = 20;
+
+function readList(res: { data?: unknown } | null | undefined): { items: StaffUser[]; total: number } {
+  const body = (res as { data?: unknown } | null | undefined)?.data;
+  if (body && typeof body === 'object' && 'data' in (body as Record<string, unknown>)) {
+    const inner = body as { data: StaffUser[]; total?: number };
+    return { items: Array.isArray(inner.data) ? inner.data : [], total: inner.total ?? inner.data?.length ?? 0 };
+  }
+  const arr = Array.isArray(body) ? (body as StaffUser[]) : [];
+  return { items: arr, total: arr.length };
+}
+
+function readData<T = unknown>(res: { data?: unknown } | null | undefined): T | null {
+  const d = (res as { data?: unknown } | null | undefined)?.data;
+  if (d && typeof d === 'object' && 'data' in (d as Record<string, unknown>)) {
+    return (d as { data: T }).data;
+  }
+  return (d as T) ?? null;
+}
 
 export default function StaffPage() {
-  const [staff, setStaff] = useState<StaffMember[]>(MOCK_STAFF);
+  const [staff, setStaff] = useState<StaffUser[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [editStaff, setEditStaff] = useState<StaffMember | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [staffToDelete, setStaffToDelete] = useState<StaffMember | null>(null);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', role: 'support', department: '', password: '' });
+  const [allRoles, setAllRoles] = useState<RoleOption[]>([]);
 
-  const filtered = staff.filter(s => {
-    const matchSearch = s.name.includes(search) || s.email.includes(search) || s.phone.includes(search);
-    const matchRole = !filterRole || s.role === filterRole;
-    const matchStatus = !filterStatus || s.status === filterStatus;
-    return matchSearch && matchRole && matchStatus;
-  });
+  // role editing modal
+  const [editUser, setEditUser] = useState<StaffUser | null>(null);
+  const [editRoles, setEditRoles] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
 
-  const openCreate = () => {
-    setEditStaff(null);
-    setFormData({ name: '', email: '', phone: '', role: 'support', department: '', password: '' });
-    setShowModal(true);
-  };
-
-  const openEdit = (s: StaffMember) => {
-    setEditStaff(s);
-    setFormData({ name: s.name, email: s.email, phone: s.phone, role: s.role, department: s.department, password: '' });
-    setShowModal(true);
-  };
-
-  const saveStaff = () => {
-    if (editStaff) {
-      setStaff(prev => prev.map(s => s.id === editStaff.id ? { ...s, ...formData, roleName: ROLE_LABELS[formData.role] } : s));
-    } else {
-      const newS: StaffMember = {
-        id: Date.now().toString(),
-        ...formData,
-        roleName: ROLE_LABELS[formData.role],
-        status: 'active',
-        lastLogin: 'هنوز وارد نشده',
-        createdAt: new Date().toLocaleDateString('fa-IR'),
-      };
-      setStaff(prev => [...prev, newS]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, unknown> = { page, limit: PAGE_SIZE };
+      if (search) params.q = search;
+      if (filterRole) params.role = filterRole;
+      const res = await staffApi.getAll(params);
+      const { items, total: t } = readList(res);
+      setStaff(items);
+      setTotal(t);
+    } catch {
+      toast.error('خطا در بارگذاری کاربران');
+      setStaff([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
     }
-    setShowModal(false);
+  }, [page, search, filterRole]);
+
+  const loadRoles = useCallback(async () => {
+    try {
+      const res = await rolesApi.getAll();
+      const data = readData<RoleOption[]>(res);
+      setAllRoles(Array.isArray(data) ? data : []);
+    } catch {
+      setAllRoles([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    loadRoles();
+  }, [loadRoles]);
+
+  const openEdit = (u: StaffUser) => {
+    setEditUser(u);
+    setEditRoles([...(u.roles ?? [])]);
   };
 
-  const toggleStatus = (s: StaffMember) => {
-    setStaff(prev => prev.map(m => m.id === s.id ? { ...m, status: m.status === 'active' ? 'suspended' : 'active' } : m));
+  const toggleRole = (role: string) => {
+    setEditRoles((prev) => (prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]));
   };
 
-  const deleteStaff = () => {
-    if (staffToDelete) setStaff(prev => prev.filter(s => s.id !== staffToDelete.id));
-    setShowDeleteDialog(false);
+  const saveRoles = async () => {
+    if (!editUser) return;
+    setSaving(true);
+    try {
+      await staffApi.updateRoles(editUser.id, editRoles);
+      toast.success('نقش‌ها به‌روزرسانی شد');
+      setEditUser(null);
+      await load();
+    } catch {
+      toast.error('خطا در به‌روزرسانی نقش‌ها');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const stats = {
-    total: staff.length,
-    active: staff.filter(s => s.status === 'active').length,
-    suspended: staff.filter(s => s.status === 'suspended').length,
-  };
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="space-y-6">
       <SectionHeader
-        title="مدیریت کارمندان"
-        subtitle="افزودن، ویرایش و مدیریت دسترسی کارمندان ادمین"
+        title="مدیریت کارمندان و نقش‌ها"
+        subtitle="انتساب نقش‌های سیستمی به کاربران"
         icon={<FiUsers />}
-        action={
-          <button onClick={openCreate} className="btn-primary flex items-center gap-2 px-4 py-2">
-            <FiPlus className="w-4 h-4" />
-            کارمند جدید
-          </button>
-        }
       />
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-          <p className="text-slate-400 text-sm">کل کارمندان</p>
-          <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
-        </div>
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-          <p className="text-slate-400 text-sm">فعال</p>
-          <p className="text-2xl font-bold text-green-400 mt-1">{stats.active}</p>
-        </div>
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-          <p className="text-slate-400 text-sm">تعلیق</p>
-          <p className="text-2xl font-bold text-red-400 mt-1">{stats.suspended}</p>
-        </div>
-      </div>
 
       {/* Filters */}
       <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 flex flex-wrap gap-3">
         <input
           value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="جستجو نام، ایمیل، تلفن..."
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          placeholder="جستجو نام، موبایل، ایمیل..."
           className="input-field flex-1 min-w-48"
         />
-        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="input-field">
+        <select value={filterRole} onChange={(e) => { setFilterRole(e.target.value); setPage(1); }} className="input-field">
           <option value="">همه نقش‌ها</option>
-          {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-        </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field">
-          <option value="">همه وضعیت‌ها</option>
-          <option value="active">فعال</option>
-          <option value="inactive">غیرفعال</option>
-          <option value="suspended">تعلیق</option>
+          {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
       </div>
 
-      {/* Table */}
-      <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-slate-700">
-              <th className="text-right text-slate-400 text-sm font-medium p-4">کارمند</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">تماس</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">نقش</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">واحد</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">وضعیت</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">آخرین ورود</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">عملیات</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(s => (
-              <tr key={s.id} className="border-b border-slate-700/50 hover:bg-slate-750 transition-colors">
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar name={s.name} size="sm" />
-                    <div>
-                      <p className="text-white font-medium text-sm">{s.name}</p>
-                      <p className="text-slate-500 text-xs">#{s.id}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-slate-300 text-xs">
-                      <FiMail className="w-3 h-3 text-slate-500" />
-                      {s.email}
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-300 text-xs">
-                      <FiPhone className="w-3 h-3 text-slate-500" />
-                      {s.phone}
-                    </div>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-1.5">
-                    <FiShield className="w-3.5 h-3.5 text-red-400" />
-                    <span className="text-slate-300 text-sm">{s.roleName}</span>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <span className="text-slate-300 text-sm">{s.department}</span>
-                </td>
-                <td className="p-4">
-                  <StatusBadge status={STATUS_COLOR[s.status] as any} label={STATUS_MAP[s.status]} />
-                </td>
-                <td className="p-4">
-                  <span className="text-slate-400 text-sm">{s.lastLogin}</span>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => openEdit(s)} className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded transition-colors">
-                      <FiEdit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => toggleStatus(s)}
-                      className={`p-1.5 rounded transition-colors ${s.status === 'active' ? 'text-slate-400 hover:text-amber-400 hover:bg-amber-500/10' : 'text-slate-400 hover:text-green-400 hover:bg-green-500/10'}`}
-                    >
-                      {s.status === 'active' ? <FiLock className="w-3.5 h-3.5" /> : <FiUnlock className="w-3.5 h-3.5" />}
-                    </button>
-                    <button
-                      onClick={() => { setStaffToDelete(s); setShowDeleteDialog(true); }}
-                      className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                    >
-                      <FiTrash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && (
-          <div className="text-center py-12 text-slate-400">هیچ کارمندی یافت نشد</div>
-        )}
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-24">
+          <RefreshCw className="w-8 h-8 text-red-400 animate-spin" />
+        </div>
+      ) : staff.length === 0 ? (
+        <EmptyState title="کاربری یافت نشد" />
+      ) : (
+        <>
+          <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="text-right text-slate-400 text-sm font-medium p-4">کاربر</th>
+                  <th className="text-right text-slate-400 text-sm font-medium p-4">تماس</th>
+                  <th className="text-right text-slate-400 text-sm font-medium p-4">نقش‌ها</th>
+                  <th className="text-right text-slate-400 text-sm font-medium p-4">وضعیت</th>
+                  <th className="text-right text-slate-400 text-sm font-medium p-4">عضویت</th>
+                  <th className="text-right text-slate-400 text-sm font-medium p-4">عملیات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staff.map((s) => (
+                  <tr key={s.id} className="border-b border-slate-700/50 hover:bg-slate-750 transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={s.fullName ?? s.nickname ?? undefined} size="sm" />
+                        <div>
+                          <p className="text-white font-medium text-sm">{s.fullName ?? s.nickname ?? 'بدون نام'}</p>
+                          <p className="text-slate-500 text-xs">{s.email ?? '-'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-1.5 text-slate-300 text-xs">
+                        <FiPhone className="w-3 h-3 text-slate-500" />
+                        {s.mobile ?? '-'}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex flex-wrap gap-1">
+                        {(s.roles ?? []).length === 0 ? (
+                          <span className="text-slate-500 text-xs">—</span>
+                        ) : (
+                          (s.roles ?? []).map((r) => (
+                            <span key={r} className="inline-flex items-center gap-1 text-xs bg-red-500/10 text-red-300 px-2 py-0.5 rounded">
+                              <FiShield className="w-3 h-3" />
+                              {ROLE_LABELS[r] ?? r}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <StatusBadge status={s.isBanned ? 'BANNED' : 'ACTIVE'} label={s.isBanned ? 'مسدود' : 'فعال'} />
+                    </td>
+                    <td className="p-4">
+                      <span className="text-slate-400 text-sm">{s.createdAt ? toJalali(s.createdAt) : '-'}</span>
+                    </td>
+                    <td className="p-4">
+                      <button onClick={() => openEdit(s)} className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded transition-colors" title="مدیریت نقش‌ها">
+                        <FiEdit2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      {/* Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editStaff ? 'ویرایش کارمند' : 'کارمند جدید'}>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">نام و نام خانوادگی</label>
-              <input value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} className="input-field w-full" />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">شماره موبایل</label>
-              <input value={formData.phone} onChange={e => setFormData(p => ({ ...p, phone: e.target.value }))} className="input-field w-full" />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">ایمیل</label>
-              <input value={formData.email} onChange={e => setFormData(p => ({ ...p, email: e.target.value }))} type="email" className="input-field w-full" />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">نقش</label>
-              <select value={formData.role} onChange={e => setFormData(p => ({ ...p, role: e.target.value }))} className="input-field w-full">
-                {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">واحد/دپارتمان</label>
-              <input value={formData.department} onChange={e => setFormData(p => ({ ...p, department: e.target.value }))} className="input-field w-full" />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">{editStaff ? 'رمز جدید (اختیاری)' : 'رمز عبور'}</label>
-              <input value={formData.password} onChange={e => setFormData(p => ({ ...p, password: e.target.value }))} type="password" className="input-field w-full" />
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 mt-2">
-            <button onClick={() => setShowModal(false)} className="px-4 py-2 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors">لغو</button>
-            <button onClick={saveStaff} className="btn-primary px-6 py-2">{editStaff ? 'ذخیره' : 'ایجاد'}</button>
-          </div>
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} total={total} />
+        </>
+      )}
+
+      {/* Role assignment Modal */}
+      <Modal
+        open={!!editUser}
+        onClose={() => setEditUser(null)}
+        title={`مدیریت نقش‌ها — ${editUser?.fullName ?? editUser?.mobile ?? ''}`}
+        footer={
+          <>
+            <button onClick={() => setEditUser(null)} className="btn-secondary">انصراف</button>
+            <button onClick={saveRoles} disabled={saving} className="btn-primary">
+              {saving ? 'در حال ذخیره...' : 'ذخیره نقش‌ها'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <p className="text-slate-400 text-sm mb-2">نقش‌های سیستمی را برای این کاربر انتخاب کنید:</p>
+          {(allRoles.length ? allRoles.map((r) => r.name) : Object.keys(ROLE_LABELS)).map((roleName) => (
+            <label key={roleName} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editRoles.includes(roleName)}
+                onChange={() => toggleRole(roleName)}
+                className="w-4 h-4 accent-red-500"
+              />
+              <FiShield className="w-4 h-4 text-red-400" />
+              <span className="text-slate-200 text-sm">{ROLE_LABELS[roleName] ?? roleName}</span>
+              <span className="text-slate-500 text-xs mr-auto font-mono">{roleName}</span>
+            </label>
+          ))}
         </div>
       </Modal>
-
-      <ConfirmDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={deleteStaff}
-        title="حذف کارمند"
-        message={`آیا از حذف "${staffToDelete?.name}" مطمئن هستید؟`}
-        confirmText="حذف"
-        type="danger"
-      />
     </div>
   );
 }

@@ -176,9 +176,10 @@ export const discountsApi = {
 export const monthlyApi = {
   getWinners: (p?: Record<string, unknown>) => apiClient.get('/admin/monthly/winners', { params: p }),
   getHistory: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<MonthlyWinner[]>>('/admin/monthly/history', { params: p }),
-  compute: (year: number, month: number) => apiClient.post('/admin/monthly/compute', { year, month }),
-  distribute: (year: number, month: number, prizes: Record<string, unknown>) =>
-    apiClient.post('/admin/monthly/distribute', { year, month, prizes }),
+  compute: (year: number, month: number) =>
+    apiClient.post('/admin/monthly/compute', {}, { params: { year, month } }),
+  distribute: (year: number, month: number, customPrizes?: Record<string, unknown>) =>
+    apiClient.post('/admin/monthly/distribute', { year, month, customPrizes }),
 };
 
 // ==================== Settings ====================
@@ -206,7 +207,7 @@ export const staffApi = {
   getAll: (p?: Record<string, unknown>) =>
     apiClient.get<ApiResponse<User[]>>('/admin/users', { params: p }),
   getUserRoles: (id: string) => apiClient.get(`/admin/users/${id}/roles`),
-  updateRoles: (id: string, roleIds: string[]) => apiClient.post(`/admin/users/${id}/roles`, { roleIds }),
+  updateRoles: (id: string, roles: string[]) => apiClient.post(`/admin/users/${id}/roles`, { roles }),
 };
 
 // ==================== Audit ====================
