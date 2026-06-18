@@ -108,6 +108,10 @@
     border-right:3px solid var(--blood);border-radius:6px;padding:14px 18px;margin:10px 0;
   }
   .step .step-h{color:var(--gold-light);font-weight:700;margin-bottom:6px;font-family:'Cinzel',serif;letter-spacing:1px}
+  .arch{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+  .arch .node{background:#160c10;border:1px solid var(--line);border-radius:8px;padding:14px;text-align:center}
+  .arch .node .t{color:var(--gold);font-weight:700;font-size:15px}
+  .arch .node .d{color:var(--text-dim);font-size:12px;margin-top:4px;direction:ltr}
 </style>
 </head>
 <body>
@@ -116,32 +120,58 @@
 <header class="hero">
   <div class="pill">SHADOW REALM GOTHIC</div>
   <h1 class="title">TIK TAK RUN</h1>
-  <div class="sub">راهنمای کامل نصب، راه‌اندازی و استقرار در محیط محصول</div>
-  <div class="sub" style="font-size:12px;margin-top:6px">نسخه ۱.۰.۰ — مخصوص توسعه‌دهنده جونیور</div>
+  <div class="sub">راهنمای کامل نصب، راه‌اندازی و استقرار روی سرور Ubuntu</div>
+  <div class="sub" style="font-size:12px;margin-top:6px">نسخه ۱.۰.۰ — پایگاه‌داده MongoDB (Replica Set) — مخصوص توسعه‌دهنده Full-Stack</div>
 </header>
 
 <div class="panel">
   <h3 style="margin-top:0">📜 فهرست مطالب</h3>
   <div class="toc">
+    <a href="#sec-0">۰. معماری کلی پروژه</a>
     <a href="#sec-1">۱. پیش‌نیازها (Prerequisites)</a>
     <a href="#sec-2">۲. کلون و نصب پکیج‌ها</a>
     <a href="#sec-3">۳. تنظیمات محیط (.env)</a>
-    <a href="#sec-4">۴. راه‌اندازی PostgreSQL و Redis با Docker</a>
-    <a href="#sec-5">۵. مهاجرت دیتابیس و سید کردن</a>
-    <a href="#sec-6">۶. بیلد API (با SWC)</a>
+    <a href="#sec-4">۴. راه‌اندازی MongoDB (Replica Set) و Redis</a>
+    <a href="#sec-5">۵. اعمال Schema و سید کردن دیتابیس</a>
+    <a href="#sec-6">۶. بیلد API (NestJS)</a>
     <a href="#sec-7">۷. بیلد Web و Admin (Next.js)</a>
     <a href="#sec-8">۸. اجرا با PM2 (Production)</a>
-    <a href="#sec-9">۹. تنظیم Nginx به‌عنوان Reverse Proxy</a>
+    <a href="#sec-9">۹. تنظیم Nginx + WebSocket</a>
     <a href="#sec-10">۱۰. SSL با Certbot و Let's Encrypt</a>
-    <a href="#sec-11">۱۱. پشتیبان‌گیری خودکار با Cron</a>
-    <a href="#sec-12">۱۲. عیب‌یابی و رفع مشکلات رایج</a>
+    <a href="#sec-11">۱۱. اتصال داشبورد ادمین به بک‌اند</a>
+    <a href="#sec-12">۱۲. پشتیبان‌گیری خودکار (mongodump)</a>
+    <a href="#sec-13">۱۳. عیب‌یابی و رفع مشکلات رایج</a>
+    <a href="#sec-14">۱۴. چک‌لیست نهایی استقرار</a>
   </div>
 </div>
+
+<section id="sec-0">
+<h2><span class="num">۰.</span> معماری کلی پروژه</h2>
+<div class="panel">
+<p>پلتفرم <b>TIK TAK RUN</b> یک مونوریپو (Monorepo) مبتنی بر <code>pnpm workspaces</code> + <code>Turborepo</code> است که از سه اپلیکیشن مجزا تشکیل شده:</p>
+<div class="arch">
+  <div class="node"><div class="t">Web</div><div class="d">Next.js 14 · :3000</div></div>
+  <div class="node"><div class="t">Admin</div><div class="d">Next.js 14 · :3001</div></div>
+  <div class="node"><div class="t">API</div><div class="d">NestJS 10 · :4000</div></div>
+  <div class="node"><div class="t">MongoDB</div><div class="d">Mongo 7 (rs0) · :27017</div></div>
+  <div class="node"><div class="t">Redis</div><div class="d">Redis 7 · :6379</div></div>
+</div>
+<table>
+  <tr><th>بخش</th><th>پکیج Workspace</th><th>تکنولوژی</th><th>پورت</th></tr>
+  <tr><td>سایت کاربران</td><td><code>@tiktakrun/web</code></td><td>Next.js 14, React 18, Zustand, SWR, Socket.io-client, Tailwind</td><td><code>3000</code></td></tr>
+  <tr><td>داشبورد ادمین</td><td><code>@tiktakrun/admin</code></td><td>Next.js 14, dnd-kit, react-table, chart.js</td><td><code>3001</code></td></tr>
+  <tr><td>بک‌اند API</td><td><code>@tiktakrun/api</code></td><td>NestJS 10, Prisma 5 (MongoDB), Redis, Socket.io</td><td><code>4000</code></td></tr>
+  <tr><td>دیتابیس</td><td>—</td><td>MongoDB 7 (Replica Set rs0)</td><td><code>27017</code></td></tr>
+  <tr><td>کش / صف</td><td>—</td><td>Redis 7 (ioredis)</td><td><code>6379</code></td></tr>
+</table>
+<div class="alert info"><b>نکته‌ی مهم API:</b> آدرس پایه‌ی API برابر است با <code>/api/v1</code> (با <code>setGlobalPrefix('api')</code> و URI Versioning نسخه <code>1</code>). همه‌ی فراخوانی‌ها باید به <code>https://api.example.com/api/v1/...</code> ارسال شوند.</div>
+</div>
+</section>
 
 <section id="sec-1">
 <h2><span class="num">۱.</span> پیش‌نیازها (Prerequisites)</h2>
 <div class="panel">
-<p>قبل از شروع، مطمئن شو سرور شما نرم‌افزارهای زیر را نصب دارد:</p>
+<p>قبل از شروع، مطمئن شو سرور Ubuntu شما نرم‌افزارهای زیر را نصب دارد:</p>
 <table>
   <tr><th>ابزار</th><th>نسخه پیشنهادی</th><th>دستور بررسی</th></tr>
   <tr><td>Ubuntu Server</td><td>22.04 LTS یا 24.04 LTS</td><td><code>lsb_release -a</code></td></tr>
@@ -149,7 +179,8 @@
   <tr><td>pnpm</td><td>۹.x</td><td><code>pnpm -v</code></td></tr>
   <tr><td>Docker</td><td>۲۴.x یا بالاتر</td><td><code>docker --version</code></td></tr>
   <tr><td>Docker Compose</td><td>۲.x (plugin)</td><td><code>docker compose version</code></td></tr>
-  <tr><td>PostgreSQL Client</td><td>۱۶.x</td><td><code>psql --version</code></td></tr>
+  <tr><td>MongoDB Shell (mongosh)</td><td>۲.x</td><td><code>mongosh --version</code></td></tr>
+  <tr><td>MongoDB Tools</td><td>۱۰۰.x (mongodump/restore)</td><td><code>mongodump --version</code></td></tr>
   <tr><td>Git</td><td>۲.x</td><td><code>git --version</code></td></tr>
   <tr><td>Nginx</td><td>۱.۲۴ یا بالاتر</td><td><code>nginx -v</code></td></tr>
   <tr><td>Certbot</td><td>آخرین نسخه</td><td><code>certbot --version</code></td></tr>
@@ -163,360 +194,217 @@ sudo apt update && sudo apt upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
-<span class="cmt"># نصب pnpm</span>
-sudo npm install -g pnpm@9
+<span class="cmt"># نصب pnpm (نسخه دقیق پروژه: 9.10.0)</span>
+sudo npm install -g pnpm@9.10.0
 
-<span class="cmt"># نصب Docker</span>
+<span class="cmt"># نصب Docker و Docker Compose plugin</span>
 curl -fsSL https://get.docker.com | sudo sh
-sudo usermod -aG docker $USER  <span class="cmt"># بعد از این فرمان باید logout/login شوی</span>
+sudo usermod -aG docker $USER  <span class="cmt"># بعد از این فرمان باید logout/login کنی</span>
 
-<span class="cmt"># نصب PostgreSQL client و Nginx</span>
-sudo apt install -y postgresql-client-16 nginx git
+<span class="cmt"># نصب mongosh و MongoDB Database Tools</span>
+curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+sudo apt update
+sudo apt install -y mongodb-mongosh mongodb-database-tools
 
-<span class="cmt"># نصب Certbot برای SSL</span>
-sudo apt install -y certbot python3-certbot-nginx</pre>
+<span class="cmt"># نصب Nginx، Git و Certbot</span>
+sudo apt install -y nginx git certbot python3-certbot-nginx</pre>
 </div>
 </section>
 
 <section id="sec-2">
 <h2><span class="num">۲.</span> کلون و نصب پکیج‌ها</h2>
 <div class="panel">
-<p>سورس پروژه را در مسیر مناسب کلون کن. ما <code>/opt/tiktakrun</code> را پیشنهاد می‌دهیم:</p>
-<pre><span class="cmt"># ساخت دایرکتوری و کپی سورس</span>
+<p>سورس پروژه را در مسیر مناسب مستقر کن. ما <code>/opt/tiktakrun</code> را پیشنهاد می‌دهیم:</p>
+<pre><span class="cmt"># ساخت دایرکتوری و انتقال مالکیت</span>
 sudo mkdir -p /opt/tiktakrun
 sudo chown -R $USER:$USER /opt/tiktakrun
 cd /opt/tiktakrun
 
-<span class="cmt"># اگر zip داری، استخراج کن</span>
+<span class="cmt"># استخراج فایل zip تحویلی</span>
 unzip tiktakrun-FINAL-v1.0.0.zip -d .
 
-<span class="cmt"># نصب همه پکیج‌های monorepo</span>
+<span class="cmt"># نصب همه پکیج‌های monorepo (pnpm workspaces)</span>
 pnpm install
 
-<span class="cmt"># تولید Prisma Client</span>
+<span class="cmt"># تولید Prisma Client برای MongoDB</span>
 cd apps/api
 pnpm prisma generate
 cd ../..</pre>
-
-<div class="alert info">
-  <b>💡 نکته:</b> این پروژه یک monorepo با ساختار pnpm workspaces + Turborepo است.
-  دایرکتوری‌های اصلی: <code>apps/api</code> (NestJS) ، <code>apps/web</code> (Next.js) ، <code>apps/admin</code> (Next.js)
-</div>
+<div class="alert warn"><b>توجه:</b> بعد از هر بار <code>pnpm install</code> یا تغییر در <code>schema.prisma</code>، حتماً <code>prisma generate</code> را دوباره اجرا کن، وگرنه TypeScript خطا می‌دهد.</div>
 </div>
 </section>
 
 <section id="sec-3">
 <h2><span class="num">۳.</span> تنظیمات محیط (.env)</h2>
 <div class="panel">
+<p>فایل <code>.env</code> را از روی <code>.env.example</code> بساز و مقادیر را پر کن:</p>
+<pre>cp .env.example .env
+nano .env</pre>
+<h3>📄 محتوای کلیدی <code>.env</code></h3>
+<pre><span class="cmt"># ---------- MongoDB ----------</span>
+MONGO_USER=tiktakrun
+MONGO_PASSWORD=<span class="str">یک-رمز-بسیار-قوی-اینجا</span>
+MONGO_DB=tiktakrun_db
 
-<h3>📁 فایل ۱: <code>apps/api/.env</code></h3>
-<pre><span class="cmt"># محیط</span>
-NODE_ENV=production
-TZ=Asia/Tehran
-PROD_DOMAIN=tiktakrun.ir
+<span class="cmt"># رشته اتصال — توجه به replicaSet=rs0 و directConnection=true</span>
+DATABASE_URL="mongodb://tiktakrun:<span class="str">یک-رمز-بسیار-قوی-اینجا</span>@mongo:27017/tiktakrun_db?authSource=admin&replicaSet=rs0&directConnection=true"
 
-<span class="cmt"># پورت API (هم API_PORT هم PORT لازم است)</span>
-API_PORT=4000
+<span class="cmt"># ---------- Redis ----------</span>
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+<span class="cmt"># ---------- API ----------</span>
 PORT=4000
+NODE_ENV=production
+JWT_ACCESS_SECRET=<span class="str">یک-سکرت-تصادفی-طولانی</span>
+JWT_REFRESH_SECRET=<span class="str">یک-سکرت-تصادفی-دیگر</span>
+JWT_ACCESS_EXPIRES=15m
+JWT_REFRESH_EXPIRES=7d
 
-<span class="cmt"># آدرس‌های عمومی</span>
-WEB_URL=https://tiktakrun.ir
-ADMIN_URL=https://admin.tiktakrun.ir
-API_URL=https://api.tiktakrun.ir
-SOCKET_URL=wss://api.tiktakrun.ir
-
-<span class="cmt"># دیتابیس PostgreSQL</span>
-DATABASE_URL=postgresql://tiktakrun_user:<span class="str">STRONG_PASSWORD</span>@localhost:5432/tiktakrun_db?schema=public
-
-<span class="cmt"># Redis</span>
-REDIS_URL=redis://localhost:6379
-
-<span class="cmt"># JWT (حتماً عوض کن!)</span>
-JWT_SECRET=<span class="str">your-very-long-random-secret-min-64-chars</span>
-JWT_EXPIRES_IN=7d
-JWT_REFRESH_SECRET=<span class="str">another-very-long-random-secret-min-64-chars</span>
-JWT_REFRESH_EXPIRES_IN=30d
-
-<span class="cmt"># SMS.ir (در محیط محصول کلید واقعی بگذار)</span>
-SMS_PROVIDER=smsir
-SMS_IR_API_KEY=<span class="str">your-sms-ir-api-key</span>
-SMS_IR_TEMPLATE_ID=<span class="str">your-template-id</span>
-SMS_IR_LINE_NUMBER=<span class="str">your-line-number</span>
-
-<span class="cmt"># آپلود فایل</span>
-UPLOAD_DIR=/opt/tiktakrun/storage
-MAX_FILE_SIZE=10485760
-
-<span class="cmt"># Rate Limiting</span>
-RATE_LIMIT_TTL=60
-RATE_LIMIT_MAX=100
-
-<span class="cmt"># OTP</span>
-OTP_TTL=300
-OTP_LENGTH=5</pre>
-
-<h3>📁 فایل ۲: <code>apps/web/.env.local</code></h3>
-<pre>NEXT_PUBLIC_API_URL=https://api.tiktakrun.ir/api/v1
-NEXT_PUBLIC_SOCKET_URL=wss://api.tiktakrun.ir
-NEXT_PUBLIC_USE_MOCK=false
-NEXT_PUBLIC_SITE_NAME=TIK TAK RUN
-NEXT_PUBLIC_SITE_URL=https://tiktakrun.ir</pre>
-
-<h3>📁 فایل ۳: <code>apps/admin/.env.local</code></h3>
-<pre>NEXT_PUBLIC_API_URL=https://api.tiktakrun.ir/api/v1
-NEXT_PUBLIC_SOCKET_URL=wss://api.tiktakrun.ir
-NEXT_PUBLIC_SITE_NAME=TIK TAK RUN Admin
-NEXT_PUBLIC_SITE_URL=https://admin.tiktakrun.ir</pre>
-
-<div class="alert err">
-  <b>⚠️ حیاتی:</b> <code>JWT_SECRET</code> و <code>JWT_REFRESH_SECRET</code> را با مقادیر تصادفی طولانی (حداقل ۶۴ کاراکتر) جایگزین کن.
-  می‌توانی با این فرمان تولیدشان کنی:
-  <br><code>openssl rand -base64 64</code>
-</div>
-
-<div class="alert warn">
-  <b>📌 یادآوری:</b> در <code>apps/api/main.ts</code>، API پورت را از متغیر <code>PORT</code> می‌خواند نه <code>API_PORT</code>.
-  پس حتماً هر دو را با مقدار یکسان تنظیم کن.
-</div>
+<span class="cmt"># ---------- Frontend public URLs ----------</span>
+NEXT_PUBLIC_API_URL=https://api.example.com
+NEXT_PUBLIC_WS_URL=https://api.example.com</pre>
+<div class="alert err"><b>هشدار امنیتی:</b> فایل <code>.env</code> هرگز نباید در گیت commit شود. مطمئن شو در <code>.gitignore</code> قرار دارد. برای تولید سکرت تصادفی از <code>openssl rand -hex 32</code> استفاده کن.</div>
+<div class="alert info"><b>چرا replicaSet=rs0؟</b> Prisma برای انجام تراکنش‌ها (Transactions) روی MongoDB به Replica Set نیاز دارد — حتی اگر تک‌نودی باشد. به همین خاطر در رشته اتصال <code>replicaSet=rs0</code> اجباری است.</div>
 </div>
 </section>
 
 <section id="sec-4">
-<h2><span class="num">۴.</span> راه‌اندازی PostgreSQL و Redis با Docker</h2>
+<h2><span class="num">۴.</span> راه‌اندازی MongoDB (Replica Set) و Redis</h2>
 <div class="panel">
+<p>پلتفرم از MongoDB به‌صورت <b>Replica Set تک‌نودی (rs0)</b> استفاده می‌کند چون Prisma برای تراکنش‌ها به آن نیاز دارد. تمام تنظیمات در <code>docker-compose.yml</code> آماده است.</p>
 
-<h3>پورت‌های پیش‌فرض</h3>
-<div class="ports">
-  <div class="port"><div class="n">۵۴۳۲</div><div class="l">PostgreSQL</div></div>
-  <div class="port"><div class="n">۶۳۷۹</div><div class="l">Redis</div></div>
-  <div class="port"><div class="n">۴۰۰۰</div><div class="l">API (NestJS)</div></div>
-  <div class="port"><div class="n">۳۰۰۰</div><div class="l">Web (Next.js)</div></div>
-  <div class="port"><div class="n">۳۰۰۱</div><div class="l">Admin (Next.js)</div></div>
+<div class="step">
+<div class="step-h">گام ۱ — ساخت Keyfile احراز هویت داخلی</div>
+<p>اعضای Replica Set برای احراز هویت داخلی به یک keyfile مشترک نیاز دارند:</p>
+<pre><span class="cmt"># تولید keyfile (اگر از قبل در سورس نیست)</span>
+openssl rand -base64 756 > infra/mongo/mongo-keyfile
+chmod 400 infra/mongo/mongo-keyfile
+
+<span class="cmt"># مالکیت برای کاربر mongodb داخل کانتینر (uid 999)</span>
+sudo chown 999:999 infra/mongo/mongo-keyfile</pre>
 </div>
 
-<h3>اجرای سرویس‌ها</h3>
-<pre>cd /opt/tiktakrun
+<div class="step">
+<div class="step-h">گام ۲ — بالا آوردن سرویس‌ها</div>
+<pre><span class="cmt"># فقط mongo، mongo-init و redis را اجرا کن</span>
+docker compose up -d mongo redis
 
-<span class="cmt"># بالا آوردن PostgreSQL + Redis</span>
-docker compose up -d postgres redis
+<span class="cmt"># سرویس mongo-init به‌صورت خودکار rs.initiate() را اجرا می‌کند</span>
+docker compose up mongo-init
 
-<span class="cmt"># بررسی وضعیت</span>
-docker compose ps
-
-<span class="cmt"># بررسی سلامت دیتابیس</span>
-docker compose logs postgres | tail -20
-docker compose exec postgres pg_isready -U tiktakrun_user -d tiktakrun_db</pre>
-
-<div class="alert info">
-  <b>💡 نکته:</b> فایل <code>docker-compose.yml</code> در ریشه پروژه از قبل آماده است.
-  در صورت نیاز به تغییر پورت‌ها، فقط بخش <code>ports</code> آن را ویرایش کن.
+<span class="cmt"># بررسی وضعیت Replica Set</span>
+docker compose exec mongo mongosh --eval "rs.status().myState"
+<span class="cmt"># خروجی 1 یعنی PRIMARY و سالم است</span></pre>
 </div>
 
-<h3>دسترسی به دیتابیس</h3>
-<pre><span class="cmt"># ورود به shell پستگرس</span>
-docker compose exec postgres psql -U tiktakrun_user -d tiktakrun_db
+<div class="alert ok"><b>راه‌اندازی خودکار:</b> سرویس <code>mongo-init</code> اسکریپت <code>infra/mongo/init-replica.sh</code> را اجرا می‌کند که منتظر آماده شدن مونگو می‌ماند، سپس <code>rs.initiate({_id:'rs0', members:[{_id:0, host:'mongo:27017'}]})</code> را صدا می‌زند و تا رسیدن به وضعیت PRIMARY صبر می‌کند.</div>
 
-<span class="cmt"># یا از خارج با psql</span>
-psql -h localhost -p 5432 -U tiktakrun_user -d tiktakrun_db</pre>
+<h3>راه‌اندازی دستی Replica Set (در صورت نیاز)</h3>
+<pre>docker compose exec mongo mongosh -u tiktakrun -p --authenticationDatabase admin
+
+<span class="cmt"># داخل shell مونگو:</span>
+rs.initiate({ _id: "rs0", members: [{ _id: 0, host: "mongo:27017" }] })
+rs.status()</pre>
 </div>
 </section>
 
 <section id="sec-5">
-<h2><span class="num">۵.</span> مهاجرت دیتابیس و سید کردن</h2>
+<h2><span class="num">۵.</span> اعمال Schema و سید کردن دیتابیس</h2>
 <div class="panel">
-<p>بعد از بالا آمدن PostgreSQL، باید جداول را بسازی و داده‌های اولیه را وارد کنی:</p>
-<pre>cd /opt/tiktakrun/apps/api
+<div class="alert warn"><b>مهم:</b> MongoDB از <code>prisma migrate</code> پشتیبانی نمی‌کند. به‌جای آن از <code>prisma db push</code> استفاده کن که Schema را مستقیماً روی دیتابیس اعمال می‌کند.</div>
+<pre>cd apps/api
 
-<span class="cmt"># روش ۱ (پیشنهادی): با migration files</span>
-pnpm prisma migrate deploy
-
-<span class="cmt"># روش ۲ (اگر migration نداری): مستقیم schema را push کن</span>
+<span class="cmt"># اعمال schema روی MongoDB</span>
 pnpm prisma db push
 
-<span class="cmt"># سید کردن داده‌های اولیه (شهرها، دسته‌ها، بازی‌ها، یوزر admin، ...)</span>
-pnpm prisma db seed</pre>
+<span class="cmt"># سید کردن داده‌های اولیه (دسته‌بندی‌ها، نقش‌ها، ادمین پیش‌فرض)</span>
+pnpm prisma db seed
+<span class="cmt"># یا مستقیم:</span>
+npx tsx prisma/seed.mongo.ts
 
-<div class="alert ok">
-  <b>✅ بعد از سید:</b> یک یوزر admin با مشخصات زیر ساخته می‌شود:<br>
-  <code>Mobile: 09120000000</code> &nbsp; <code>Password: Admin@1234</code>
-</div>
-
-<div class="alert warn">
-  <b>⚠️ امنیت:</b> در محیط محصول، بلافاصله بعد از اولین ورود، رمز admin را عوض کن:
-  <br>۱. وارد <code>/admin</code> شو
-  <br>۲. از منوی پروفایل، <b>تغییر رمز عبور</b> را انتخاب کن
-  <br>۳. یا با psql دستی hash جدید بساز:
-  <pre style="margin-top:8px">node -e "console.log(require('bcrypt').hashSync('NewStrongPass!', 10))"
-<span class="cmt"># سپس:</span>
-UPDATE users SET "passwordHash" = '$2b$10$...' WHERE mobile = '09120000000';</pre>
-</div>
-
-<h3>بررسی جداول</h3>
-<pre>docker compose exec postgres psql -U tiktakrun_user -d tiktakrun_db -c "\dt"
-<span class="cmt"># باید حدود ۵۳ جدول ببینی</span></pre>
+cd ../..</pre>
+<div class="alert info"><b>دسته‌بندی‌های سید‌شده:</b> اسکریپت سید چهار دسته اصلی می‌سازد: <code>سینما ترس</code> (cinema-horror)، <code>بردگیم</code> (board-game)، <code>مافیا</code> (mafia) و <code>لیزرتگ</code> (lasertag).</div>
+<h3>بررسی داده‌ها</h3>
+<pre>docker compose exec mongo mongosh tiktakrun_db -u tiktakrun -p --authenticationDatabase admin \
+  --eval "db.categories.find().pretty()"</pre>
 </div>
 </section>
 
 <section id="sec-6">
-<h2><span class="num">۶.</span> بیلد API (با SWC)</h2>
+<h2><span class="num">۶.</span> بیلد API (NestJS)</h2>
 <div class="panel">
+<pre>cd apps/api
 
-<div class="alert err">
-  <b>🔥 خیلی مهم:</b> این پروژه حدود ۷۵۸ خطای TypeScript دارد که <b>اجرایی نیستند</b> (warning های type نه bug واقعی).
-  برای بیلد، حتماً از <b>SWC builder</b> استفاده کن نه <code>tsc</code>.
-</div>
+<span class="cmt"># بررسی تایپ‌ها (باید 0 خطا باشد)</span>
+pnpm tsc --noEmit
 
-<pre>cd /opt/tiktakrun/apps/api
+<span class="cmt"># بیلد production</span>
+pnpm build   <span class="cmt"># خروجی در dist/</span>
 
-<span class="cmt"># بیلد با SWC (نه tsc!)</span>
-pnpm nest build --builder swc
-
-<span class="cmt"># نتیجه باید چنین چیزی باشد:</span>
-<span class="cmt"># Successfully compiled: 180 files with swc (~750ms)</span></pre>
-
-<p>خروجی در دایرکتوری <code>apps/api/dist</code> ساخته می‌شود.</p>
-
-<h3>تست محلی</h3>
-<pre>cd /opt/tiktakrun/apps/api
-NODE_ENV=production PORT=4000 node dist/main.js
-
-<span class="cmt"># در یک ترمینال دیگر:</span>
-curl http://localhost:4000/api/v1/games
-<span class="cmt"># باید JSON برگرداند</span></pre>
+<span class="cmt"># تست اجرای محلی (اختیاری)</span>
+node dist/main
+cd ../..</pre>
+<div class="alert info">API روی پورت <code>4000</code> با پیشوند <code>/api/v1</code> بالا می‌آید. تست سلامت: <code>curl http://localhost:4000/api/v1/health</code></div>
 </div>
 </section>
 
 <section id="sec-7">
 <h2><span class="num">۷.</span> بیلد Web و Admin (Next.js)</h2>
 <div class="panel">
+<pre><span class="cmt"># بیلد سایت کاربران</span>
+cd apps/web
+pnpm build      <span class="cmt"># next build → .next/</span>
+cd ../..
 
-<div class="alert warn">
-  <b>📌 توجه:</b> در فایل‌های <code>apps/web/next.config.js</code> و <code>apps/admin/next.config.js</code>،
-  گزینه <code>typescript.ignoreBuildErrors: true</code> فعال است. این به‌خاطر TS warning های غیربحرانی است.
-</div>
-
-<h3>بیلد Web</h3>
-<pre>cd /opt/tiktakrun/apps/web
+<span class="cmt"># بیلد داشبورد ادمین</span>
+cd apps/admin
 pnpm build
+cd ../..
 
-<span class="cmt"># خروجی در .next/</span>
-<span class="cmt"># تست محلی:</span>
-pnpm start -p 3000</pre>
-
-<h3>بیلد Admin</h3>
-<pre>cd /opt/tiktakrun/apps/admin
-pnpm build
-
-<span class="cmt"># تست محلی:</span>
-pnpm start -p 3001</pre>
-
-<h3>بیلد همه با Turbo (روش سریع‌تر)</h3>
-<pre>cd /opt/tiktakrun
-pnpm turbo build</pre>
+<span class="cmt"># یا با Turborepo همه را یکجا بیلد کن:</span>
+pnpm turbo run build</pre>
+<div class="alert warn"><b>قبل از بیلد:</b> مطمئن شو <code>NEXT_PUBLIC_API_URL</code> و <code>NEXT_PUBLIC_WS_URL</code> در محیط بیلد ست شده‌اند، چون Next.js این متغیرها را در زمان بیلد inline می‌کند.</div>
 </div>
 </section>
 
 <section id="sec-8">
 <h2><span class="num">۸.</span> اجرا با PM2 (Production)</h2>
 <div class="panel">
+<pre><span class="cmt"># نصب PM2 سراسری</span>
+sudo npm install -g pm2
 
-<h3>نصب PM2</h3>
-<pre>sudo npm install -g pm2</pre>
-
-<h3>فایل <code>ecosystem.config.js</code></h3>
-<p>این فایل را در ریشه پروژه (<code>/opt/tiktakrun/</code>) بساز:</p>
-<pre>module.exports = {
-  apps: [
-    {
-      name: <span class="str">'tiktakrun-api'</span>,
-      cwd: <span class="str">'/opt/tiktakrun/apps/api'</span>,
-      script: <span class="str">'dist/main.js'</span>,
-      env: {
-        NODE_ENV: <span class="str">'production'</span>,
-        PORT: 4000,
-      },
-      instances: 1,
-      autorestart: true,
-      max_memory_restart: <span class="str">'500M'</span>,
-      error_file: <span class="str">'/var/log/tiktakrun/api-error.log'</span>,
-      out_file: <span class="str">'/var/log/tiktakrun/api-out.log'</span>,
-    },
-    {
-      name: <span class="str">'tiktakrun-web'</span>,
-      cwd: <span class="str">'/opt/tiktakrun/apps/web'</span>,
-      script: <span class="str">'node_modules/next/dist/bin/next'</span>,
-      args: <span class="str">'start -p 3000'</span>,
-      env: { NODE_ENV: <span class="str">'production'</span> },
-      instances: 1,
-      autorestart: true,
-      max_memory_restart: <span class="str">'400M'</span>,
-    },
-    {
-      name: <span class="str">'tiktakrun-admin'</span>,
-      cwd: <span class="str">'/opt/tiktakrun/apps/admin'</span>,
-      script: <span class="str">'node_modules/next/dist/bin/next'</span>,
-      args: <span class="str">'start -p 3001'</span>,
-      env: { NODE_ENV: <span class="str">'production'</span> },
-      instances: 1,
-      autorestart: true,
-      max_memory_restart: <span class="str">'400M'</span>,
-    },
-  ],
-};</pre>
-
-<h3>اجرا</h3>
-<pre>sudo mkdir -p /var/log/tiktakrun
-sudo chown -R $USER:$USER /var/log/tiktakrun
-
+<span class="cmt"># اجرای هر سه سرویس</span>
 cd /opt/tiktakrun
-pm2 start ecosystem.config.js
 
-<span class="cmt"># ذخیره برای بازیابی بعد از ریبوت</span>
+pm2 start "node apps/api/dist/main" --name ttr-api
+pm2 start "pnpm --filter @tiktakrun/web start" --name ttr-web
+pm2 start "pnpm --filter @tiktakrun/admin start" --name ttr-admin
+
+<span class="cmt"># ذخیره و فعال‌سازی استارت خودکار بعد از ریبوت</span>
 pm2 save
-pm2 startup
-<span class="cmt"># دستور خروجی pm2 startup را اجرا کن (با sudo)</span>
+pm2 startup   <span class="cmt"># دستور خروجی را با sudo اجرا کن</span>
 
-<span class="cmt"># بررسی وضعیت</span>
-pm2 status
-pm2 logs --nostream</pre>
+<span class="cmt"># مشاهده وضعیت</span>
+pm2 list
+pm2 logs ttr-api --lines 50</pre>
+<div class="alert ok"><b>توصیه:</b> برای داکرایز کامل، می‌توانی به‌جای PM2 از <code>docker compose up -d</code> با همان <code>docker-compose.yml</code> استفاده کنی که سرویس <code>api</code> آن خودش <code>prisma db push</code> را اجرا می‌کند.</div>
 </div>
 </section>
 
 <section id="sec-9">
-<h2><span class="num">۹.</span> تنظیم Nginx به‌عنوان Reverse Proxy</h2>
+<h2><span class="num">۹.</span> تنظیم Nginx + WebSocket</h2>
 <div class="panel">
+<p>Nginx به‌عنوان Reverse Proxy جلوی سه اپ قرار می‌گیرد. توجه ویژه به تنظیمات <b>WebSocket (Socket.io)</b> برای API:</p>
+<pre><span class="cmt"># /etc/nginx/sites-available/tiktakrun</span>
 
-<p>فرض می‌کنیم سه ساب‌دامین داری: <code>tiktakrun.ir</code> (وب)، <code>admin.tiktakrun.ir</code> (پنل)، و <code>api.tiktakrun.ir</code> (API).</p>
-
-<h3>فایل <code>/etc/nginx/sites-available/tiktakrun</code></h3>
-<pre><span class="cmt"># ─────────── WEB (Frontend اصلی) ───────────</span>
+<span class="cmt"># --- سایت کاربران ---</span>
 server {
     listen 80;
-    server_name tiktakrun.ir www.tiktakrun.ir;
-
+    server_name example.com www.example.com;
     location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-
-<span class="cmt"># ─────────── ADMIN ───────────</span>
-server {
-    listen 80;
-    server_name admin.tiktakrun.ir;
-
-    location / {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
+        proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -524,233 +412,153 @@ server {
     }
 }
 
-<span class="cmt"># ─────────── API ───────────</span>
+<span class="cmt"># --- داشبورد ادمین ---</span>
 server {
     listen 80;
-    server_name api.tiktakrun.ir;
-    client_max_body_size 20M;
-
+    server_name admin.example.com;
     location / {
-        proxy_pass http://localhost:4000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
+        proxy_pass http://127.0.0.1:3001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+}
 
-    <span class="cmt"># Socket.io</span>
-    location /socket.io/ {
-        proxy_pass http://localhost:4000/socket.io/;
+<span class="cmt"># --- API + WebSocket ---</span>
+server {
+    listen 80;
+    server_name api.example.com;
+    location / {
+        proxy_pass http://127.0.0.1:4000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Upgrade $http_upgrade;          <span class="cmt"># برای WebSocket</span>
+        proxy_set_header Connection "upgrade";           <span class="cmt"># برای WebSocket</span>
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;                        <span class="cmt"># اتصال طولانی WS</span>
     }
 }</pre>
-
-<h3>فعال‌سازی</h3>
-<pre>sudo ln -s /etc/nginx/sites-available/tiktakrun /etc/nginx/sites-enabled/
-sudo nginx -t            <span class="cmt"># تست syntax</span>
+<pre><span class="cmt"># فعال‌سازی</span>
+sudo ln -s /etc/nginx/sites-available/tiktakrun /etc/nginx/sites-enabled/
+sudo nginx -t            <span class="cmt"># تست صحت کانفیگ</span>
 sudo systemctl reload nginx</pre>
+<div class="alert err"><b>کلیدی برای چت/نوتیفیکیشن زنده:</b> بدون دو هدر <code>Upgrade</code> و <code>Connection "upgrade"</code>، اتصال Socket.io کار نمی‌کند و چت زنده و اعلان‌ها از کار می‌افتند.</div>
 </div>
 </section>
 
 <section id="sec-10">
 <h2><span class="num">۱۰.</span> SSL با Certbot و Let's Encrypt</h2>
 <div class="panel">
-
-<div class="alert info">
-  <b>پیش‌نیاز:</b> DNS رکوردهای A تمام ساب‌دامین‌ها باید به IP سرور اشاره کنند و در دسترس باشند.
-</div>
-
-<pre><span class="cmt"># دریافت گواهی برای همه ساب‌دامین‌ها</span>
-sudo certbot --nginx \
-  -d tiktakrun.ir \
-  -d www.tiktakrun.ir \
-  -d admin.tiktakrun.ir \
-  -d api.tiktakrun.ir
-
-<span class="cmt"># Certbot به‌طور خودکار:</span>
-<span class="cmt">#  1. گواهی می‌گیرد</span>
-<span class="cmt">#  2. فایل Nginx را آپدیت می‌کند (HTTPS اضافه می‌کند)</span>
-<span class="cmt">#  3. redirect از HTTP به HTTPS را اعمال می‌کند</span>
+<pre><span class="cmt"># گرفتن گواهی برای هر سه دامنه</span>
+sudo certbot --nginx -d example.com -d www.example.com -d admin.example.com -d api.example.com
 
 <span class="cmt"># تست تمدید خودکار</span>
-sudo certbot renew --dry-run
-
-<span class="cmt"># Cron از قبل ساخته شده ولی برای اطمینان:</span>
-sudo systemctl status certbot.timer</pre>
-
-<div class="alert ok">
-  <b>✅ تمدید خودکار:</b> Certbot هر روز چک می‌کند و در صورت لزوم تمدید می‌کند.
-  گواهی‌های Let's Encrypt هر ۹۰ روز منقضی می‌شوند ولی ۳۰ روز قبل تمدید می‌شوند.
-</div>
+sudo certbot renew --dry-run</pre>
+<div class="alert ok">Certbot به‌صورت خودکار بلاک‌های <code>server</code> در Nginx را برای HTTPS (پورت 443) بازنویسی می‌کند و ریدایرکت HTTP→HTTPS اضافه می‌کند. تمدید گواهی توسط systemd timer انجام می‌شود.</div>
 </div>
 </section>
 
 <section id="sec-11">
-<h2><span class="num">۱۱.</span> پشتیبان‌گیری خودکار با Cron</h2>
+<h2><span class="num">۱۱.</span> اتصال داشبورد ادمین به بک‌اند</h2>
 <div class="panel">
-
-<h3>روش ۱: استفاده از endpoint داخلی Admin</h3>
-<pre><span class="cmt"># این endpoint از داخل admin panel هم در دسترس است:</span>
-<span class="cmt"># POST /api/v1/admin/backup/create</span>
-
-<span class="cmt"># اسکریپت bash برای فراخوانی خودکار:</span>
-sudo nano /opt/tiktakrun/scripts/backup.sh</pre>
-
-<p>محتوای <code>/opt/tiktakrun/scripts/backup.sh</code>:</p>
-<pre>#!/bin/bash
-set -e
-DATE=$(date +%Y-%m-%d_%H-%M-%S)
-BACKUP_DIR=/opt/tiktakrun/backups
-mkdir -p $BACKUP_DIR
-
-<span class="cmt"># Backup PostgreSQL</span>
-docker compose -f /opt/tiktakrun/docker-compose.yml exec -T postgres \
-  pg_dump -U tiktakrun_user -d tiktakrun_db \
-  | gzip > $BACKUP_DIR/db_$DATE.sql.gz
-
-<span class="cmt"># Backup storage (uploaded files)</span>
-tar -czf $BACKUP_DIR/storage_$DATE.tar.gz -C /opt/tiktakrun storage/
-
-<span class="cmt"># حذف بکاپ‌های قدیمی‌تر از ۳۰ روز</span>
-find $BACKUP_DIR -name "*.gz" -mtime +30 -delete
-
-echo "[$(date)] Backup completed: $DATE" >> /var/log/tiktakrun/backup.log</pre>
-
-<pre>sudo chmod +x /opt/tiktakrun/scripts/backup.sh
-
-<span class="cmt"># تست دستی</span>
-/opt/tiktakrun/scripts/backup.sh
-
-<span class="cmt"># اضافه به crontab (هر روز ساعت ۳ بامداد)</span>
-crontab -e
-<span class="cmt"># خط زیر را اضافه کن:</span>
-0 3 * * * /opt/tiktakrun/scripts/backup.sh</pre>
-
-<h3>روش ۲: فراخوانی API endpoint</h3>
-<pre>#!/bin/bash
-TOKEN=$(curl -s -X POST https://api.tiktakrun.ir/api/v1/auth/admin/login \
-  -H "Content-Type: application/json" \
-  -d '{"mobile":"09120000000","password":"YourAdminPass"}' \
-  | jq -r '.access_token')
-
-curl -X POST https://api.tiktakrun.ir/api/v1/admin/backup/create \
-  -H "Authorization: Bearer $TOKEN"</pre>
-
-<h3>بازیابی از بکاپ</h3>
-<pre>cd /opt/tiktakrun/backups
-gunzip -c db_2026-05-26_03-00-00.sql.gz | \
-  docker compose -f ../docker-compose.yml exec -T postgres \
-  psql -U tiktakrun_user -d tiktakrun_db</pre>
+<p>داشبورد ادمین (<code>@tiktakrun/admin</code>) از طریق یک axios client به API متصل می‌شود. نکات کلیدی اتصال:</p>
+<table>
+  <tr><th>موضوع</th><th>مقدار / مسیر</th></tr>
+  <tr><td>آدرس پایه API</td><td><code>NEXT_PUBLIC_API_URL</code> → مثلاً <code>https://api.example.com</code></td></tr>
+  <tr><td>توکن دسترسی (canonical)</td><td><code>localStorage["ttr_admin_access_token"]</code></td></tr>
+  <tr><td>axios client</td><td><code>src/lib/api/client.ts</code> (با <code>getAccessToken()</code>)</td></tr>
+  <tr><td>ساختار پاسخ</td><td><code>{ success: true, data: { data, total, page, limit } }</code></td></tr>
+</table>
+<div class="alert info"><b>ResponseInterceptor:</b> یک interceptor سراسری در API همه پاسخ‌ها را در <code>{ success, data }</code> می‌پیچد. در صفحات ادمین یک تابع <code>unwrap()</code> داریم که در صورت وجود <code>res.data.data</code> آن را باز می‌کند.</div>
+<h3>اندپوینت‌های مدیریتی کلیدی</h3>
+<table>
+  <tr><th>قابلیت</th><th>متد و مسیر</th></tr>
+  <tr><td>لیست نظرات (مدیریت)</td><td><code>GET /admin/games/comments?filter=pending&page=1&limit=20</code></td></tr>
+  <tr><td>آمار لایک/نظر</td><td><code>GET /admin/games/comments/stats</code></td></tr>
+  <tr><td>تأیید نظر</td><td><code>POST /admin/games/comments/:id/approve</code></td></tr>
+  <tr><td>رد نظر</td><td><code>POST /admin/games/comments/:id/reject</code></td></tr>
+  <tr><td>حذف نظر</td><td><code>DELETE /admin/games/comments/:id</code></td></tr>
+  <tr><td>تنظیم سطح بازی (Tier)</td><td><code>PATCH /admin/games/:id/tier</code> body: <code>{ tier }</code></td></tr>
+  <tr><td>CRUD دسته‌بندی‌ها</td><td><code>/admin/categories</code> (GET/POST/PATCH/DELETE)</td></tr>
+</table>
+<div class="alert ok"><b>سطوح بازی (GameTier):</b> پنج سطح موجود است: <code>STANDARD</code> (استاندارد)، <code>SILVER</code> (نقره‌ای)، <code>GOLD</code> (طلایی)، <code>PLATINUM</code> (پلاتینیوم)، <code>DIAMOND</code> (دایموند).</div>
 </div>
 </section>
 
 <section id="sec-12">
-<h2><span class="num">۱۲.</span> عیب‌یابی و رفع مشکلات رایج</h2>
+<h2><span class="num">۱۲.</span> پشتیبان‌گیری خودکار (mongodump)</h2>
 <div class="panel">
+<p>اسکریپت‌های آماده در <code>infra/scripts/</code> قرار دارند. پشتیبان‌گیری با <code>mongodump</code> به‌صورت آرشیو فشرده انجام می‌شود:</p>
+<pre><span class="cmt"># پشتیبان‌گیری دستی</span>
+bash infra/scripts/backup.sh
+<span class="cmt"># داخل اسکریپت:</span>
+mongodump --archive=backup-$(date +%F).gz --gzip \
+  --uri="mongodb://tiktakrun:PASS@localhost:27017/tiktakrun_db?authSource=admin&replicaSet=rs0"
 
-<div class="step">
-  <div class="step-h">🚨 مشکل ۱: API استارت نمی‌شود</div>
-  <p>چک‌لیست:</p>
-  <ul>
-    <li>آیا PostgreSQL اجرا است؟ <code>docker compose ps</code></li>
-    <li>آیا <code>DATABASE_URL</code> در <code>.env</code> صحیح است؟</li>
-    <li>آیا <code>PORT</code> و <code>API_PORT</code> هر دو ست شده‌اند؟</li>
-    <li>لاگ‌ها را ببین: <code>pm2 logs tiktakrun-api --nostream</code></li>
-  </ul>
-</div>
+<span class="cmt"># بازیابی</span>
+mongorestore --archive=backup-2026-06-18.gz --gzip --drop \
+  --uri="mongodb://tiktakrun:PASS@localhost:27017/?authSource=admin&replicaSet=rs0"</pre>
+<h3>زمان‌بندی خودکار با Cron</h3>
+<pre><span class="cmt"># ویرایش crontab</span>
+crontab -e
 
-<div class="step">
-  <div class="step-h">🚨 مشکل ۲: خطای Prisma client</div>
-  <pre>cd /opt/tiktakrun/apps/api
-pnpm prisma generate
-pm2 restart tiktakrun-api</pre>
-</div>
-
-<div class="step">
-  <div class="step-h">🚨 مشکل ۳: Web/Admin به API وصل نمی‌شود</div>
-  <p>بررسی <code>NEXT_PUBLIC_API_URL</code> در <code>.env.local</code>:</p>
-  <ul>
-    <li>باید با <code>/api/v1</code> پایان یابد (نه فقط <code>/api</code>)</li>
-    <li>بعد از تغییر، باید مجدد <code>pnpm build</code> اجرا کنی (Next.js در زمان بیلد متغیرها را inline می‌کند)</li>
-  </ul>
-</div>
-
-<div class="step">
-  <div class="step-h">🚨 مشکل ۴: OTP پیامک نمی‌رسد</div>
-  <p>در محیط dev، کد OTP در لاگ‌های API چاپ می‌شود:</p>
-  <pre>tail -f /var/log/tiktakrun/api-out.log | grep "SMS-MOCK OTP"</pre>
-  <p>در محیط prod، باید SMS.ir credentials واقعی در <code>.env</code> ست شوند.</p>
-</div>
-
-<div class="step">
-  <div class="step-h">🚨 مشکل ۵: خطای bcrypt</div>
-  <p>اگر هنگام لاگین خطای bcrypt دیدی:</p>
-  <pre>cd /opt/tiktakrun/apps/api
-pnpm rebuild bcrypt
-pm2 restart tiktakrun-api</pre>
-</div>
-
-<div class="step">
-  <div class="step-h">🚨 مشکل ۶: WebSocket کار نمی‌کند</div>
-  <p>چک کن که Nginx بلاک <code>location /socket.io/</code> دارد و headerهای <code>Upgrade</code> و <code>Connection</code> ست هستند.</p>
-</div>
-
-<div class="step">
-  <div class="step-h">🚨 مشکل ۷: Memory leak یا کندی</div>
-  <pre>pm2 monit                          <span class="cmt"># مانیتورینگ زنده</span>
-pm2 restart all                    <span class="cmt"># ری‌استارت همه</span>
-docker compose restart postgres    <span class="cmt"># ری‌استارت دیتابیس</span></pre>
-</div>
-
-<div class="step">
-  <div class="step-h">🚨 مشکل ۸: تداخل پورت با سرویس‌های دیگر</div>
-  <p>اگر پورت‌های ۳۰۰۰/۴۰۰۰/۵۴۳۲/۶۳۷۹ روی سرور قبلاً استفاده می‌شوند، در <code>.env</code> و <code>docker-compose.yml</code> پورت‌ها را تغییر بده.
-  مثال (همان پورت‌های QA که در این session استفاده شد):</p>
-  <ul>
-    <li>API: <code>4010</code></li>
-    <li>Web: <code>3010</code></li>
-    <li>Admin: <code>3011</code></li>
-    <li>PostgreSQL: <code>5433</code></li>
-    <li>Redis: <code>6380</code></li>
-  </ul>
-</div>
-
+<span class="cmt"># هر روز ساعت ۳ بامداد پشتیبان بگیر</span>
+0 3 * * * /opt/tiktakrun/infra/scripts/backup.sh >> /var/log/ttr-backup.log 2>&1</pre>
 </div>
 </section>
 
-<section>
-<h2><span class="num">📋</span> چک‌لیست نهایی استقرار</h2>
+<section id="sec-13">
+<h2><span class="num">۱۳.</span> عیب‌یابی و رفع مشکلات رایج</h2>
 <div class="panel">
-<ul style="list-style:none;padding:0">
-  <li>☐ Ubuntu 22.04 + Node 20 + pnpm 9 + Docker نصب شده</li>
-  <li>☐ سورس در <code>/opt/tiktakrun</code> کلون شده</li>
-  <li>☐ <code>pnpm install</code> در ریشه با موفقیت اجرا شد</li>
-  <li>☐ سه فایل <code>.env</code> با مقادیر prod ساخته شد (مخصوصاً JWT secrets)</li>
-  <li>☐ <code>docker compose up -d postgres redis</code> اجرا شد و healthy است</li>
-  <li>☐ <code>pnpm prisma migrate deploy</code> یا <code>db push</code> موفق بود</li>
-  <li>☐ <code>pnpm prisma db seed</code> اجرا شد و یوزر admin ساخته شد</li>
-  <li>☐ <code>pnpm nest build --builder swc</code> برای API موفق بود</li>
-  <li>☐ <code>pnpm build</code> برای web و admin موفق بود</li>
-  <li>☐ PM2 با ecosystem config اجرا شد و وضعیت سبز است</li>
-  <li>☐ Nginx config شد و <code>nginx -t</code> پاس می‌دهد</li>
-  <li>☐ Certbot SSL گرفت و HTTPS کار می‌کند</li>
-  <li>☐ Cron بکاپ روزانه ست شد</li>
-  <li>☐ رمز admin از <code>Admin@1234</code> تغییر کرد</li>
-  <li>☐ Firewall فقط پورت‌های ۸۰/۴۴۳/۲۲ را باز دارد</li>
+<table>
+  <tr><th>مشکل</th><th>علت</th><th>راه‌حل</th></tr>
+  <tr><td>Prisma: <code>Transactions are not supported</code></td><td>Replica Set راه‌اندازی نشده</td><td><code>rs.initiate()</code> را اجرا کن و در DATABASE_URL پارامتر <code>replicaSet=rs0</code> را اضافه کن</td></tr>
+  <tr><td>Mongo: <code>not authorized / keyfile</code></td><td>keyfile اشتباه یا دسترسی غلط</td><td><code>chmod 400</code> و <code>chown 999:999</code> روی <code>mongo-keyfile</code></td></tr>
+  <tr><td>API به Mongo وصل نمی‌شود</td><td>هاست اشتباه در connection string</td><td>داخل Docker از <code>mongo:27017</code> و خارج از آن از <code>localhost:27017</code> استفاده کن</td></tr>
+  <tr><td>چت/اعلان زنده کار نمی‌کند</td><td>هدرهای WebSocket در Nginx نیست</td><td>هدرهای <code>Upgrade</code> و <code>Connection "upgrade"</code> را اضافه کن</td></tr>
+  <tr><td>ادمین: ۴۰۱ مداوم</td><td>توکن اشتباه یا منقضی</td><td>کلید <code>ttr_admin_access_token</code> را بررسی کن و دوباره لاگین کن</td></tr>
+  <tr><td>TS errors بعد از reset</td><td>node_modules یا Prisma Client نیست</td><td><code>pnpm install</code> سپس <code>npx prisma generate</code></td></tr>
+  <tr><td>Next.js: API URL اشتباه</td><td>متغیر public در زمان بیلد نبوده</td><td>متغیرها را ست کن و دوباره <code>pnpm build</code> بزن</td></tr>
+</table>
+<h3>دستورات تشخیصی مفید</h3>
+<pre>docker compose ps                          <span class="cmt"># وضعیت کانتینرها</span>
+docker compose logs -f mongo               <span class="cmt"># لاگ مونگو</span>
+docker compose exec mongo mongosh --eval "rs.status()"
+pm2 logs ttr-api --lines 100               <span class="cmt"># لاگ API</span>
+curl http://localhost:4000/api/v1/health   <span class="cmt"># تست سلامت API</span>
+redis-cli -h localhost ping                <span class="cmt"># تست Redis → PONG</span></pre>
+</div>
+</section>
+
+<section id="sec-14">
+<h2><span class="num">۱۴.</span> چک‌لیست نهایی استقرار</h2>
+<div class="panel">
+<ul>
+  <li>✅ پیش‌نیازها نصب شدند (Node 20، pnpm 9.10، Docker، mongosh، Nginx، Certbot)</li>
+  <li>✅ سورس در <code>/opt/tiktakrun</code> مستقر و <code>pnpm install</code> اجرا شد</li>
+  <li>✅ فایل <code>.env</code> ساخته و سکرت‌ها پر شدند (با <code>replicaSet=rs0</code>)</li>
+  <li>✅ keyfile مونگو ساخته شد (<code>chmod 400</code> + <code>chown 999:999</code>)</li>
+  <li>✅ MongoDB Replica Set (rs0) راه‌اندازی و وضعیت PRIMARY تأیید شد</li>
+  <li>✅ Redis بالا آمد و به <code>ping</code> پاسخ <code>PONG</code> داد</li>
+  <li>✅ <code>prisma db push</code> اجرا و دیتابیس سید شد (۴ دسته شامل مافیا و لیزرتگ)</li>
+  <li>✅ هر سه اپ بیلد شدند (api + web + admin)</li>
+  <li>✅ سرویس‌ها با PM2 یا Docker اجرا و <code>pm2 save</code> + <code>pm2 startup</code> انجام شد</li>
+  <li>✅ Nginx با هدرهای WebSocket تنظیم و <code>nginx -t</code> سبز شد</li>
+  <li>✅ گواهی SSL با Certbot برای هر چهار دامنه صادر شد</li>
+  <li>✅ داشبورد ادمین به API وصل و لاگین تست شد</li>
+  <li>✅ Cron پشتیبان‌گیری روزانه (mongodump) تنظیم شد</li>
 </ul>
+<div class="alert ok"><b>تبریک!</b> اگر همه موارد بالا تیک خوردند، پلتفرم TIK TAK RUN شما به‌صورت کامل روی سرور Ubuntu در حال اجراست. 🎉</div>
 </div>
 </section>
 
 <footer>
-  <div class="seal">~ THE END ~</div>
-  <div style="margin-top:14px">TIK TAK RUN v1.0.0 — Shadow Realm Gothic</div>
-  <div style="margin-top:6px;font-size:12px">راهنما برای استقرار محصول | تاریخ تنظیم: خرداد ۱۴۰۵</div>
+  <div class="seal">TIK TAK RUN</div>
+  <div style="margin-top:10px">راهنمای استقرار Full-Stack · MongoDB Replica Set · نسخه ۱.۰.۰</div>
+  <div style="margin-top:6px;font-size:11px">ساخته‌شده برای استقرار روی Ubuntu Server — تمام مراحل بک‌اند، دیتابیس، WebSocket و داشبورد</div>
 </footer>
 
 </div>
