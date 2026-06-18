@@ -36,24 +36,33 @@ export const categoriesApi = {
 };
 
 // ==================== Reviews ====================
+// Backend: ReviewsAdminController @Controller('admin/reviews')
+//   GET  /            -> { data, total, page, limit }  (query: isApproved, gameId, page, limit, sortBy)
+//   POST /:id/approve -> sets isApproved=true
+//   POST /:id/reject  -> deletes review + notifies (body: { reason })
+//   DELETE /:id       -> hard delete
 export const reviewsApi = {
   getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<Review[]>>('/admin/reviews', { params: p }),
-  approve: (id: string) => apiClient.patch(`/admin/reviews/${id}/approve`),
-  reject: (id: string, note?: string) => apiClient.patch(`/admin/reviews/${id}/reject`, { note }),
+  approve: (id: string) => apiClient.post(`/admin/reviews/${id}/approve`),
+  reject: (id: string, reason = 'محتوای نامناسب') => apiClient.post(`/admin/reviews/${id}/reject`, { reason }),
   delete: (id: string) => apiClient.delete(`/admin/reviews/${id}`),
 };
 
 // ==================== Chats ====================
+// Backend: AdminChatController @Controller('admin')
+//   GET  /chats/messages            -> { success, data, meta:{total,page,limit} } (query: page, limit, status, userId, roomType)
+//   GET  /chats/stats               -> { success, data }
+//   POST /chats/messages/:id/hide   -> body { reason? }
+//   POST /chats/messages/:id/delete -> hard delete
+//   POST /users/:userId/mute        -> body { hours, reason? }
+//   POST /users/:userId/warn        -> body { message }
 export const chatsApi = {
-  getMessages: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<ChatMessage[]>>('/admin/chats', { params: p }),
-  getReported: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<ChatMessage[]>>('/admin/chats/reported', { params: p }),
-  hide: (id: string) => apiClient.patch(`/admin/chats/${id}/hide`),
-  delete: (id: string) => apiClient.delete(`/admin/chats/${id}`),
-  warn: (userId: string) => apiClient.post(`/admin/users/${userId}/warn`),
-  mute: (userId: string, duration: string) => apiClient.post(`/admin/users/${userId}/mute`, { duration }),
+  getMessages: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<ChatMessage[]>>('/admin/chats/messages', { params: p }),
   getStats: () => apiClient.get('/admin/chats/stats'),
-  getBannedWords: () => apiClient.get<{ words: string[] }>('/admin/chats/banned-words'),
-  updateBannedWords: (words: string[]) => apiClient.put('/admin/chats/banned-words', { words }),
+  hide: (id: string, reason?: string) => apiClient.post(`/admin/chats/messages/${id}/hide`, { reason }),
+  delete: (id: string) => apiClient.post(`/admin/chats/messages/${id}/delete`),
+  mute: (userId: string, hours: number, reason?: string) => apiClient.post(`/admin/users/${userId}/mute`, { hours, reason }),
+  warn: (userId: string, message: string) => apiClient.post(`/admin/users/${userId}/warn`, { message }),
 };
 
 // ==================== Tickets ====================
@@ -74,9 +83,12 @@ export const transactionsApi = {
   getStats: () => apiClient.get('/admin/transactions/stats'),
 };
 
+// Backend: PaymentsAdminController @Controller('admin/payments')
+//   GET /      -> { data, total, page, limit } (query: status, userId, bookingId, page, limit)
+//   GET /:id   -> single payment with booking
 export const paymentsApi = {
   getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<Payment[]>>('/admin/payments', { params: p }),
-  exportExcel: (p?: Record<string, unknown>) => apiClient.get('/admin/payments/export', { params: p, responseType: 'blob' }),
+  getById: (id: string) => apiClient.get<ApiResponse<Payment>>(`/admin/payments/${id}`),
 };
 
 export const reportsApi = {

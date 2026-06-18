@@ -1,157 +1,165 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageSquare, Shield, EyeOff, Trash2, AlertTriangle, VolumeX, Search, RefreshCw } from 'lucide-react';
-import { SectionHeader, StatsCard, FilterBar, Avatar, StatusBadge, ConfirmDialog } from '@/components/ui';
+import { SectionHeader, StatsCard, FilterBar, Avatar, ConfirmDialog, EmptyState, Pagination } from '@/components/ui';
 import { toJalaliDateTime, persianNum } from '@/lib/utils/format';
 import { chatsApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 
-type ChatRoomType = 'GLOBAL' | 'TEAM' | 'PRIVATE';
-type ChatMsgStatus = 'NORMAL' | 'REPORTED' | 'HIDDEN';
+type ChatMsgStatus = 'NORMAL' | 'REPORTED' | 'HIDDEN' | 'DELETED';
 
+// مدل واقعی بک‌اند: ChatMessage { id, roomId, userId, text, status, reportsCount, createdAt, user:{id,fullName,mobile} }
 interface AdminChatMessage {
   id: string;
+  roomId: string;
   userId: string;
-  user: {
-    id: string; name: string; nickname: string; avatar: string | undefined;
-    mobile: string; roles: string[]; isActive: boolean; isVip: boolean;
-    level: number; tier: string; xp: number; coins: number; diamonds: number; createdAt: string;
-  };
-  roomType: ChatRoomType;
-  content: string;
+  text: string;
   status: ChatMsgStatus;
   reportsCount: number;
   createdAt: string;
+  user: { id: string; fullName: string | null; mobile?: string } | null;
 }
 
-const MOCK_MESSAGES: AdminChatMessage[] = Array(20).fill(0).map((_, i) => ({
-  id: `msg${i + 1}`,
-  userId: `u${i % 5 + 1}`,
-  user: {
-    id: `u${i % 5 + 1}`,
-    name: ['علی احمدی', 'سارا محمدی', 'رضا کریمی', 'نیلوفر حسینی', 'امیر رضایی'][i % 5],
-    nickname: ['GhostPlayer', 'DarkShadow', 'FearMaster', 'ShadowLord', 'NightRider'][i % 5],
-    avatar: undefined,
-    mobile: '',
-    roles: [],
-    isActive: true,
-    isVip: i % 4 === 0,
-    level: (i % 10) + 1,
-    tier: 'SILVER' as const,
-    xp: 0, coins: 0, diamonds: 0, createdAt: '',
-  },
-  roomType: (['GLOBAL', 'TEAM', 'PRIVATE'][i % 3]) as ChatRoomType,
-  content: [
-    'این بازی واقعاً ترسناک بود! پیشنهاد می‌دم',
-    'کسی میاد تیم بزنه؟',
-    'اتاق فرار تاریک رو امتحان کنید',
-    'این پیام حاوی محتوای نامناسب است 🚫',
-    'بهترین تجربه عمرم بود!',
-  ][i % 5],
-  status: (['NORMAL', 'REPORTED', 'HIDDEN', 'NORMAL', 'NORMAL'][i % 5]) as ChatMsgStatus,
-  reportsCount: [0, 3, 0, 1, 0][i % 5],
-  createdAt: new Date(Date.now() - i * 180000).toISOString(),
-}));
+interface ChatStats {
+  messagesToday: number;
+  reportsToday: number;
+  mutedUsers: number;
+  bannedUsers: number;
+  peakHour?: number;
+}
+
+// این کنترلر مستقیماً { success, data, meta } برمی‌گرداند
+function readList<T = any>(res: any): { data: T[]; total: number } {
+  const body = res?.data;
+  const data = body?.data ?? [];
+  const total = body?.meta?.total ?? data.length;
+  return { data, total };
+}
+function readStats(res: any): ChatStats | null {
+  return res?.data?.data ?? res?.data ?? null;
+}
 
 export default function ChatsPage() {
-  const [messages, setMessages] = useState(MOCK_MESSAGES);
-  const [filter, setFilter] = useState({ roomType: '', status: '' });
+  const [messages, setMessages] = useState<AdminChatMessage[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<ChatStats | null>(null);
+
+  const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit] = useState(30);
+
   const [muteDialog, setMuteDialog] = useState<{ userId: string; name: string } | null>(null);
-  const [muteDuration, setMuteDuration] = useState('24h');
-  const [isLive, setIsLive] = useState(true);
+  const [muteHours, setMuteHours] = useState(24);
+  const [isLive, setIsLive] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Simulate live messages
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await chatsApi.getStats();
+      setStats(readStats(res));
+    } catch { /* بی‌صدا */ }
+  }, []);
+
+  const loadMessages = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, unknown> = { page, limit };
+      if (statusFilter) params.status = statusFilter;
+      const res = await chatsApi.getMessages(params);
+      const { data, total: t } = readList<AdminChatMessage>(res);
+      setMessages(data);
+      setTotal(t);
+    } catch {
+      toast.error('خطا در بارگذاری پیام‌ها');
+      setMessages([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit, statusFilter]);
+
+  useEffect(() => { loadMessages(); }, [loadMessages]);
+  useEffect(() => { loadStats(); }, [loadStats]);
+
+  // حالت زنده: هر ۱۰ ثانیه لیست را تازه‌سازی می‌کند (polling واقعی، نه شبیه‌سازی)
   useEffect(() => {
     if (!isLive) return;
-    const interval = setInterval(() => {
-      const newMsg: AdminChatMessage = {
-        id: `msg-${Date.now()}`,
-        userId: 'u1',
-        user: { ...MOCK_MESSAGES[0].user },
-        roomType: 'GLOBAL',
-        content: ['پیام جدید...', 'کاربر فعال شد', 'سوال در چت'][Math.floor(Math.random() * 3)],
-        status: 'NORMAL',
-        reportsCount: 0,
-        createdAt: new Date().toISOString(),
-      };
-      setMessages(prev => [newMsg, ...prev].slice(0, 50));
-    }, 10000);
+    const interval = setInterval(() => { loadMessages(); loadStats(); }, 10000);
     return () => clearInterval(interval);
-  }, [isLive]);
+  }, [isLive, loadMessages, loadStats]);
 
   const handleHide = async (id: string) => {
     try {
       await chatsApi.hide(id);
-      setMessages(prev => prev.map(m => m.id === id ? { ...m, status: 'HIDDEN' as const } : m));
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, status: 'HIDDEN' } : m));
       toast.success('پیام مخفی شد');
-    } catch { toast.error('خطا'); }
+    } catch { toast.error('خطا در مخفی‌کردن پیام'); }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await chatsApi.delete(id);
       setMessages(prev => prev.filter(m => m.id !== id));
+      setTotal(t => Math.max(0, t - 1));
       toast.success('پیام حذف شد');
-    } catch { toast.error('خطا'); }
+    } catch { toast.error('خطا در حذف پیام'); }
   };
 
   const handleMute = async () => {
     if (!muteDialog) return;
     try {
-      await chatsApi.mute(muteDialog.userId, muteDuration);
-      toast.success(`کاربر ${muteDialog.name} برای ${muteDuration} بی‌صدا شد`);
+      await chatsApi.mute(muteDialog.userId, muteHours, 'تخلف در چت');
+      toast.success(`کاربر ${muteDialog.name} برای ${persianNum(muteHours)} ساعت بی‌صدا شد`);
       setMuteDialog(null);
-    } catch { toast.error('خطا'); }
+    } catch { toast.error('خطا در بی‌صدا کردن کاربر'); }
   };
 
+  // جستجوی کلاینتی روی صفحه‌ی جاری
   const filtered = messages.filter(m =>
-    (!filter.roomType || m.roomType === filter.roomType) &&
-    (!filter.status || m.status === filter.status) &&
-    (!search || m.content.includes(search) || m.user.name.includes(search))
+    !search || m.text?.includes(search) || m.user?.fullName?.includes(search)
   );
 
-  const stats = [
-    { label: 'پیام‌های امروز', value: persianNum(347), color: 'blue' as const, icon: <MessageSquare className="w-5 h-5" /> },
-    { label: 'گزارش‌های امروز', value: persianNum(12), color: 'red' as const, icon: <AlertTriangle className="w-5 h-5" /> },
-    { label: 'کاربران Mute', value: persianNum(3), color: 'yellow' as const, icon: <VolumeX className="w-5 h-5" /> },
-    { label: 'کاربران Ban', value: persianNum(1), color: 'red' as const, icon: <Shield className="w-5 h-5" /> },
+  const statCards = [
+    { label: 'پیام‌های امروز', value: persianNum(stats?.messagesToday ?? 0), color: 'blue' as const, icon: <MessageSquare className="w-5 h-5" /> },
+    { label: 'گزارش‌های امروز', value: persianNum(stats?.reportsToday ?? 0), color: 'red' as const, icon: <AlertTriangle className="w-5 h-5" /> },
+    { label: 'کاربران بی‌صدا', value: persianNum(stats?.mutedUsers ?? 0), color: 'yellow' as const, icon: <VolumeX className="w-5 h-5" /> },
+    { label: 'کاربران مسدود', value: persianNum(stats?.bannedUsers ?? 0), color: 'red' as const, icon: <Shield className="w-5 h-5" /> },
   ];
 
   return (
     <div className="fade-in">
       <SectionHeader
-        title="مانیتور چت زنده"
-        subtitle="نظارت real-time بر پیام‌های چت کاربران"
+        title="مانیتور چت"
+        subtitle="نظارت و مدیریت پیام‌های چت کاربران"
         breadcrumb={[{ label: 'داشبورد' }, { label: 'چت' }]}
         actions={
-          <button
-            onClick={() => setIsLive(!isLive)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-medium text-sm ${isLive ? 'border-green-500/30 bg-green-500/10 text-green-400' : 'border-slate-700 text-slate-400 hover:text-white'}`}
-          >
-            <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
-            {isLive ? 'زنده' : 'متوقف'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { loadMessages(); loadStats(); }} className="btn-secondary" title="بارگذاری مجدد">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={() => setIsLive(!isLive)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-medium text-sm ${isLive ? 'border-green-500/30 bg-green-500/10 text-green-400' : 'border-slate-700 text-slate-400 hover:text-white'}`}
+            >
+              <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
+              {isLive ? 'زنده (هر ۱۰ث)' : 'متوقف'}
+            </button>
+          </div>
         }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {stats.map((s, i) => <StatsCard key={i} {...s} />)}
+        {statCards.map((s, i) => <StatsCard key={i} {...s} />)}
       </div>
 
-      <FilterBar onReset={() => { setFilter({ roomType: '', status: '' }); setSearch(''); }}>
+      <FilterBar onReset={() => { setStatusFilter(''); setSearch(''); setPage(1); }}>
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input type="text" placeholder="جستجو..." value={search} onChange={e => setSearch(e.target.value)} className="input-field pr-10" />
         </div>
-        <select value={filter.roomType} onChange={e => setFilter(p => ({ ...p, roomType: e.target.value }))} className="select-field w-36">
-          <option value="">همه اتاق‌ها</option>
-          <option value="GLOBAL">عمومی</option>
-          <option value="TEAM">تیم</option>
-          <option value="PRIVATE">خصوصی</option>
-        </select>
-        <select value={filter.status} onChange={e => setFilter(p => ({ ...p, status: e.target.value }))} className="select-field w-36">
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="select-field w-40">
           <option value="">همه وضعیت‌ها</option>
           <option value="NORMAL">عادی</option>
           <option value="REPORTED">گزارش‌شده</option>
@@ -161,73 +169,79 @@ export default function ChatsPage() {
 
       <div className="admin-card">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-slate-400 text-sm">{persianNum(filtered.length)} پیام</p>
-          <button onClick={() => setMessages(MOCK_MESSAGES)} className="btn-ghost text-sm">
-            <RefreshCw className="w-4 h-4" />
-            بروزرسانی
-          </button>
+          <p className="text-slate-400 text-sm">{persianNum(total)} پیام</p>
         </div>
 
-        <div className="space-y-3 max-h-[600px] overflow-y-auto">
-          {filtered.map(msg => (
-            <div
-              key={msg.id}
-              className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${
-                msg.status === 'REPORTED'
-                  ? 'border-red-500/30 bg-red-500/5'
-                  : msg.status === 'HIDDEN'
-                  ? 'border-slate-700/50 bg-slate-700/20 opacity-60'
-                  : 'border-slate-700/30 hover:border-slate-600/50'
-              }`}
-            >
-              <Avatar name={msg.user.name} size="sm" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="text-white text-sm font-medium">{msg.user.name}</span>
-                  {msg.user.nickname && <span className="text-slate-500 text-xs">@{msg.user.nickname}</span>}
-                  <span className={`badge text-xs ${msg.roomType === 'GLOBAL' ? 'bg-blue-500/20 text-blue-400' : msg.roomType === 'TEAM' ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-500/20 text-slate-400'}`}>
-                    {msg.roomType === 'GLOBAL' ? 'عمومی' : msg.roomType === 'TEAM' ? 'تیم' : 'خصوصی'}
-                  </span>
-                  {msg.reportsCount > 0 && (
-                    <span className="badge bg-red-500/20 text-red-400">
-                      {msg.reportsCount} گزارش
-                    </span>
-                  )}
-                  <span className="text-slate-600 text-xs mr-auto">{toJalaliDateTime(msg.createdAt)}</span>
+        {loading ? (
+          <div className="text-center py-16 text-slate-500">
+            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-3" />
+            در حال بارگذاری...
+          </div>
+        ) : filtered.length === 0 ? (
+          <EmptyState title="پیامی یافت نشد" description="هیچ پیامی با این فیلتر وجود ندارد." />
+        ) : (
+          <div className="space-y-3 max-h-[600px] overflow-y-auto">
+            {filtered.map(msg => (
+              <div
+                key={msg.id}
+                className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${
+                  msg.status === 'REPORTED'
+                    ? 'border-red-500/30 bg-red-500/5'
+                    : msg.status === 'HIDDEN' || msg.status === 'DELETED'
+                    ? 'border-slate-700/50 bg-slate-700/20 opacity-60'
+                    : 'border-slate-700/30 hover:border-slate-600/50'
+                }`}
+              >
+                <Avatar name={msg.user?.fullName || 'کاربر'} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-white text-sm font-medium">{msg.user?.fullName || 'کاربر ناشناس'}</span>
+                    {msg.user?.mobile && <span className="text-slate-500 text-xs font-mono">{msg.user.mobile}</span>}
+                    {msg.reportsCount > 0 && (
+                      <span className="badge bg-red-500/20 text-red-400">
+                        {persianNum(msg.reportsCount)} گزارش
+                      </span>
+                    )}
+                    <span className="text-slate-600 text-xs mr-auto">{toJalaliDateTime(msg.createdAt)}</span>
+                  </div>
+                  <p className={`text-sm leading-relaxed ${msg.status === 'HIDDEN' || msg.status === 'DELETED' ? 'line-through text-slate-500' : 'text-slate-300'}`}>
+                    {msg.text}
+                  </p>
                 </div>
-                <p className={`text-sm leading-relaxed ${msg.status === 'HIDDEN' ? 'line-through text-slate-500' : 'text-slate-300'}`}>
-                  {msg.content}
-                </p>
-              </div>
-              <div className="flex gap-1 flex-shrink-0">
-                {msg.status !== 'HIDDEN' && (
+                <div className="flex gap-1 flex-shrink-0">
+                  {msg.status !== 'HIDDEN' && msg.status !== 'DELETED' && (
+                    <button
+                      onClick={() => handleHide(msg.id)}
+                      className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-yellow-400"
+                      title="مخفی کردن"
+                    >
+                      <EyeOff className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleHide(msg.id)}
-                    className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-yellow-400"
-                    title="مخفی کردن"
+                    onClick={() => setMuteDialog({ userId: msg.userId, name: msg.user?.fullName || 'کاربر' })}
+                    className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-orange-400"
+                    title="بی‌صدا کردن"
                   >
-                    <EyeOff className="w-4 h-4" />
+                    <VolumeX className="w-4 h-4" />
                   </button>
-                )}
-                <button
-                  onClick={() => setMuteDialog({ userId: msg.userId, name: msg.user.name })}
-                  className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-orange-400"
-                  title="بی‌صدا کردن"
-                >
-                  <VolumeX className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(msg.id)}
-                  className="p-1.5 hover:bg-red-900/20 rounded-lg text-slate-400 hover:text-red-400"
-                  title="حذف پیام"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  <button
+                    onClick={() => handleDelete(msg.id)}
+                    className="p-1.5 hover:bg-red-900/20 rounded-lg text-slate-400 hover:text-red-400"
+                    title="حذف پیام"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+
+        {!loading && total > limit && (
+          <Pagination currentPage={page} totalPages={Math.ceil(total / limit)} onPageChange={setPage} total={total} />
+        )}
       </div>
 
       {/* Mute Dialog */}
@@ -241,11 +255,11 @@ export default function ChatsPage() {
             <div className="space-y-3">
               <p>مدت زمان بی‌صدا کردن را انتخاب کنید:</p>
               <div className="flex gap-2">
-                {[{ v: '24h', l: '۲۴ ساعت' }, { v: '7d', l: '۷ روز' }, { v: '30d', l: '۳۰ روز' }].map(o => (
+                {[{ v: 24, l: '۲۴ ساعت' }, { v: 168, l: '۷ روز' }, { v: 720, l: '۳۰ روز' }].map(o => (
                   <button
                     key={o.v}
-                    onClick={() => setMuteDuration(o.v)}
-                    className={`px-3 py-1.5 rounded-lg text-sm border ${muteDuration === o.v ? 'border-red-500 text-red-400 bg-red-500/10' : 'border-slate-700 text-slate-400'}`}
+                    onClick={() => setMuteHours(o.v)}
+                    className={`px-3 py-1.5 rounded-lg text-sm border ${muteHours === o.v ? 'border-red-500 text-red-400 bg-red-500/10' : 'border-slate-700 text-slate-400'}`}
                   >
                     {o.l}
                   </button>

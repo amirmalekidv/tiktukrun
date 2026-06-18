@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Game, Review, ApiResponse } from '../types';
+import type { Game, ApiResponse } from '../types';
 
 export const gamesApi = {
   getAll: (params?: Record<string, unknown>) =>
@@ -21,11 +21,12 @@ export const gamesApi = {
   delete: (id: string) =>
     apiClient.delete(`/admin/games/${id}`),
 
+  // backend: @Post(':id/toggle-active') / @Post(':id/toggle-featured')
   toggleActive: (id: string) =>
-    apiClient.patch(`/admin/games/${id}/toggle-active`),
+    apiClient.post(`/admin/games/${id}/toggle-active`),
 
   toggleFeatured: (id: string) =>
-    apiClient.patch(`/admin/games/${id}/toggle-featured`),
+    apiClient.post(`/admin/games/${id}/toggle-featured`),
 
   uploadImage: (id: string, file: File) => {
     const fd = new FormData();
@@ -35,17 +36,13 @@ export const gamesApi = {
     });
   },
 
-  deleteImage: (id: string, imageUrl: string) =>
-    apiClient.delete(`/admin/games/${id}/images`, { data: { imageUrl } }),
+  // backend: @Delete(':id/images/:imageId')
+  deleteImage: (id: string, imageId: string) =>
+    apiClient.delete(`/admin/games/${id}/images/${imageId}`),
 
-  reorderImages: (id: string, images: string[]) =>
-    apiClient.patch(`/admin/games/${id}/images/reorder`, { images }),
-
-  getReviews: (id: string, params?: Record<string, unknown>) =>
-    apiClient.get<ApiResponse<Review[]>>(`/admin/games/${id}/reviews`, { params }),
-
-  getStats: (id: string) =>
-    apiClient.get(`/admin/games/${id}/stats`),
+  // backend: @Post(':id/recompute-rank')
+  recomputeRank: (id: string) =>
+    apiClient.post(`/admin/games/${id}/recompute-rank`),
 
   // سطح‌بندی بازی: STANDARD | SILVER | GOLD | PLATINUM | DIAMOND
   setTier: (id: string, tier: string) =>

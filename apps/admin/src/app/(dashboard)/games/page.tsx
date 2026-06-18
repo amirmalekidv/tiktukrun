@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Grid, List, Star, Edit, Trash2, ToggleLeft, Bookmark } from 'lucide-react';
-import { SectionHeader, StatsCard, FilterBar, StatusBadge, Toggle, ConfirmDialog } from '@/components/ui';
+import { Plus, Search, Grid, List, Star, Edit, Trash2, ToggleLeft, Bookmark, RefreshCw } from 'lucide-react';
+import { SectionHeader, StatsCard, FilterBar, Toggle, ConfirmDialog, Pagination, EmptyState } from '@/components/ui';
 import { formatToman, persianNum, FEAR_EMOJIS, fearLabel } from '@/lib/utils/format';
 import { gamesApi } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -10,45 +10,47 @@ import type { Game } from '@/lib/types';
 import { GAME_TIER_FA, GAME_TIER_STYLE } from '@/lib/types';
 import { Gamepad2, TrendingUp, BookOpen } from 'lucide-react';
 
-const MOCK_GAMES: Game[] = Array(12).fill(0).map((_, i) => ({
-  id: `g${i + 1}`,
-  title: ['اتاق فرار تاریک', 'ترس مطلق', 'لیزرتگ پرو', 'VR ماجرا', 'پینت‌بال', 'بردگیم رقابتی', 'سینما ترس', 'مانع خطرناک', 'واقعیت افزوده', 'اتاق جنگل', 'ماجراجویی زیر آب', 'معمای مخوف'][i],
-  slug: `game-${i + 1}`,
-  subtitle: 'تجربه ترس واقعی',
-  categoryId: `cat${(i % 5) + 1}`,
-  category: { id: `cat${(i % 5) + 1}`, name: ['اتاق فرار', 'لیزرتگ', 'VR', 'پینت‌بال', 'بردگیم'][i % 5], slug: '', isActive: true },
-  branchId: `br${(i % 3) + 1}`,
-  branch: { id: `br${(i % 3) + 1}`, name: ['تهران', 'مشهد', 'اصفهان'][i % 3], cityId: '', address: '', isActive: true, createdAt: '' },
-  fearLevel: (i % 5) + 1,
-  difficulty: ['EASY', 'MEDIUM', 'HARD', 'EXPERT'][i % 4] as 'EASY',
-  tier: (['STANDARD', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND'] as const)[i % 5],
-  likesCount: (i + 1) * 7,
-  commentsCount: (i + 1) * 2,
-  minPlayers: (i % 2) + 2,
-  maxPlayers: (i % 4) + 4,
-  duration: [45, 60, 90][i % 3],
-  pricePerPerson: String((i + 1) * 100000 + 150000),
-  tags: ['ترس', 'هیجان', 'چالش'],
-  images: [],
-  isActive: i % 5 !== 4,
-  isFeatured: i % 4 === 0,
-  rating: Math.round((3.5 + (i % 5) * 0.3) * 10) / 10,
-  totalBookings: (i + 1) * 23,
-  createdAt: '2024-01-01',
-  updatedAt: '2024-03-01',
-}));
-
 type ViewMode = 'table' | 'grid';
+
+// خواندن داده از پاسخ بک‌اند (ResponseInterceptor → { success, data: {...} })
+function unwrap<T = any>(res: any): T {
+  const d = res?.data;
+  if (d && typeof d === 'object' && 'data' in d) return d.data as T;
+  return d as T;
+}
 
 export default function GamesPage() {
   const [view, setView] = useState<ViewMode>('table');
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [branchFilter, setBranchFilter] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
-  const [featuredFilter, setFeaturedFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
+
+  const [games, setGames] = useState<Game[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const loadGames = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, unknown> = { page, limit };
+      if (activeFilter) params.isActive = activeFilter === 'active' ? 'true' : 'false';
+      const res = await gamesApi.getAll(params);
+      const payload = unwrap<{ data: Game[]; total: number }>(res);
+      setGames(payload?.data ?? []);
+      setTotal(payload?.total ?? 0);
+    } catch {
+      toast.error('خطا در بارگذاری بازی‌ها');
+      setGames([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit, activeFilter]);
+
+  useEffect(() => { loadGames(); }, [loadGames]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -56,6 +58,7 @@ export default function GamesPage() {
     try {
       await gamesApi.delete(deleteId);
       toast.success('بازی حذف شد');
+      loadGames();
     } catch {
       toast.error('خطا در حذف بازی');
     } finally {
@@ -65,28 +68,45 @@ export default function GamesPage() {
   };
 
   const handleToggleActive = async (id: string) => {
+    // به‌روزرسانی خوش‌بینانه
+    setGames(prev => prev.map(g => g.id === id ? { ...g, isActive: !g.isActive } : g));
     try {
       await gamesApi.toggleActive(id);
       toast.success('وضعیت بازی تغییر کرد');
     } catch {
       toast.error('خطا');
+      loadGames();
     }
   };
 
   const handleToggleFeatured = async (id: string) => {
+    setGames(prev => prev.map(g => g.id === id ? { ...g, isFeatured: !g.isFeatured } : g));
     try {
       await gamesApi.toggleFeatured(id);
       toast.success('وضعیت ویژه تغییر کرد');
     } catch {
       toast.error('خطا');
+      loadGames();
     }
   };
 
+  // فیلتر جستجو در سمت کلاینت روی صفحه‌ی جاری
+  const filtered = games.filter(g =>
+    !search ||
+    g.title?.includes(search) ||
+    g.category?.name?.includes(search) ||
+    g.branch?.name?.includes(search)
+  );
+
+  const activeCount = games.filter(g => g.isActive).length;
+  const featuredCount = games.filter(g => g.isFeatured).length;
+  const totalBookings = games.reduce((s, g) => s + (g.totalBookings || 0), 0);
+
   const stats = [
-    { label: 'کل بازی‌ها', value: persianNum(12), icon: <Gamepad2 className="w-5 h-5" />, color: 'red' as const },
-    { label: 'بازی‌های فعال', value: persianNum(10), icon: <ToggleLeft className="w-5 h-5" />, color: 'green' as const },
-    { label: 'بازی‌های ویژه', value: persianNum(3), icon: <Bookmark className="w-5 h-5" />, color: 'yellow' as const },
-    { label: 'کل رزروها', value: persianNum(1842), icon: <BookOpen className="w-5 h-5" />, color: 'blue' as const },
+    { label: 'کل بازی‌ها', value: persianNum(total), icon: <Gamepad2 className="w-5 h-5" />, color: 'red' as const },
+    { label: 'فعال (این صفحه)', value: persianNum(activeCount), icon: <ToggleLeft className="w-5 h-5" />, color: 'green' as const },
+    { label: 'ویژه (این صفحه)', value: persianNum(featuredCount), icon: <Bookmark className="w-5 h-5" />, color: 'yellow' as const },
+    { label: 'رزروها (این صفحه)', value: persianNum(totalBookings), icon: <BookOpen className="w-5 h-5" />, color: 'blue' as const },
   ];
 
   return (
@@ -96,10 +116,15 @@ export default function GamesPage() {
         subtitle="لیست، ایجاد و ویرایش تمام بازی‌های پلتفرم"
         breadcrumb={[{ label: 'داشبورد', href: '/dashboard' }, { label: 'بازی‌ها' }]}
         actions={
-          <Link href="/games/new" className="btn-primary">
-            <Plus className="w-4 h-4" />
-            بازی جدید
-          </Link>
+          <div className="flex items-center gap-2">
+            <button onClick={loadGames} className="btn-secondary" title="بارگذاری مجدد">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <Link href="/games/new" className="btn-primary">
+              <Plus className="w-4 h-4" />
+              بازی جدید
+            </Link>
+          </div>
         }
       />
 
@@ -107,7 +132,7 @@ export default function GamesPage() {
         {stats.map((s, i) => <StatsCard key={i} {...s} />)}
       </div>
 
-      <FilterBar onReset={() => { setSearch(''); setCategoryFilter(''); setBranchFilter(''); }}>
+      <FilterBar onReset={() => { setSearch(''); setActiveFilter(''); setPage(1); }}>
         <div className="relative flex-1 min-w-48">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
@@ -118,13 +143,7 @@ export default function GamesPage() {
             className="input-field pr-10"
           />
         </div>
-        <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="select-field w-40">
-          <option value="">همه دسته‌ها</option>
-          <option value="cat1">اتاق فرار</option>
-          <option value="cat2">لیزرتگ</option>
-          <option value="cat3">VR</option>
-        </select>
-        <select value={activeFilter} onChange={e => setActiveFilter(e.target.value)} className="select-field w-36">
+        <select value={activeFilter} onChange={e => { setActiveFilter(e.target.value); setPage(1); }} className="select-field w-36">
           <option value="">همه وضعیت‌ها</option>
           <option value="active">فعال</option>
           <option value="inactive">غیرفعال</option>
@@ -141,7 +160,17 @@ export default function GamesPage() {
         </div>
       </FilterBar>
 
-      {view === 'table' ? (
+      {loading ? (
+        <div className="admin-card text-center py-16 text-slate-500">
+          <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-3" />
+          در حال بارگذاری...
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title="بازی‌ای یافت نشد"
+          description="هنوز بازی‌ای ثبت نشده یا با فیلتر فعلی مطابقت ندارد."
+        />
+      ) : view === 'table' ? (
         <div className="admin-card">
           <div className="overflow-x-auto">
             <table className="admin-table">
@@ -161,7 +190,7 @@ export default function GamesPage() {
                 </tr>
               </thead>
               <tbody>
-                {MOCK_GAMES.map(game => (
+                {filtered.map(game => (
                   <tr key={game.id}>
                     <td>
                       <div className="flex items-center gap-3">
@@ -176,7 +205,7 @@ export default function GamesPage() {
                         </div>
                         <div>
                           <p className="text-white font-medium">{game.title}</p>
-                          <p className="text-slate-500 text-xs">{game.duration} دقیقه</p>
+                          <p className="text-slate-500 text-xs">{persianNum(game.duration || 0)} دقیقه</p>
                         </div>
                       </div>
                     </td>
@@ -194,15 +223,15 @@ export default function GamesPage() {
                     </td>
                     <td>
                       <div className="flex items-center gap-1">
-                        <span className="text-lg">{FEAR_EMOJIS[game.fearLevel - 1]}</span>
-                        <span className="text-slate-400 text-xs">{fearLabel(game.fearLevel)}</span>
+                        <span className="text-lg">{FEAR_EMOJIS[(game.fearLevel || 1) - 1]}</span>
+                        <span className="text-slate-400 text-xs">{fearLabel(game.fearLevel || 1)}</span>
                       </div>
                     </td>
-                    <td className="text-slate-300">{persianNum(game.minPlayers)}-{persianNum(game.maxPlayers)}</td>
+                    <td className="text-slate-300">{persianNum(game.minPlayers || 0)}-{persianNum(game.maxPlayers || 0)}</td>
                     <td>
                       <div className="flex items-center gap-1">
                         <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                        <span className="text-white">{game.rating}</span>
+                        <span className="text-white">{game.rating ?? '—'}</span>
                       </div>
                     </td>
                     <td className="text-slate-300">{persianNum(game.totalBookings || 0)}</td>
@@ -233,12 +262,16 @@ export default function GamesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {MOCK_GAMES.map(game => (
+          {filtered.map(game => (
             <div key={game.id} className="admin-card hover:border-slate-600 transition-all group">
               <div className="aspect-video bg-slate-700 rounded-xl mb-3 overflow-hidden relative">
-                <div className="w-full h-full flex items-center justify-center text-slate-600">
-                  <Gamepad2 className="w-8 h-8" />
-                </div>
+                {game.coverImage ? (
+                  <img src={game.coverImage} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-600">
+                    <Gamepad2 className="w-8 h-8" />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
                   <Link href={`/games/${game.id}`} className="btn-secondary text-xs py-1.5 px-3">
                     <Edit className="w-3 h-3" /> ویرایش
@@ -247,9 +280,14 @@ export default function GamesPage() {
                     <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
-                <span className="absolute top-2 right-2 text-2xl">{FEAR_EMOJIS[game.fearLevel - 1]}</span>
+                <span className="absolute top-2 right-2 text-2xl">{FEAR_EMOJIS[(game.fearLevel || 1) - 1]}</span>
                 {game.isFeatured && (
                   <span className="absolute top-2 left-2 badge bg-yellow-500/80 text-yellow-100 text-xs">ویژه</span>
+                )}
+                {game.tier && (
+                  <span className={`absolute bottom-2 left-2 badge text-xs ${GAME_TIER_STYLE[game.tier]}`}>
+                    {GAME_TIER_FA[game.tier]}
+                  </span>
                 )}
               </div>
               <h3 className="text-white font-bold mb-1">{game.title}</h3>
@@ -258,7 +296,7 @@ export default function GamesPage() {
                 <p className="text-red-400 font-bold text-sm">{formatToman(game.pricePerPerson)}</p>
                 <div className="flex items-center gap-1">
                   <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                  <span className="text-white text-sm">{game.rating}</span>
+                  <span className="text-white text-sm">{game.rating ?? '—'}</span>
                 </div>
               </div>
               <div className="flex items-center justify-between mt-3">
@@ -267,6 +305,16 @@ export default function GamesPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!loading && total > limit && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={page}
+            totalPages={Math.ceil(total / limit)}
+            onPageChange={setPage}
+          />
         </div>
       )}
 

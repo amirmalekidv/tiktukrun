@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useCustomers } from '@/hooks/useCustomers'
 import { CustomersTable } from '@/components/customers/CustomersTable'
@@ -13,7 +13,7 @@ import { customersApi } from '@/lib/api/customers'
 import toast from 'react-hot-toast'
 import type { Customer, CustomerFilterParams } from '@/types'
 
-export default function CustomersPage() {
+function CustomersPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -161,5 +161,14 @@ export default function CustomersPage() {
         />
       )}
     </div>
+  )
+}
+
+// useSearchParams باید داخل یک مرز Suspense باشد (الزام Next.js App Router)
+export default function CustomersPage() {
+  return (
+    <Suspense fallback={<div className="p-5 text-slate-500">در حال بارگذاری...</div>}>
+      <CustomersPageInner />
+    </Suspense>
   )
 }
