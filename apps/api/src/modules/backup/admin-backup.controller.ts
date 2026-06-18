@@ -25,7 +25,7 @@ export class AdminBackupController {
   constructor(private readonly backupService: BackupService) {}
 
   @Post('create')
-  @ApiOperation({ summary: 'ایجاد پشتیبان کامل (pg_dump + gzip)' })
+  @ApiOperation({ summary: 'ایجاد پشتیبان کامل (mongodump --archive --gzip)' })
   async createBackup() {
     const result = await this.backupService.createBackup();
     return { success: true, data: result };

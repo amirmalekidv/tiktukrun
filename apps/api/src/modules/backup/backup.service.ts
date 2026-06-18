@@ -24,7 +24,14 @@ export class BackupService {
   }
 
   /**
-   * Create database backup using pg_dump + gzip
+   * Create database backup using mongodump (gzip-compressed archive).
+   *
+   * MongoDB migration: replaced the old pg_dump|gzip pipeline with
+   * `mongodump --uri=<DATABASE_URL> --archive --gzip`, which streams a single
+   * self-contained, already-compressed archive to stdout. We pipe that
+   * straight to disk — no separate gzip process needed.
+   *
+   * Restore with: `mongorestore --uri=<DATABASE_URL> --archive=<file> --gzip`
    */
   async createBackup(): Promise<{ filename: string; size: number }> {
     // Check if backup is already running
@@ -38,15 +45,18 @@ export class BackupService {
       .toISOString()
       .replace(/[:.]/g, '-')
       .slice(0, 19);
-    const filename = `backup-${timestamp}.sql.gz`;
+    const filename = `backup-${timestamp}.archive.gz`;
     const filepath = path.join(BACKUP_DIR, filename);
+    const dbUri =
+      process.env.DATABASE_URL ??
+      'mongodb://localhost:27017/tiktakrun?replicaSet=rs0&directConnection=true';
 
     // Create running flag
     fs.writeFileSync(BACKUP_RUNNING_FLAG, timestamp);
 
     return new Promise((resolve, reject) => {
-      // FIX: Use a single settled flag to prevent resolve/reject being called multiple times
-      // (race condition between output 'finish' and pgDump 'close' with non-zero exit code)
+      // Single settled flag prevents resolve/reject being called twice
+      // (race between output 'finish' and mongodump 'close').
       let settled = false;
       const settle = (fn: () => void) => {
         if (settled) return;
@@ -55,14 +65,13 @@ export class BackupService {
         fn();
       };
 
-      // FIX: Track pgDump exit code; output 'finish' must wait for pgDump to close cleanly
-      let pgDumpExitCode: number | null = null;
+      let dumpExitCode: number | null = null;
       let outputFinished = false;
 
       const tryResolve = () => {
-        // Only resolve when BOTH pgDump has closed with code 0 AND output has finished writing
-        if (pgDumpExitCode === null || !outputFinished) return;
-        if (pgDumpExitCode !== 0) return; // already rejected in pgDump.on('close')
+        // Resolve only when mongodump exited 0 AND the file finished writing.
+        if (dumpExitCode === null || !outputFinished) return;
+        if (dumpExitCode !== 0) return; // already rejected in close handler
         settle(() => {
           try {
             if (fs.existsSync(BACKUP_RUNNING_FLAG)) {
@@ -85,38 +94,34 @@ export class BackupService {
       }, BACKUP_TIMEOUT_MS);
 
       try {
-        const pgDump = spawn('pg_dump', [
-          process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/tiktakrun',
-          '--no-password',
-          '--format=plain',
+        const mongodump = spawn('mongodump', [
+          `--uri=${dbUri}`,
+          '--archive',
+          '--gzip',
         ]);
 
-        const gzip = spawn('gzip', ['-9', '-c']);
         const output = fs.createWriteStream(filepath);
+        mongodump.stdout.pipe(output);
 
-        pgDump.stdout.pipe(gzip.stdin);
-        gzip.stdout.pipe(output);
-
-        // FIX: On pg_dump spawn error, properly reject with cleanup
-        pgDump.on('error', (err) => {
-          this.logger.error(`pg_dump error: ${err.message}`);
-          settle(() => {
-            this.cleanup(filepath);
-            reject(new Error(`pg_dump spawn error: ${err.message}`));
-          });
+        // Capture stderr for diagnostics (mongodump logs progress there).
+        let stderrTail = '';
+        mongodump.stderr.on('data', (chunk) => {
+          stderrTail = (stderrTail + chunk.toString()).slice(-2000);
         });
 
-        // FIX: On gzip error, properly reject with cleanup
-        gzip.on('error', (err) => {
-          this.logger.error(`gzip error: ${err.message}`);
+        mongodump.on('error', (err) => {
+          this.logger.error(`mongodump error: ${err.message}`);
           settle(() => {
             this.cleanup(filepath);
-            reject(new Error(`gzip error: ${err.message}`));
+            reject(
+              new Error(
+                `mongodump spawn error: ${err.message} — آیا ابزار mongodump (mongodb-database-tools) نصب است؟`,
+              ),
+            );
           });
         });
 
         output.on('finish', () => {
-          // FIX: Do NOT resolve here immediately — wait for pgDump exit code too
           outputFinished = true;
           tryResolve();
         });
@@ -128,16 +133,15 @@ export class BackupService {
           });
         });
 
-        pgDump.on('close', (code) => {
-          pgDumpExitCode = code ?? 1;
-          if (pgDumpExitCode !== 0) {
-            // FIX: pg_dump failed — reject regardless of whether output finished
+        mongodump.on('close', (code) => {
+          dumpExitCode = code ?? 1;
+          if (dumpExitCode !== 0) {
+            this.logger.error(`mongodump failed: ${stderrTail}`);
             settle(() => {
               this.cleanup(filepath);
-              reject(new Error(`pg_dump exited with code ${pgDumpExitCode}`));
+              reject(new Error(`mongodump exited with code ${dumpExitCode}`));
             });
           } else {
-            // pg_dump OK — check if output already finished
             tryResolve();
           }
         });
@@ -158,7 +162,12 @@ export class BackupService {
 
     const files = fs
       .readdirSync(BACKUP_DIR)
-      .filter((f) => f.endsWith('.sql.gz') || f.endsWith('.tar.gz'))
+      .filter(
+        (f) =>
+          f.endsWith('.archive.gz') ||
+          f.endsWith('.sql.gz') ||
+          f.endsWith('.tar.gz'),
+      )
       .map((filename) => {
         const filepath = path.join(BACKUP_DIR, filename);
         const stats = fs.statSync(filepath);
