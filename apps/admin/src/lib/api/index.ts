@@ -145,13 +145,12 @@ export const levelsApi = {
   updateBulk: (levels: Partial<Level>[]) => apiClient.put('/admin/levels', { levels }),
 };
 
+// NOTE: There is no admin CRUD endpoint for avatar items in the backend.
+// The only catalog source is the user-scoped read endpoint GET /users/me/avatar/items
+// which returns the full active catalog (each item annotated with ownership status).
+// The admin avatars page is therefore read-only.
 export const avatarsApi = {
-  getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<AvatarItem[]>>('/admin/avatars', { params: p }),
-  create: (d: FormData) => apiClient.post<ApiResponse<AvatarItem>>('/admin/avatars', d, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  update: (id: string, d: Partial<AvatarItem>) => apiClient.patch<ApiResponse<AvatarItem>>(`/admin/avatars/${id}`, d),
-  delete: (id: string) => apiClient.delete(`/admin/avatars/${id}`),
+  getAll: () => apiClient.get<ApiResponse<AvatarItem[]>>('/users/me/avatar/items'),
 };
 
 // ==================== Discounts ====================
