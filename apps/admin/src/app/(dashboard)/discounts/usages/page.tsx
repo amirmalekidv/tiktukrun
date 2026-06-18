@@ -1,197 +1,189 @@
 'use client';
 
-import { useState } from 'react';
-import { SectionHeader, StatusBadge } from '@/components/ui';
-import { FiTag, FiDownload, FiFilter, FiTrendingUp } from 'react-icons/fi';
+import { useState, useEffect, useCallback } from 'react';
+import { SectionHeader, EmptyState, Pagination } from '@/components/ui';
+import { FiTag, FiFilter } from 'react-icons/fi';
+import { RefreshCw } from 'lucide-react';
+import { discountsApi } from '@/lib/api';
+import { toJalaliDateTime, formatToman, persianNum } from '@/lib/utils/format';
+import toast from 'react-hot-toast';
+
+interface DiscountCodeLite {
+  id: string;
+  code: string;
+  usedCount?: number;
+}
 
 interface DiscountUsage {
   id: string;
-  code: string;
+  codeId: string;
   userId: string;
-  userName: string;
   bookingId: string;
-  gameName: string;
-  discountType: 'percent' | 'fixed';
-  discountValue: number;
-  originalAmount: number;
-  discountAmount: number;
-  finalAmount: number;
-  usedAt: string;
-  status: 'applied' | 'reversed';
+  savedAmount: number;
+  createdAt: string;
+  booking?: { id: string; code?: string | null; status?: string | null; totalPrice?: number | null } | null;
 }
 
-const MOCK_USAGES: DiscountUsage[] = [
-  { id: '1', code: 'NOWRUZ1403', userId: 'u1', userName: 'علی محمدی', bookingId: 'B-1001', gameName: 'قلعه اشباح', discountType: 'percent', discountValue: 20, originalAmount: 350000, discountAmount: 70000, finalAmount: 280000, usedAt: '۱۴۰۳/۰۴/۱۵ ۱۴:۳۰', status: 'applied' },
-  { id: '2', code: 'VIP50', userId: 'u2', userName: 'مریم احمدی', bookingId: 'B-1002', gameName: 'گنج دزد دریایی', discountType: 'percent', discountValue: 50, originalAmount: 300000, discountAmount: 150000, finalAmount: 150000, usedAt: '۱۴۰۳/۰۴/۱۵ ۱۳:۱۵', status: 'applied' },
-  { id: '3', code: 'WELCOME100', userId: 'u3', userName: 'رضا کریمی', bookingId: 'B-1003', gameName: 'آزمایشگاه مخفی', discountType: 'fixed', discountValue: 100000, originalAmount: 280000, discountAmount: 100000, finalAmount: 180000, usedAt: '۱۴۰۳/۰۴/۱۵ ۱۱:۰۰', status: 'applied' },
-  { id: '4', code: 'BIRTHDAY25', userId: 'u4', userName: 'فاطمه حسینی', bookingId: 'B-1004', gameName: 'عملیات فرار', discountType: 'percent', discountValue: 25, originalAmount: 250000, discountAmount: 62500, finalAmount: 187500, usedAt: '۱۴۰۳/۰۴/۱۴ ۱۶:۴۵', status: 'applied' },
-  { id: '5', code: 'NOWRUZ1403', userId: 'u5', userName: 'محمد رضایی', bookingId: 'B-1005', gameName: 'قلعه اشباح', discountType: 'percent', discountValue: 20, originalAmount: 350000, discountAmount: 70000, finalAmount: 280000, usedAt: '۱۴۰۳/۰۴/۱۴ ۱۰:۳۰', status: 'reversed' },
-  { id: '6', code: 'VIP50', userId: 'u6', userName: 'زهرا نوری', bookingId: 'B-1006', gameName: 'گنج دزد دریایی', discountType: 'percent', discountValue: 50, originalAmount: 300000, discountAmount: 150000, finalAmount: 150000, usedAt: '۱۴۰۳/۰۴/۱۳ ۱۸:۰۰', status: 'applied' },
-];
+const PAGE_SIZE = 20;
 
-const CODE_SUMMARY: Record<string, { uses: number; totalDiscount: number; uniqueUsers: number }> = {};
-MOCK_USAGES.forEach(u => {
-  if (!CODE_SUMMARY[u.code]) CODE_SUMMARY[u.code] = { uses: 0, totalDiscount: 0, uniqueUsers: 0 };
-  CODE_SUMMARY[u.code].uses++;
-  CODE_SUMMARY[u.code].totalDiscount += u.discountAmount;
-});
+function unwrap<T = unknown>(res: { data?: unknown } | null | undefined): T | null {
+  const d = (res as { data?: unknown } | null | undefined)?.data;
+  if (d && typeof d === 'object' && 'data' in (d as Record<string, unknown>)) {
+    return (d as { data: T }).data;
+  }
+  return (d as T) ?? null;
+}
+
+function unwrapPaginated<T>(res: { data?: unknown } | null | undefined): { items: T[]; total: number } {
+  const d = (res as { data?: unknown } | null | undefined)?.data;
+  if (d && typeof d === 'object' && 'data' in (d as Record<string, unknown>)) {
+    const inner = d as { data: T[]; total?: number };
+    return { items: Array.isArray(inner.data) ? inner.data : [], total: inner.total ?? inner.data?.length ?? 0 };
+  }
+  const arr = Array.isArray(d) ? (d as T[]) : [];
+  return { items: arr, total: arr.length };
+}
 
 export default function DiscountUsagesPage() {
-  const [search, setSearch] = useState('');
-  const [filterCode, setFilterCode] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [codes, setCodes] = useState<DiscountCodeLite[]>([]);
+  const [selectedCode, setSelectedCode] = useState<string>('');
+  const [usages, setUsages] = useState<DiscountUsage[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loadingCodes, setLoadingCodes] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const filtered = MOCK_USAGES.filter(u => {
-    const matchSearch = u.userName.includes(search) || u.bookingId.includes(search) || u.code.includes(search);
-    const matchCode = !filterCode || u.code === filterCode;
-    const matchStatus = !filterStatus || u.status === filterStatus;
-    return matchSearch && matchCode && matchStatus;
-  });
+  const loadCodes = useCallback(async () => {
+    setLoadingCodes(true);
+    try {
+      const res = await discountsApi.getCodes({ limit: 200 });
+      const { items } = unwrapPaginated<DiscountCodeLite>(res);
+      setCodes(items);
+      if (items.length && !selectedCode) setSelectedCode(items[0].id);
+    } catch {
+      toast.error('خطا در بارگذاری کدها');
+      setCodes([]);
+    } finally {
+      setLoadingCodes(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const totalDiscount = filtered.reduce((a, u) => a + u.discountAmount, 0);
-  const totalOriginal = filtered.reduce((a, u) => a + u.originalAmount, 0);
-  const uniqueCodes = Array.from(new Set(MOCK_USAGES.map(u => u.code)));
+  const loadUsages = useCallback(async () => {
+    if (!selectedCode) return;
+    setLoading(true);
+    try {
+      const res = await discountsApi.getUsages(selectedCode, { page, limit: PAGE_SIZE });
+      const { items, total: t } = unwrapPaginated<DiscountUsage>(res);
+      setUsages(items);
+      setTotal(t);
+    } catch {
+      toast.error('خطا در بارگذاری سابقه استفاده');
+      setUsages([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedCode, page]);
+
+  useEffect(() => {
+    loadCodes();
+  }, [loadCodes]);
+
+  useEffect(() => {
+    loadUsages();
+  }, [loadUsages]);
+
+  const totalSaved = usages.reduce((a, u) => a + (u.savedAmount ?? 0), 0);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentCode = codes.find((c) => c.id === selectedCode);
 
   return (
     <div className="space-y-6">
       <SectionHeader
         title="سابقه استفاده کدها"
-        subtitle="تاریخچه کامل استفاده از کدهای تخفیف"
+        subtitle="تاریخچه استفاده از هر کد تخفیف"
         icon={<FiTag />}
-        action={
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors text-sm">
-            <FiDownload className="w-4 h-4" />
-            خروجی Excel
-          </button>
-        }
       />
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-          <p className="text-2xl font-bold text-white">{MOCK_USAGES.length}</p>
-          <p className="text-slate-400 text-sm mt-1">کل استفاده‌ها</p>
-        </div>
-        <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-          <p className="text-2xl font-bold text-red-400">{(totalDiscount / 1000000).toFixed(2)}M</p>
-          <p className="text-slate-400 text-sm mt-1">کل تخفیف اعمال شده</p>
-        </div>
-        <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-          <p className="text-2xl font-bold text-purple-400">{uniqueCodes.length}</p>
-          <p className="text-slate-400 text-sm mt-1">کدهای فعال</p>
-        </div>
-        <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-          <FiTrendingUp className="w-5 h-5 text-green-400 mb-1" />
-          <p className="text-2xl font-bold text-green-400">{totalOriginal > 0 ? ((totalDiscount / totalOriginal) * 100).toFixed(1) : 0}%</p>
-          <p className="text-slate-400 text-sm mt-0">میانگین تخفیف</p>
-        </div>
-      </div>
-
-      {/* Code Summary */}
-      <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-        <h3 className="text-white font-semibold mb-4">خلاصه کدها</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {Object.entries(CODE_SUMMARY).map(([code, data]) => (
-            <div key={code} className="bg-slate-750 rounded-xl p-4 border border-slate-600 flex items-center justify-between">
-              <div>
-                <p className="text-red-400 font-mono font-bold">{code}</p>
-                <p className="text-slate-400 text-xs">{data.uses} بار استفاده</p>
-              </div>
-              <div className="text-right">
-                <p className="text-amber-400 font-medium">{(data.totalDiscount / 1000).toFixed(0)}K</p>
-                <p className="text-slate-500 text-xs">تخفیف</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Filters */}
+      {/* Code selector */}
       <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 flex flex-wrap gap-3 items-center">
         <FiFilter className="text-slate-400 w-4 h-4" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="جستجو کاربر، کد، شناسه رزرو..."
-          className="input-field flex-1 min-w-48"
-        />
-        <select value={filterCode} onChange={e => setFilterCode(e.target.value)} className="input-field">
-          <option value="">همه کدها</option>
-          {uniqueCodes.map(c => <option key={c} value={c}>{c}</option>)}
+        <select
+          value={selectedCode}
+          onChange={(e) => { setSelectedCode(e.target.value); setPage(1); }}
+          className="input-field min-w-56"
+          disabled={loadingCodes}
+        >
+          {codes.length === 0 && <option value="">کدی موجود نیست</option>}
+          {codes.map((c) => (
+            <option key={c.id} value={c.id}>{c.code}</option>
+          ))}
         </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field">
-          <option value="">همه وضعیت‌ها</option>
-          <option value="applied">اعمال شده</option>
-          <option value="reversed">برگشت خورده</option>
-        </select>
-      </div>
-
-      {/* Table */}
-      <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-slate-700">
-              <th className="text-right text-slate-400 text-sm font-medium p-4">کد</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">کاربر</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">رزرو / بازی</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">تخفیف</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">مبلغ اصلی</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">مبلغ نهایی</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">تاریخ</th>
-              <th className="text-right text-slate-400 text-sm font-medium p-4">وضعیت</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(u => (
-              <tr key={u.id} className="border-b border-slate-700/50 hover:bg-slate-750 transition-colors">
-                <td className="p-4">
-                  <span className="font-mono text-red-400 bg-red-500/10 px-2 py-0.5 rounded text-sm">{u.code}</span>
-                </td>
-                <td className="p-4">
-                  <div>
-                    <p className="text-white text-sm">{u.userName}</p>
-                    <p className="text-slate-500 text-xs">{u.userId}</p>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div>
-                    <p className="text-slate-300 text-sm">{u.bookingId}</p>
-                    <p className="text-slate-500 text-xs">{u.gameName}</p>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <span className="text-red-400 font-medium">
-                    {u.discountType === 'percent' ? `${u.discountValue}%` : `${u.discountValue.toLocaleString('fa-IR')} ت`}
-                  </span>
-                  <p className="text-slate-500 text-xs">{u.discountAmount.toLocaleString('fa-IR')} ت</p>
-                </td>
-                <td className="p-4">
-                  <span className="text-slate-300 line-through text-sm">{u.originalAmount.toLocaleString('fa-IR')}</span>
-                </td>
-                <td className="p-4">
-                  <span className="text-green-400 font-medium">{u.finalAmount.toLocaleString('fa-IR')} ت</span>
-                </td>
-                <td className="p-4">
-                  <span className="text-slate-400 text-sm">{u.usedAt}</span>
-                </td>
-                <td className="p-4">
-                  <StatusBadge
-                    status={u.status === 'applied' ? 'success' : 'danger'}
-                    label={u.status === 'applied' ? 'اعمال شده' : 'برگشت خورده'}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && (
-          <div className="text-center py-12 text-slate-400">
-            <FiTag className="w-10 h-10 mx-auto mb-3 text-slate-600" />
-            <p>رکوردی یافت نشد</p>
-          </div>
+        {currentCode && (
+          <span className="text-slate-400 text-sm">
+            تعداد استفاده ثبت‌شده: {persianNum(total)}
+          </span>
         )}
       </div>
-      <p className="text-slate-500 text-sm text-center">نمایش {filtered.length} از {MOCK_USAGES.length} رکورد</p>
+
+      {/* Stats */}
+      {selectedCode && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+            <p className="text-2xl font-bold text-white">{persianNum(total)}</p>
+            <p className="text-slate-400 text-sm mt-1">کل استفاده‌ها (این کد)</p>
+          </div>
+          <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+            <p className="text-2xl font-bold text-red-400">{formatToman(totalSaved)}</p>
+            <p className="text-slate-400 text-sm mt-1">تخفیف اعمال‌شده (این صفحه)</p>
+          </div>
+        </div>
+      )}
+
+      {loadingCodes || loading ? (
+        <div className="flex items-center justify-center py-24">
+          <RefreshCw className="w-8 h-8 text-red-400 animate-spin" />
+        </div>
+      ) : usages.length === 0 ? (
+        <EmptyState title="رکوردی یافت نشد" description="برای این کد استفاده‌ای ثبت نشده است." />
+      ) : (
+        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-700">
+                <th className="text-right text-slate-400 text-sm font-medium p-4">رزرو</th>
+                <th className="text-right text-slate-400 text-sm font-medium p-4">کاربر</th>
+                <th className="text-right text-slate-400 text-sm font-medium p-4">تخفیف اعمال‌شده</th>
+                <th className="text-right text-slate-400 text-sm font-medium p-4">وضعیت رزرو</th>
+                <th className="text-right text-slate-400 text-sm font-medium p-4">تاریخ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {usages.map((u) => (
+                <tr key={u.id} className="border-b border-slate-700/50 hover:bg-slate-750 transition-colors">
+                  <td className="p-4">
+                    <span className="text-slate-300 text-sm font-mono">{u.booking?.code ?? u.bookingId}</span>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-slate-400 text-xs font-mono">{u.userId}</span>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-red-400 font-medium">{formatToman(u.savedAmount)}</span>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-slate-300 text-sm">{u.booking?.status ?? '-'}</span>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-slate-400 text-sm">{toJalaliDateTime(u.createdAt)}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} total={total} />
+        </div>
+      )}
     </div>
   );
 }
