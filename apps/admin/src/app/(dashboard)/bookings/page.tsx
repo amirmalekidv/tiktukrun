@@ -1,13 +1,12 @@
 'use client';
-import { useState, useCallback } from 'react';
-import useSWR from 'swr';
-import { Plus, Search, Calendar, Filter } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Search, Calendar, Filter, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { fetcher } from '@/lib/api';
-import { SectionHeader, StatsCard, FilterBar, LoadingSpinner } from '@/components/ui';
+import { bookingsApi } from '@/lib/api';
+import { SectionHeader, FilterBar } from '@/components/ui';
 import BookingsTable from '@/components/bookings/BookingsTable';
-import { formatToman, persianNum, toJalali } from '@/lib/utils/format';
-import { CalendarDays, CreditCard, Users, TrendingUp } from 'lucide-react';
+import type { Booking } from '@/lib/types';
+import toast from 'react-hot-toast';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'همه وضعیت‌ها' },
@@ -18,51 +17,83 @@ const STATUS_OPTIONS = [
   { value: 'REFUNDED', label: 'بازگشت وجه' },
 ];
 
-// Mock data for display
-const MOCK_BOOKINGS = Array(10).fill(0).map((_, i) => ({
-  id: `bk-${i + 1}`,
-  code: `BK-${String(100000 + i).padStart(6, '0')}`,
-  userId: `u${i + 1}`,
-  user: {
-    id: `u${i + 1}`, name: ['علی احمدی', 'سارا محمدی', 'رضا کریمی', 'نیلوفر حسینی', 'امیر رضایی'][i % 5],
-    mobile: `0912${String(1000000 + i)}`,
-    roles: [], isActive: true, isVip: false, level: 1, tier: 'BRONZE' as const,
-    xp: 0, coins: 0, diamonds: 0, createdAt: '2024-01-01',
-  },
-  gameId: `g${i + 1}`,
-  game: { id: `g${i + 1}`, title: ['اتاق فرار تاریک', 'ترس مطلق', 'لیزرتگ پرو', 'VR ماجرا', 'پینت‌بال'][i % 5], slug: '', categoryId: '', branchId: '', fearLevel: 3, difficulty: 'HARD' as const, minPlayers: 2, maxPlayers: 6, duration: 60, pricePerPerson: '250000', tags: [], images: [], isActive: true, isFeatured: false, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
-  branchId: `br${i + 1}`,
-  branch: { id: `br${i + 1}`, name: ['شعبه تهران', 'شعبه مشهد', 'شعبه اصفهان'][i % 3], cityId: 'c1', address: '', isActive: true, createdAt: '2024-01-01' },
-  slotId: `s${i + 1}`,
-  slotDate: new Date(Date.now() - i * 86400000).toISOString(),
-  slotTime: ['۱۴:۰۰', '۱۶:۰۰', '۱۸:۰۰', '۲۰:۰۰'][i % 4],
-  playersCount: (i % 4) + 2,
-  amount: String((i + 1) * 250000),
-  discountAmount: i % 3 === 0 ? '50000' : '0',
-  finalAmount: String((i + 1) * 250000 - (i % 3 === 0 ? 50000 : 0)),
-  paymentMethod: ['WALLET', 'ZARINPAL', 'CASH'][i % 3] as 'WALLET',
-  status: ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'REFUNDED'][i % 5] as 'PENDING',
-  createdAt: new Date(Date.now() - i * 86400000).toISOString(),
-  updatedAt: new Date(Date.now() - i * 3600000).toISOString(),
-}));
+const PAGE_SIZE = 20;
+
+// admin/bookings list is double-wrapped: { success, data: { data, total, page, limit } }
+function unwrapPaginated(res: any): { items: any[]; total: number } {
+  const body = res?.data;
+  const inner = body && typeof body === 'object' && 'data' in body ? body.data : body;
+  const items = Array.isArray(inner?.data) ? inner.data : Array.isArray(inner) ? inner : [];
+  const total = Number(inner?.total ?? body?.total ?? items.length) || 0;
+  return { items, total };
+}
+
+// Normalize the raw Prisma booking payload into the shape BookingsTable expects.
+function normalize(b: any): Booking {
+  return {
+    id: b.id,
+    code: b.code,
+    userId: b.userId,
+    user: b.user
+      ? ({
+          id: b.user.id,
+          name: b.user.fullName,
+          mobile: b.user.mobile,
+        } as any)
+      : undefined,
+    gameId: b.gameId,
+    game: b.game ? ({ id: b.game.id, title: b.game.title } as any) : undefined,
+    branchId: b.branchId,
+    branch: b.branch ? ({ id: b.branchId, name: b.branch?.name } as any) : undefined,
+    slotId: b.slotId ?? '',
+    slotDate: b.slotDateTime ?? b.slotDate ?? b.createdAt,
+    slotTime: b.slotDateTime
+      ? new Date(b.slotDateTime).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
+      : '',
+    playersCount: b.playersCount ?? b.players ?? 0,
+    amount: String(b.basePrice ?? b.amount ?? 0),
+    discountAmount: String(b.discountApplied ?? b.discountAmount ?? 0),
+    finalAmount: String(b.totalAmount ?? b.finalAmount ?? 0),
+    paymentMethod: b.paymentMethod ?? 'WALLET',
+    status: b.status,
+    createdAt: b.createdAt,
+    updatedAt: b.updatedAt ?? b.createdAt,
+  } as Booking;
+}
 
 export default function BookingsPage() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Real API: const { data, isLoading, mutate } = useSWR(`/admin/bookings?page=${page}&search=${search}&status=${status}`, fetcher);
-  const bookings = MOCK_BOOKINGS;
-  const isLoading = false;
-  const mutate = () => {};
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, unknown> = { page, limit: PAGE_SIZE };
+      if (search) params.q = search;
+      if (status) params.status = status;
+      const res = await bookingsApi.getAll(params);
+      const { items, total } = unwrapPaginated(res);
+      setBookings(items.map(normalize));
+      setTotal(total);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'خطا در دریافت رزروها');
+      setBookings([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, search, status]);
 
-  const stats = [
-    { label: 'رزروهای امروز', value: persianNum(24), subValue: formatToman(6000000), icon: <CalendarDays className="w-5 h-5" />, color: 'red' as const },
-    { label: 'رزروهای این هفته', value: persianNum(142), subValue: formatToman(35500000), icon: <CreditCard className="w-5 h-5" />, color: 'blue' as const },
-    { label: 'رزروهای این ماه', value: persianNum(528), subValue: formatToman(132000000), icon: <TrendingUp className="w-5 h-5" />, color: 'green' as const },
-    { label: 'کل کاربران فعال', value: persianNum(1240), subValue: 'کاربر ثبت‌نام کرده', icon: <Users className="w-5 h-5" />, color: 'yellow' as const },
-  ];
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="fade-in">
@@ -72,61 +103,64 @@ export default function BookingsPage() {
         breadcrumb={[{ label: 'داشبورد', href: '/dashboard' }, { label: 'رزروها' }]}
         actions={
           <>
+            <button onClick={load} className="btn-secondary flex items-center gap-2" disabled={loading}>
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              بروزرسانی
+            </button>
             <Link href="/bookings/calendar" className="btn-secondary">
               <Calendar className="w-4 h-4" />
               نمای تقویم
-            </Link>
-            <Link href="/bookings/new" className="btn-primary">
-              <Plus className="w-4 h-4" />
-              رزرو دستی
             </Link>
           </>
         }
       />
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {stats.map((s, i) => (
-          <StatsCard key={i} {...s} />
-        ))}
-      </div>
-
       {/* Filters */}
-      <FilterBar onReset={() => { setSearch(''); setStatus(''); }}>
+      <FilterBar
+        onReset={() => {
+          setSearch('');
+          setStatus('');
+          setPage(1);
+        }}
+      >
         <div className="flex-1 relative min-w-48">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="text"
             placeholder="جستجو (کد، نام، موبایل)..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="input-field pr-10"
           />
         </div>
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
           className="select-field w-48"
         >
-          {STATUS_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
           ))}
         </select>
-        <button className="btn-secondary">
-          <Filter className="w-4 h-4" />
-          فیلترهای بیشتر
-        </button>
       </FilterBar>
 
       {/* Table */}
       <BookingsTable
         bookings={bookings}
-        loading={isLoading}
-        total={528}
+        loading={loading}
+        total={total}
         page={page}
-        totalPages={53}
+        totalPages={totalPages}
         onPageChange={setPage}
-        onRefresh={mutate}
+        onRefresh={load}
         selectedIds={selectedIds}
         onSelectIds={setSelectedIds}
       />

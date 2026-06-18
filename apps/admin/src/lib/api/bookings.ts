@@ -1,6 +1,17 @@
 import apiClient from './client';
 import type { Booking, ApiResponse, BookingStatus } from '../types';
 
+// Backend: BookingsAdminController @Controller('admin/bookings')
+//   GET  /            -> { success, data: { data, total, page, limit } }  (double-wrapped via buildPaginatedResponse)
+//                        query: status, userId, gameId, branchId, from, to, q, page, limit
+//   GET  /calendar    -> { success, data: { branchId, from, to, calendar } }  (query: branchId, from, to)
+//   GET  /export      -> CSV blob
+//   GET  /:id         -> { success, data: booking }  (single-wrapped)
+//   PATCH /:id/status -> body { status, reason? }  (AdminUpdateBookingStatusDto)
+//   POST /:id/refund  -> body { amount, reason }    (RefundBookingDto; ADMIN only)
+//   POST /:id/complete-> no body
+//   POST /:id/rate-player -> body { xpDelta, reason } (RatePlayerDto; BRANCH_MANAGER)
+// NOTE: There is NO admin create / update / cancel route. Use changeStatus(CANCELLED) to cancel.
 export const bookingsApi = {
   getAll: (params?: Record<string, unknown>) =>
     apiClient.get<ApiResponse<Booking[]>>('/admin/bookings', { params }),
@@ -8,30 +19,24 @@ export const bookingsApi = {
   getById: (id: string) =>
     apiClient.get<ApiResponse<Booking>>(`/admin/bookings/${id}`),
 
-  create: (data: Partial<Booking>) =>
-    apiClient.post<ApiResponse<Booking>>('/admin/bookings', data),
+  changeStatus: (id: string, status: BookingStatus, reason?: string) =>
+    apiClient.patch(`/admin/bookings/${id}/status`, { status, reason }),
 
-  update: (id: string, data: Partial<Booking>) =>
-    apiClient.patch<ApiResponse<Booking>>(`/admin/bookings/${id}`, data),
+  cancel: (id: string, reason?: string) =>
+    apiClient.patch(`/admin/bookings/${id}/status`, { status: 'CANCELLED', reason }),
 
-  changeStatus: (id: string, status: BookingStatus, note?: string) =>
-    apiClient.patch(`/admin/bookings/${id}/status`, { status, note }),
+  complete: (id: string) =>
+    apiClient.post(`/admin/bookings/${id}/complete`),
 
-  refund: (id: string, reason: string, amount?: string) =>
-    apiClient.post(`/admin/bookings/${id}/refund`, { reason, amount }),
+  refund: (id: string, amount: number, reason: string) =>
+    apiClient.post(`/admin/bookings/${id}/refund`, { amount, reason }),
 
-  cancel: (id: string, reason: string) =>
-    apiClient.post(`/admin/bookings/${id}/cancel`, { reason }),
+  ratePlayer: (id: string, xpDelta: number, reason: string) =>
+    apiClient.post(`/admin/bookings/${id}/rate-player`, { xpDelta, reason }),
 
-  ratePlayer: (id: string, rating: number, note?: string) =>
-    apiClient.post(`/admin/bookings/${id}/rate`, { rating, note }),
-
-  getCalendar: (params?: { branchId?: string; gameId?: string; start?: string; end?: string }) =>
+  getCalendar: (params?: { branchId?: string; from?: string; to?: string }) =>
     apiClient.get('/admin/bookings/calendar', { params }),
 
   exportExcel: (params?: Record<string, unknown>) =>
     apiClient.get('/admin/bookings/export', { params, responseType: 'blob' }),
-
-  getStats: () =>
-    apiClient.get('/admin/bookings/stats'),
 };

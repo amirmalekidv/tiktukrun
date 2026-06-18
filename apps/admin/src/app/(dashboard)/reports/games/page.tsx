@@ -1,9 +1,12 @@
 'use client';
-import { SectionHeader, StatsCard } from '@/components/ui';
+import { useState, useEffect, useCallback } from 'react';
+import { SectionHeader, StatsCard, EmptyState } from '@/components/ui';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { formatToman, persianNum } from '@/lib/utils/format';
-import { TrendingUp, Users, Star, Percent } from 'lucide-react';
+import { formatToman, persianNum, toJalali } from '@/lib/utils/format';
+import { TrendingUp, Users, Star, BarChart3, RefreshCw } from 'lucide-react';
+import { reportsApi } from '@/lib/api';
+import toast from 'react-hot-toast';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -19,94 +22,167 @@ const chartOpts = {
   },
 };
 
-const GAME_NAMES = ['اتاق فرار تاریک', 'لیزرتگ پرو', 'VR ماجرا', 'پینت‌بال', 'بردگیم'];
+interface GameStat {
+  id: string;
+  name: string;
+  bookings: number;
+  revenue: number;
+  rating: string;
+  lastBooking: string | null;
+}
 
-const roiData = {
-  labels: GAME_NAMES,
-  datasets: [
-    { label: 'درآمد (میلیون)', data: [45, 32, 28, 19, 25], backgroundColor: 'rgba(34,197,94,0.7)' },
-    { label: 'نرخ اشغال (%)', data: [85, 70, 75, 60, 65], backgroundColor: 'rgba(59,130,246,0.5)' },
-  ],
-};
-
-const MOCK_GAMES_ROI = GAME_NAMES.map((name, i) => ({
-  name,
-  category: ['اتاق فرار', 'لیزرتگ', 'VR', 'پینت‌بال', 'بردگیم'][i],
-  totalBookings: (i + 1) * 45 + 20,
-  revenue: String((i + 1) * 9000000 + 5000000),
-  avgRating: (4.0 + Math.random() * 0.8).toFixed(1),
-  occupancyRate: 60 + i * 5,
-  roi: 150 + i * 30,
-}));
+// Backend admin/analytics/* return { success: true, data }
+function readData<T>(res: any): T {
+  const body = res?.data;
+  if (body && typeof body === 'object' && 'data' in body) return body.data as T;
+  return body as T;
+}
 
 export default function GamesReportPage() {
+  const [games, setGames] = useState<GameStat[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await reportsApi.getGames();
+      const data = readData<GameStat[]>(res);
+      setGames(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'خطا در دریافت گزارش بازی‌ها');
+      setGames([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const totalBookings = games.reduce((s, g) => s + (g.bookings || 0), 0);
+  const totalRevenue = games.reduce((s, g) => s + (g.revenue || 0), 0);
+  const topGame = games[0];
+  const avgRating =
+    games.length > 0
+      ? (games.reduce((s, g) => s + parseFloat(g.rating || '0'), 0) / games.length).toFixed(1)
+      : '0.0';
+
+  // Top 8 by revenue for the chart
+  const chartGames = games.slice(0, 8);
+  const chartData = {
+    labels: chartGames.map((g) => g.name),
+    datasets: [
+      {
+        label: 'درآمد (تومان)',
+        data: chartGames.map((g) => g.revenue),
+        backgroundColor: 'rgba(34,197,94,0.7)',
+        yAxisID: 'y',
+      },
+      {
+        label: 'رزروها',
+        data: chartGames.map((g) => g.bookings),
+        backgroundColor: 'rgba(59,130,246,0.5)',
+        yAxisID: 'y',
+      },
+    ],
+  };
+
   return (
     <div className="fade-in">
       <SectionHeader
         title="گزارش بازی‌ها"
-        subtitle="آمار ROI، اشغال و عملکرد هر بازی"
+        subtitle="آمار درآمد، رزرو و امتیاز هر بازی"
         breadcrumb={[{ label: 'گزارش‌ها' }, { label: 'بازی‌ها' }]}
+        actions={
+          <button onClick={load} className="btn-secondary flex items-center gap-2" disabled={loading}>
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            بروزرسانی
+          </button>
+        }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatsCard label="بهترین بازی" value="اتاق فرار تاریک" color="red" icon={<Star className="w-5 h-5" />} />
-        <StatsCard label="کل رزروها" value={persianNum(842)} color="blue" icon={<Users className="w-5 h-5" />} />
-        <StatsCard label="میانگین ROI" value="۲۱۰٪" color="green" icon={<TrendingUp className="w-5 h-5" />} />
-        <StatsCard label="میانگین اشغال" value="۷۱٪" color="yellow" icon={<Percent className="w-5 h-5" />} />
-      </div>
-
-      <div className="admin-card mb-6">
-        <h3 className="section-title">مقایسه بازی‌ها</h3>
-        <Bar data={roiData} options={chartOpts} />
-      </div>
-
-      <div className="admin-card">
-        <h3 className="section-title">جزئیات ROI بازی‌ها</h3>
-        <div className="overflow-x-auto">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>بازی</th>
-                <th>دسته</th>
-                <th>رزروها</th>
-                <th>درآمد</th>
-                <th>امتیاز</th>
-                <th>نرخ اشغال</th>
-                <th>ROI</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_GAMES_ROI.map((game, i) => (
-                <tr key={i}>
-                  <td className="text-white font-medium">{game.name}</td>
-                  <td className="text-slate-400">{game.category}</td>
-                  <td className="text-slate-300">{persianNum(game.totalBookings)}</td>
-                  <td className="text-green-400 font-bold">{formatToman(game.revenue)}</td>
-                  <td>
-                    <div className="flex items-center gap-1">
-                      <span className="text-yellow-400">★</span>
-                      <span className="text-white">{game.avgRating}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-700 rounded-full h-2 w-24">
-                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${game.occupancyRate}%` }} />
-                      </div>
-                      <span className="text-slate-300 text-sm">{game.occupancyRate}٪</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`font-bold ${game.roi > 200 ? 'text-green-400' : game.roi > 150 ? 'text-yellow-400' : 'text-slate-300'}`}>
-                      {game.roi}٪
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {loading ? (
+        <div className="flex items-center justify-center py-24">
+          <RefreshCw className="w-8 h-8 text-red-400 animate-spin" />
         </div>
-      </div>
+      ) : games.length === 0 ? (
+        <EmptyState
+          title="داده‌ای موجود نیست"
+          description="هنوز رزرو تکمیل‌شده‌ای برای محاسبه آمار بازی‌ها ثبت نشده است."
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <StatsCard
+              label="بهترین بازی"
+              value={topGame?.name || '—'}
+              color="red"
+              icon={<Star className="w-5 h-5" />}
+            />
+            <StatsCard
+              label="کل رزروها"
+              value={persianNum(totalBookings)}
+              color="blue"
+              icon={<Users className="w-5 h-5" />}
+            />
+            <StatsCard
+              label="کل درآمد"
+              value={formatToman(totalRevenue)}
+              color="green"
+              icon={<TrendingUp className="w-5 h-5" />}
+            />
+            <StatsCard
+              label="میانگین امتیاز"
+              value={persianNum(avgRating)}
+              color="yellow"
+              icon={<Star className="w-5 h-5" />}
+            />
+          </div>
+
+          <div className="admin-card mb-6">
+            <h3 className="section-title flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" /> مقایسه بازی‌ها (درآمد و رزرو)
+            </h3>
+            <Bar data={chartData} options={chartOpts} />
+          </div>
+
+          <div className="admin-card">
+            <h3 className="section-title">جزئیات بازی‌ها</h3>
+            <div className="overflow-x-auto">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>بازی</th>
+                    <th>رزروها</th>
+                    <th>درآمد</th>
+                    <th>امتیاز</th>
+                    <th>آخرین رزرو</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {games.map((game) => (
+                    <tr key={game.id}>
+                      <td className="text-white font-medium">{game.name}</td>
+                      <td className="text-slate-300">{persianNum(game.bookings)}</td>
+                      <td className="text-green-400 font-bold">{formatToman(game.revenue)}</td>
+                      <td>
+                        <div className="flex items-center gap-1">
+                          <span className="text-yellow-400">★</span>
+                          <span className="text-white">{persianNum(game.rating)}</span>
+                        </div>
+                      </td>
+                      <td className="text-slate-400 text-sm">
+                        {game.lastBooking ? toJalali(game.lastBooking) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

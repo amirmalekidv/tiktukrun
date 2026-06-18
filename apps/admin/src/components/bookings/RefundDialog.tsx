@@ -25,9 +25,14 @@ export default function RefundDialog({ open, onClose, bookingId, totalAmount, on
       toast.error('دلیل بازگشت وجه را وارد کنید');
       return;
     }
+    const amount = fullRefund ? Number(totalAmount) : Number(customAmount);
+    if (!fullRefund && (!amount || amount <= 0)) {
+      toast.error('مبلغ بازگشتی معتبر نیست');
+      return;
+    }
     setLoading(true);
     try {
-      await bookingsApi.refund(bookingId, reason, fullRefund ? undefined : customAmount);
+      await bookingsApi.refund(bookingId, amount, reason);
       toast.success('درخواست بازگشت وجه ثبت شد');
       onSuccess();
       onClose();
