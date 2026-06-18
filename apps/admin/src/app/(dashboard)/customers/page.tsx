@@ -11,7 +11,7 @@ import { BanUserModal } from '@/components/customers/BanUserModal'
 import { toPersianNum } from '@/lib/utils'
 import { customersApi } from '@/lib/api/customers'
 import toast from 'react-hot-toast'
-import type { Customer } from '@/types'
+import type { Customer, CustomerFilterParams } from '@/types'
 
 export default function CustomersPage() {
   const router = useRouter()
@@ -27,12 +27,12 @@ export default function CustomersPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [banTarget, setBanTarget] = useState<Customer | null>(null)
 
-  const { data: res, isLoading, mutate } = useCustomers({ ...filters, page, limit: 20 })
+  const { data: res, isLoading, mutate } = useCustomers({ ...filters, page, limit: 20 } as CustomerFilterParams)
   const customers = res?.data || []
   const meta = res?.meta
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedIds(checked ? customers.map(c => c.id) : [])
+    setSelectedIds(checked ? customers.map((c: Customer) => c.id) : [])
   }
 
   const handleSelect = (id: string, checked: boolean) => {

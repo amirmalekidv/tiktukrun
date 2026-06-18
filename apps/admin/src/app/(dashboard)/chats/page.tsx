@@ -6,7 +6,25 @@ import { toJalaliDateTime, persianNum } from '@/lib/utils/format';
 import { chatsApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 
-const MOCK_MESSAGES = Array(20).fill(0).map((_, i) => ({
+type ChatRoomType = 'GLOBAL' | 'TEAM' | 'PRIVATE';
+type ChatMsgStatus = 'NORMAL' | 'REPORTED' | 'HIDDEN';
+
+interface AdminChatMessage {
+  id: string;
+  userId: string;
+  user: {
+    id: string; name: string; nickname: string; avatar: string | undefined;
+    mobile: string; roles: string[]; isActive: boolean; isVip: boolean;
+    level: number; tier: string; xp: number; coins: number; diamonds: number; createdAt: string;
+  };
+  roomType: ChatRoomType;
+  content: string;
+  status: ChatMsgStatus;
+  reportsCount: number;
+  createdAt: string;
+}
+
+const MOCK_MESSAGES: AdminChatMessage[] = Array(20).fill(0).map((_, i) => ({
   id: `msg${i + 1}`,
   userId: `u${i % 5 + 1}`,
   user: {
@@ -22,7 +40,7 @@ const MOCK_MESSAGES = Array(20).fill(0).map((_, i) => ({
     tier: 'SILVER' as const,
     xp: 0, coins: 0, diamonds: 0, createdAt: '',
   },
-  roomType: ['GLOBAL', 'TEAM', 'PRIVATE'][i % 3] as 'GLOBAL',
+  roomType: (['GLOBAL', 'TEAM', 'PRIVATE'][i % 3]) as ChatRoomType,
   content: [
     'این بازی واقعاً ترسناک بود! پیشنهاد می‌دم',
     'کسی میاد تیم بزنه؟',
@@ -30,7 +48,7 @@ const MOCK_MESSAGES = Array(20).fill(0).map((_, i) => ({
     'این پیام حاوی محتوای نامناسب است 🚫',
     'بهترین تجربه عمرم بود!',
   ][i % 5],
-  status: ['NORMAL', 'REPORTED', 'HIDDEN', 'NORMAL', 'NORMAL'][i % 5] as 'NORMAL',
+  status: (['NORMAL', 'REPORTED', 'HIDDEN', 'NORMAL', 'NORMAL'][i % 5]) as ChatMsgStatus,
   reportsCount: [0, 3, 0, 1, 0][i % 5],
   createdAt: new Date(Date.now() - i * 180000).toISOString(),
 }));
@@ -48,13 +66,13 @@ export default function ChatsPage() {
   useEffect(() => {
     if (!isLive) return;
     const interval = setInterval(() => {
-      const newMsg = {
+      const newMsg: AdminChatMessage = {
         id: `msg-${Date.now()}`,
         userId: 'u1',
         user: { ...MOCK_MESSAGES[0].user },
-        roomType: 'GLOBAL' as const,
+        roomType: 'GLOBAL',
         content: ['پیام جدید...', 'کاربر فعال شد', 'سوال در چت'][Math.floor(Math.random() * 3)],
-        status: 'NORMAL' as const,
+        status: 'NORMAL',
         reportsCount: 0,
         createdAt: new Date().toISOString(),
       };

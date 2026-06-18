@@ -52,7 +52,7 @@ export function useAuth() {
       if (res.success && res.data && isAuthResponse(res.data)) {
         const { user: u, accessToken, refreshToken } = res.data
         // Check admin role
-        if (!u.roles.some((r) => ADMIN_ROLES.includes(r))) {
+        if (!u.roles.some((r: AdminRole) => ADMIN_ROLES.includes(r))) {
           toast.error('شما دسترسی به پنل مدیریت ندارید')
           return false
         }
@@ -76,7 +76,7 @@ export function useAuth() {
       const res = await authApi.loginWithPassword(mobile, password)
       if (res.success && res.data && isAuthResponse(res.data)) {
         const { user: u, accessToken, refreshToken } = res.data
-        if (!u.roles.some((r) => ADMIN_ROLES.includes(r))) {
+        if (!u.roles.some((r: AdminRole) => ADMIN_ROLES.includes(r))) {
           toast.error('شما دسترسی به پنل مدیریت ندارید')
           return false
         }

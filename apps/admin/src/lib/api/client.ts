@@ -4,8 +4,9 @@
  */
 
 import axios from 'axios';
+import { getAccessToken, clearTokens } from '../auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export const apiClient = axios.create({
   baseURL: `${API_URL}/api/v1`,
@@ -19,7 +20,8 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('admin_token');
+      // Prefer the canonical token (lib/auth.ts), fall back to legacy key.
+      const token = getAccessToken() || localStorage.getItem('admin_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -35,6 +37,7 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
+        clearTokens();
         localStorage.removeItem('admin_token');
         window.location.href = '/login';
       }

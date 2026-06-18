@@ -69,7 +69,7 @@ export function RevenueChart({ data }: Props) {
               padding: 10,
               callbacks: {
                 title: (items) => `تاریخ: ${items[0].label}`,
-                label: (item) => ` درآمد: ${item.parsed.y.toFixed(1)} میلیون تومان`,
+                label: (item) => ` درآمد: ${(item.parsed.y ?? 0).toFixed(1)} میلیون تومان`,
               },
             },
           },

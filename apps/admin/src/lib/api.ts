@@ -87,3 +87,14 @@ api.interceptors.response.use(
 )
 
 export default api
+
+// =============================================
+// Bridge: re-export all domain API objects defined in ./api/index.ts
+// (bookingsApi, gamesApi, fetcher, branchesApi, citiesApi, categoriesApi,
+//  reviewsApi, chatsApi, ticketsApi, transactionsApi, paymentsApi, reportsApi,
+//  backupApi, wheelApi, badgesApi, levelsApi, avatarsApi, discountsApi,
+//  monthlyApi, settingsApi, rolesApi, staffApi, auditApi, apiClient ...)
+// This resolves the `@/lib/api` file shadowing the `@/lib/api/` directory so
+// that `import { gamesApi } from '@/lib/api'` continues to work everywhere.
+// =============================================
+export * from './api/index'

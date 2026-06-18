@@ -5,6 +5,8 @@ import { SectionHeader, StatsCard, FilterBar, Avatar, StatusBadge, Pagination } 
 import { formatToman, persianNum, toJalaliDateTime } from '@/lib/utils/format';
 import toast from 'react-hot-toast';
 
+type PaymentStatusT = 'SUCCESS' | 'PENDING' | 'FAILED' | 'REFUNDED';
+
 const MOCK_PAYMENTS = Array(15).fill(0).map((_, i) => ({
   id: `p${i + 1}`,
   userId: `u${i % 5 + 1}`,
@@ -14,7 +16,7 @@ const MOCK_PAYMENTS = Array(15).fill(0).map((_, i) => ({
   gateway: 'ZarinPal',
   refId: `ZP-${String(987654321 - i).padStart(9, '0')}`,
   trackId: `TR${String(123456 + i)}`,
-  status: ['SUCCESS', 'PENDING', 'FAILED', 'REFUNDED', 'SUCCESS'][i % 5] as 'SUCCESS',
+  status: (['SUCCESS', 'PENDING', 'FAILED', 'REFUNDED', 'SUCCESS'][i % 5]) as PaymentStatusT,
   createdAt: new Date(Date.now() - i * 3600000).toISOString(),
 }));
 

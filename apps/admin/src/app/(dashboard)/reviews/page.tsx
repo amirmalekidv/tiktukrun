@@ -6,6 +6,8 @@ import { toJalaliDateTime, persianNum } from '@/lib/utils/format';
 import { reviewsApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 
+type ReviewStatusT = 'PENDING' | 'APPROVED' | 'REJECTED';
+
 const MOCK_REVIEWS = Array(12).fill(0).map((_, i) => ({
   id: `r${i + 1}`,
   userId: `u${i + 1}`,
@@ -14,7 +16,7 @@ const MOCK_REVIEWS = Array(12).fill(0).map((_, i) => ({
   game: { id: `g${i + 1}`, title: ['اتاق فرار تاریک', 'لیزرتگ پرو', 'VR ماجرا'][i % 3], slug: '', categoryId: '', branchId: '', fearLevel: 3, difficulty: 'HARD' as const, minPlayers: 2, maxPlayers: 6, duration: 60, pricePerPerson: '', tags: [], images: [], isActive: true, isFeatured: false, createdAt: '', updatedAt: '' },
   rating: (i % 5) + 1,
   comment: 'بازی فوق‌العاده بود! تجربه‌ای که هرگز فراموش نمی‌کنم. محیط ترسناک و هیجان‌انگیز بود.',
-  status: ['PENDING', 'APPROVED', 'REJECTED'][i % 3] as 'PENDING',
+  status: (['PENDING', 'APPROVED', 'REJECTED'][i % 3]) as ReviewStatusT,
   createdAt: new Date(Date.now() - i * 86400000).toISOString(),
 }));
 
