@@ -1,26 +1,76 @@
 'use client';
-import { useState } from 'react';
-import { SectionHeader, StatsCard, FilterBar, Avatar, Pagination } from '@/components/ui';
+import { useState, useEffect, useCallback } from 'react';
+import { SectionHeader, StatsCard, Avatar, Pagination, EmptyState } from '@/components/ui';
 import { toJalaliDateTime, persianNum } from '@/lib/utils/format';
-import { Gift } from 'lucide-react';
+import { Gift, RefreshCw } from 'lucide-react';
+import { wheelApi } from '@/lib/api';
+import toast from 'react-hot-toast';
 
-const MOCK_SPINS = Array(20).fill(0).map((_, i) => ({
-  id: `sp${i + 1}`,
-  user: { name: ['علی احمدی', 'سارا محمدی', 'رضا کریمی'][i % 3] },
-  prize: { name: ['۵۰ سکه', 'هیچی', '۵ الماس', '۵۰۰ XP', '۲۰٪ تخفیف'][i % 5], color: ['#f59e0b', '#475569', '#3b82f6', '#8b5cf6', '#22c55e'][i % 5] },
-  paidWith: i % 2 === 0 ? 'coins' : 'diamonds',
-  paidAmount: i % 2 === 0 ? 100 : 5,
-  createdAt: new Date(Date.now() - i * 3600000).toISOString(),
-}));
+interface AdminSpin {
+  id: string;
+  paidWith: string;
+  costPaid: number;
+  awardedAt: string;
+  user?: { id: string; fullName?: string | null; mobile?: string } | null;
+  prize?: { id: string; name: string; color?: string } | null;
+}
+
+interface WheelStats {
+  totalSpins: number;
+  totalCoinsSpent: number;
+  totalDiamondsSpent: number;
+}
+
+const PAGE_SIZE = 20;
+
+// admin-wheel endpoints return { success, data, meta } directly (not double-wrapped)
+function readSpins(res: any): { items: AdminSpin[]; total: number } {
+  const body = res?.data;
+  const items = body?.data ?? [];
+  const total = body?.meta?.total ?? items.length;
+  return { items, total };
+}
+function readStats(res: any): WheelStats | null {
+  const body = res?.data;
+  return body?.data ?? null;
+}
 
 export default function WheelSpinsPage() {
+  const [items, setItems] = useState<AdminSpin[]>([]);
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<WheelStats | null>(null);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
-  const stats = [
-    { label: 'کل چرخش‌ها', value: persianNum(1842), color: 'blue' as const, icon: <Gift className="w-5 h-5" /> },
-    { label: 'سکه مصرف شده', value: persianNum(184200), color: 'yellow' as const, icon: <Gift className="w-5 h-5" /> },
-    { label: 'الماس مصرف شده', value: persianNum(9210), color: 'purple' as const, icon: <Gift className="w-5 h-5" /> },
-    { label: 'پربرنده‌ترین', value: '۵۰ سکه', color: 'green' as const, icon: <Gift className="w-5 h-5" /> },
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [spinsRes, statsRes] = await Promise.all([
+        wheelApi.getSpins({ page, limit: PAGE_SIZE }),
+        wheelApi.getStats(),
+      ]);
+      const { items, total } = readSpins(spinsRes);
+      setItems(items);
+      setTotal(total);
+      setStats(readStats(statsRes));
+    } catch {
+      toast.error('خطا در بارگذاری تاریخچه چرخش‌ها');
+      setItems([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const statCards = [
+    { label: 'کل چرخش‌ها', value: persianNum(stats?.totalSpins ?? 0), color: 'blue' as const, icon: <Gift className="w-5 h-5" /> },
+    { label: 'سکه مصرف شده', value: persianNum(stats?.totalCoinsSpent ?? 0), color: 'yellow' as const, icon: <Gift className="w-5 h-5" /> },
+    { label: 'الماس مصرف شده', value: persianNum(stats?.totalDiamondsSpent ?? 0), color: 'purple' as const, icon: <Gift className="w-5 h-5" /> },
+    { label: 'تعداد صفحه جاری', value: persianNum(items.length), color: 'green' as const, icon: <Gift className="w-5 h-5" /> },
   ];
 
   return (
@@ -28,52 +78,71 @@ export default function WheelSpinsPage() {
       <SectionHeader
         title="تاریخچه چرخش گردونه"
         breadcrumb={[{ label: 'گردونه شانس' }, { label: 'تاریخچه' }]}
+        actions={
+          <button onClick={load} className="btn-secondary" title="بارگذاری مجدد">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {stats.map((s, i) => <StatsCard key={i} {...s} />)}
+        {statCards.map((s, i) => <StatsCard key={i} {...s} />)}
       </div>
 
       <div className="admin-card">
-        <div className="overflow-x-auto">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>کاربر</th>
-                <th>جایزه</th>
-                <th>پرداخت با</th>
-                <th>مقدار پرداخت</th>
-                <th>تاریخ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_SPINS.map(spin => (
-                <tr key={spin.id}>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <Avatar name={spin.user.name} size="sm" />
-                      <span className="text-white">{spin.user.name}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: spin.prize.color }} />
-                      <span className="text-slate-300">{spin.prize.name}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`badge ${spin.paidWith === 'coins' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                      {spin.paidWith === 'coins' ? 'سکه' : 'الماس'}
-                    </span>
-                  </td>
-                  <td className="text-slate-300">{persianNum(spin.paidAmount)}</td>
-                  <td className="text-slate-400 text-sm">{toJalaliDateTime(spin.createdAt)}</td>
+        {loading ? (
+          <div className="text-center py-12 text-slate-500">
+            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" /> در حال بارگذاری...
+          </div>
+        ) : items.length === 0 ? (
+          <EmptyState title="چرخشی ثبت نشده" description="هنوز هیچ کاربری گردونه را نچرخانده است." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>کاربر</th>
+                  <th>جایزه</th>
+                  <th>پرداخت با</th>
+                  <th>مقدار پرداخت</th>
+                  <th>تاریخ</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <Pagination currentPage={page} totalPages={10} onPageChange={setPage} total={200} />
+              </thead>
+              <tbody>
+                {items.map(spin => {
+                  const name = spin.user?.fullName || 'کاربر';
+                  const isCoins = spin.paidWith === 'COINS';
+                  return (
+                    <tr key={spin.id}>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <Avatar name={name} size="sm" />
+                          <span className="text-white">{name}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: spin.prize?.color || '#475569' }} />
+                          <span className="text-slate-300">{spin.prize?.name ?? '—'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`badge ${isCoins ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                          {isCoins ? 'سکه' : 'الماس'}
+                        </span>
+                      </td>
+                      <td className="text-slate-300">{persianNum(spin.costPaid)}</td>
+                      <td className="text-slate-400 text-sm">{toJalaliDateTime(spin.awardedAt)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {totalPages > 1 && (
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} total={total} />
+        )}
       </div>
     </div>
   );

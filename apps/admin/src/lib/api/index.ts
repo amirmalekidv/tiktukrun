@@ -80,10 +80,13 @@ export const ticketsApi = {
 };
 
 // ==================== Finance ====================
-// Backend: there is no /admin/transactions controller; payments are the source of truth.
-// transactionsApi reads payments and presents them as transactions.
+// Backend: WalletAdminController @Controller('admin/wallets')
+//   GET /transactions (query: userId, currency, type, page, limit) -> { data, total, page, limit }
+//   POST /manual-adjust { userId, currency, delta, reason }
 export const transactionsApi = {
-  getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<Transaction[]>>('/admin/payments', { params: p }),
+  getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<Transaction[]>>('/admin/wallets/transactions', { params: p }),
+  manualAdjust: (d: { userId: string; currency: string; delta: number; reason: string }) =>
+    apiClient.post('/admin/wallets/manual-adjust', d),
   getStats: () => apiClient.get('/admin/analytics/cashflow'),
 };
 

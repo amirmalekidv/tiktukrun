@@ -160,20 +160,29 @@ export const TIER_CONFIG: Record<string, { label: string; color: string; bg: str
 };
 
 // نوع تراکنش
+// مطابق enum TransactionType بک‌اند
 export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   DEPOSIT: 'واریز',
-  WITHDRAWAL: 'برداشت',
+  WITHDRAW: 'برداشت',
   BOOKING_PAYMENT: 'پرداخت رزرو',
-  BOOKING_REFUND: 'بازگشت رزرو',
-  WHEEL_SPIN: 'چرخش گردونه',
-  REWARD: 'جایزه',
-  BONUS: 'پاداش',
-  TRANSFER: 'انتقال',
-  PURCHASE: 'خرید',
+  REFUND: 'بازگشت وجه',
+  WHEEL_SPEND: 'هزینه گردونه',
+  WHEEL_WIN: 'برد گردونه',
+  DIAMOND_PURCHASE: 'خرید الماس',
+  COIN_PURCHASE: 'خرید سکه',
+  INVITE_REWARD: 'پاداش دعوت',
+  MONTHLY_REWARD: 'جایزه ماهانه',
+  MANUAL_ADJUST: 'تنظیم دستی',
+  RATING_REWARD: 'پاداش امتیازدهی',
 };
 
-// ارز
+// ارز — مطابق enum CurrencyType بک‌اند (uppercase)
 export const CURRENCY_LABELS: Record<string, string> = {
+  TOMAN: 'تومان',
+  COINS: 'سکه',
+  DIAMONDS: 'الماس',
+  XP: 'XP',
+  // سازگاری با مقادیر قدیمی lowercase
   toman: 'تومان',
   coins: 'سکه',
   diamonds: 'الماس',
