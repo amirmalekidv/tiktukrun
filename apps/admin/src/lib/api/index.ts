@@ -1,5 +1,5 @@
 export { bookingsApi } from './bookings';
-export { gamesApi } from './games';
+export { gamesApi, gameCommentsApi } from './games';
 export { fetcher, apiClient } from './client';
 
 import apiClient from './client';

@@ -46,4 +46,29 @@ export const gamesApi = {
 
   getStats: (id: string) =>
     apiClient.get(`/admin/games/${id}/stats`),
+
+  // سطح‌بندی بازی: STANDARD | SILVER | GOLD | PLATINUM | DIAMOND
+  setTier: (id: string, tier: string) =>
+    apiClient.patch(`/admin/games/${id}/tier`, { tier }),
+};
+
+// ──────────────────────────────────────────────────────────────
+// مدیریت/مودریشن کامنت‌های بازی + آمار لایک‌ها
+// endpoints بک‌اند: /admin/games/comments
+// ──────────────────────────────────────────────────────────────
+export const gameCommentsApi = {
+  list: (filter: 'pending' | 'all' | 'hidden' = 'pending', page = 1, limit = 30) =>
+    apiClient.get(`/admin/games/comments`, { params: { filter, page, limit } }),
+
+  stats: () =>
+    apiClient.get(`/admin/games/comments/stats`),
+
+  approve: (commentId: string) =>
+    apiClient.post(`/admin/games/comments/${commentId}/approve`),
+
+  reject: (commentId: string) =>
+    apiClient.post(`/admin/games/comments/${commentId}/reject`),
+
+  remove: (commentId: string) =>
+    apiClient.delete(`/admin/games/comments/${commentId}`),
 };

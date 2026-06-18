@@ -22,6 +22,7 @@ const schema = z.object({
   scenario: z.string().optional(),
   fearLevel: z.number().min(1).max(5),
   difficulty: z.enum(['EASY', 'MEDIUM', 'HARD', 'EXPERT']),
+  tier: z.enum(['STANDARD', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND']),
   minPlayers: z.number().min(1),
   maxPlayers: z.number().min(1),
   duration: z.number().min(15),
@@ -58,6 +59,7 @@ export default function GameForm({ game, onSuccess }: GameFormProps) {
       description: game?.description || '',
       fearLevel: game?.fearLevel || 3,
       difficulty: game?.difficulty || 'MEDIUM',
+      tier: (game as any)?.tier || 'STANDARD',
       minPlayers: game?.minPlayers || 2,
       maxPlayers: game?.maxPlayers || 6,
       duration: game?.duration || 60,
@@ -247,6 +249,17 @@ export default function GameForm({ game, onSuccess }: GameFormProps) {
               <option value="MEDIUM">متوسط</option>
               <option value="HARD">سخت</option>
               <option value="EXPERT">خبره</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="label-field">سطح‌بندی (Tier)</label>
+            <select {...register('tier')} className="select-field">
+              <option value="STANDARD">استاندارد</option>
+              <option value="SILVER">نقره‌ای</option>
+              <option value="GOLD">طلایی</option>
+              <option value="PLATINUM">پلاتینیوم</option>
+              <option value="DIAMOND">دایموند</option>
             </select>
           </div>
 

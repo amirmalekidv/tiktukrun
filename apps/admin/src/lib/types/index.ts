@@ -82,6 +82,23 @@ export interface BookingEvent {
 
 // ==================== Game ====================
 export type DifficultyLevel = 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT';
+export type GameTier = 'STANDARD' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND';
+
+export const GAME_TIER_FA: Record<GameTier, string> = {
+  STANDARD: 'استاندارد',
+  SILVER: 'نقره‌ای',
+  GOLD: 'طلایی',
+  PLATINUM: 'پلاتینیوم',
+  DIAMOND: 'دایموند',
+};
+
+export const GAME_TIER_STYLE: Record<GameTier, string> = {
+  STANDARD: 'bg-slate-500/20 text-slate-300',
+  SILVER: 'bg-gray-300/20 text-gray-200',
+  GOLD: 'bg-yellow-500/20 text-yellow-300',
+  PLATINUM: 'bg-cyan-400/20 text-cyan-200',
+  DIAMOND: 'bg-purple-500/20 text-purple-300',
+};
 
 export interface Game {
   id: string;
@@ -96,6 +113,9 @@ export interface Game {
   scenario?: string;
   fearLevel: number;
   difficulty: DifficultyLevel;
+  tier?: GameTier;
+  likesCount?: number;
+  commentsCount?: number;
   minPlayers: number;
   maxPlayers: number;
   duration: number;

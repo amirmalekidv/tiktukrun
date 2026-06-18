@@ -39,6 +39,7 @@ const navGroups = [
         ]
       },
       { href: '/reviews', label: 'نظرات', icon: Star },
+      { href: '/comments', label: 'نظرات بازی‌ها', icon: MessageSquare },
       {
         label: 'چت زنده', icon: MessageSquare,
         children: [

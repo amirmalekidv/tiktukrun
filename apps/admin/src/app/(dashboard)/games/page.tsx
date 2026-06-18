@@ -7,6 +7,7 @@ import { formatToman, persianNum, FEAR_EMOJIS, fearLabel } from '@/lib/utils/for
 import { gamesApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Game } from '@/lib/types';
+import { GAME_TIER_FA, GAME_TIER_STYLE } from '@/lib/types';
 import { Gamepad2, TrendingUp, BookOpen } from 'lucide-react';
 
 const MOCK_GAMES: Game[] = Array(12).fill(0).map((_, i) => ({
@@ -20,6 +21,9 @@ const MOCK_GAMES: Game[] = Array(12).fill(0).map((_, i) => ({
   branch: { id: `br${(i % 3) + 1}`, name: ['تهران', 'مشهد', 'اصفهان'][i % 3], cityId: '', address: '', isActive: true, createdAt: '' },
   fearLevel: (i % 5) + 1,
   difficulty: ['EASY', 'MEDIUM', 'HARD', 'EXPERT'][i % 4] as 'EASY',
+  tier: (['STANDARD', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND'] as const)[i % 5],
+  likesCount: (i + 1) * 7,
+  commentsCount: (i + 1) * 2,
   minPlayers: (i % 2) + 2,
   maxPlayers: (i % 4) + 4,
   duration: [45, 60, 90][i % 3],
@@ -146,6 +150,7 @@ export default function GamesPage() {
                   <th>بازی</th>
                   <th>دسته / شعبه</th>
                   <th>قیمت</th>
+                  <th>سطح</th>
                   <th>ترس</th>
                   <th>بازیکنان</th>
                   <th>امتیاز</th>
@@ -180,6 +185,13 @@ export default function GamesPage() {
                       <p className="text-slate-500 text-xs">{game.branch?.name}</p>
                     </td>
                     <td className="text-white font-medium">{formatToman(game.pricePerPerson)}</td>
+                    <td>
+                      {game.tier && (
+                        <span className={`badge text-xs ${GAME_TIER_STYLE[game.tier]}`}>
+                          {GAME_TIER_FA[game.tier]}
+                        </span>
+                      )}
+                    </td>
                     <td>
                       <div className="flex items-center gap-1">
                         <span className="text-lg">{FEAR_EMOJIS[game.fearLevel - 1]}</span>
