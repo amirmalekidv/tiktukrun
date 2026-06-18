@@ -66,21 +66,23 @@ export const chatsApi = {
 };
 
 // ==================== Tickets ====================
+// Backend: AdminTicketsController @Controller('admin/tickets')
+//   GET /  GET /stats  GET /:id  PATCH /:id (status/priority)  POST /:id/reply
 export const ticketsApi = {
   getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<Ticket[]>>('/admin/tickets', { params: p }),
   getById: (id: string) => apiClient.get<ApiResponse<Ticket>>(`/admin/tickets/${id}`),
   reply: (id: string, content: string, isInternal?: boolean) =>
     apiClient.post<ApiResponse<TicketMessage>>(`/admin/tickets/${id}/reply`, { content, isInternal }),
-  assign: (id: string, assigneeId: string) => apiClient.patch(`/admin/tickets/${id}/assign`, { assigneeId }),
-  changeStatus: (id: string, status: string) => apiClient.patch(`/admin/tickets/${id}/status`, { status }),
+  changeStatus: (id: string, status: string) => apiClient.patch(`/admin/tickets/${id}`, { status }),
   getStats: () => apiClient.get('/admin/tickets/stats'),
 };
 
 // ==================== Finance ====================
+// Backend: there is no /admin/transactions controller; payments are the source of truth.
+// transactionsApi reads payments and presents them as transactions.
 export const transactionsApi = {
-  getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<Transaction[]>>('/admin/transactions', { params: p }),
-  exportExcel: (p?: Record<string, unknown>) => apiClient.get('/admin/transactions/export', { params: p, responseType: 'blob' }),
-  getStats: () => apiClient.get('/admin/transactions/stats'),
+  getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<Transaction[]>>('/admin/payments', { params: p }),
+  getStats: () => apiClient.get('/admin/analytics/cashflow'),
 };
 
 // Backend: PaymentsAdminController @Controller('admin/payments')
@@ -91,30 +93,34 @@ export const paymentsApi = {
   getById: (id: string) => apiClient.get<ApiResponse<Payment>>(`/admin/payments/${id}`),
 };
 
+// Backend: AdminAnalyticsController @Controller('admin/analytics')
 export const reportsApi = {
-  getFinancial: (p?: Record<string, unknown>) => apiClient.get('/admin/reports/financial', { params: p }),
-  getGames: (p?: Record<string, unknown>) => apiClient.get('/admin/reports/games', { params: p }),
-  getCohort: () => apiClient.get('/admin/reports/cohort'),
-  getHeatmap: () => apiClient.get('/admin/reports/heatmap'),
-  exportPdf: (p?: Record<string, unknown>) => apiClient.get('/admin/reports/export/pdf', { params: p, responseType: 'blob' }),
-  exportExcel: (p?: Record<string, unknown>) => apiClient.get('/admin/reports/export/excel', { params: p, responseType: 'blob' }),
+  getFinancial: (p?: Record<string, unknown>) => apiClient.get('/admin/analytics/financial', { params: p }),
+  getGames: (p?: Record<string, unknown>) => apiClient.get('/admin/analytics/games', { params: p }),
+  getCohort: () => apiClient.get('/admin/analytics/cohort'),
+  getHeatmap: () => apiClient.get('/admin/analytics/heatmap'),
 };
 
 // ==================== Backup ====================
+// Backend: AdminBackupController @Controller('admin/backup')
+//   POST /create  GET /list  GET /download/:filename  DELETE /:filename
 export const backupApi = {
-  getAll: () => apiClient.get<ApiResponse<Backup[]>>('/admin/backup'),
+  getAll: () => apiClient.get<ApiResponse<Backup[]>>('/admin/backup/list'),
   create: () => apiClient.post<ApiResponse<Backup>>('/admin/backup/create'),
-  delete: (id: string) => apiClient.delete(`/admin/backup/${id}`),
-  download: (id: string) => apiClient.get(`/admin/backup/${id}/download`, { responseType: 'blob' }),
+  delete: (filename: string) => apiClient.delete(`/admin/backup/${filename}`),
+  download: (filename: string) => apiClient.get(`/admin/backup/download/${filename}`, { responseType: 'blob' }),
 };
 
 // ==================== Gamification ====================
+// Backend: AdminWheelController @Controller('admin/wheel')
+//   GET /prizes  POST /prizes  PATCH /prizes/:id  DELETE /prizes/:id
+//   POST /prizes/:id/toggle-active  GET /spins  GET /stats
 export const wheelApi = {
   getPrizes: () => apiClient.get<ApiResponse<WheelPrize[]>>('/admin/wheel/prizes'),
   createPrize: (d: Partial<WheelPrize>) => apiClient.post<ApiResponse<WheelPrize>>('/admin/wheel/prizes', d),
   updatePrize: (id: string, d: Partial<WheelPrize>) => apiClient.patch<ApiResponse<WheelPrize>>(`/admin/wheel/prizes/${id}`, d),
   deletePrize: (id: string) => apiClient.delete(`/admin/wheel/prizes/${id}`),
-  reorderPrizes: (ids: string[]) => apiClient.patch('/admin/wheel/prizes/reorder', { ids }),
+  togglePrize: (id: string) => apiClient.post(`/admin/wheel/prizes/${id}/toggle-active`),
   getSpins: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<WheelSpin[]>>('/admin/wheel/spins', { params: p }),
   getStats: () => apiClient.get('/admin/wheel/stats'),
 };
@@ -142,19 +148,26 @@ export const avatarsApi = {
 };
 
 // ==================== Discounts ====================
+// Backend: AdminDiscountsController @Controller('admin')
+//   GET /discount-codes  POST /discount-codes  PATCH /discount-codes/:id  DELETE /discount-codes/:id
+//   GET /discount-codes/:id/usages  GET /auto-discounts  POST/PATCH/DELETE /auto-discounts
 export const discountsApi = {
-  getCodes: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<DiscountCode[]>>('/admin/discounts/codes', { params: p }),
-  createCode: (d: Partial<DiscountCode>) => apiClient.post<ApiResponse<DiscountCode>>('/admin/discounts/codes', d),
-  updateCode: (id: string, d: Partial<DiscountCode>) => apiClient.patch<ApiResponse<DiscountCode>>(`/admin/discounts/codes/${id}`, d),
-  deleteCode: (id: string) => apiClient.delete(`/admin/discounts/codes/${id}`),
-  getAutoDiscounts: () => apiClient.get<ApiResponse<AutoDiscount[]>>('/admin/discounts/auto'),
-  updateAutoDiscount: (id: string, d: Partial<AutoDiscount>) => apiClient.patch<ApiResponse<AutoDiscount>>(`/admin/discounts/auto/${id}`, d),
-  getUsages: (p?: Record<string, unknown>) => apiClient.get('/admin/discounts/usages', { params: p }),
+  getCodes: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<DiscountCode[]>>('/admin/discount-codes', { params: p }),
+  createCode: (d: Partial<DiscountCode>) => apiClient.post<ApiResponse<DiscountCode>>('/admin/discount-codes', d),
+  updateCode: (id: string, d: Partial<DiscountCode>) => apiClient.patch<ApiResponse<DiscountCode>>(`/admin/discount-codes/${id}`, d),
+  deleteCode: (id: string) => apiClient.delete(`/admin/discount-codes/${id}`),
+  getAutoDiscounts: () => apiClient.get<ApiResponse<AutoDiscount[]>>('/admin/auto-discounts'),
+  createAutoDiscount: (d: Partial<AutoDiscount>) => apiClient.post<ApiResponse<AutoDiscount>>('/admin/auto-discounts', d),
+  updateAutoDiscount: (id: string, d: Partial<AutoDiscount>) => apiClient.patch<ApiResponse<AutoDiscount>>(`/admin/auto-discounts/${id}`, d),
+  deleteAutoDiscount: (id: string) => apiClient.delete(`/admin/auto-discounts/${id}`),
+  getUsages: (id: string, p?: Record<string, unknown>) => apiClient.get(`/admin/discount-codes/${id}/usages`, { params: p }),
 };
 
 // ==================== Monthly ====================
+// Backend: AdminMonthlyController @Controller('admin/monthly')
+//   GET /winners  POST /compute  POST /distribute  GET /history
 export const monthlyApi = {
-  getCurrent: () => apiClient.get('/admin/monthly/current'),
+  getWinners: (p?: Record<string, unknown>) => apiClient.get('/admin/monthly/winners', { params: p }),
   getHistory: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<MonthlyWinner[]>>('/admin/monthly/history', { params: p }),
   compute: (year: number, month: number) => apiClient.post('/admin/monthly/compute', { year, month }),
   distribute: (year: number, month: number, prizes: Record<string, unknown>) =>
@@ -169,25 +182,26 @@ export const settingsApi = {
 };
 
 // ==================== Roles ====================
+// Backend: AdminRolesController @Controller('admin/roles')
+//   GET /  POST /  PATCH /:id/permissions
 export const rolesApi = {
   getAll: () => apiClient.get<ApiResponse<Role[]>>('/admin/roles'),
-  getById: (id: string) => apiClient.get<ApiResponse<Role>>(`/admin/roles/${id}`),
   create: (d: Partial<Role>) => apiClient.post<ApiResponse<Role>>('/admin/roles', d),
   updatePermissions: (id: string, permissions: string[]) =>
-    apiClient.post(`/admin/roles/${id}/permissions`, { permissions }),
-  getAllPermissions: () => apiClient.get<ApiResponse<Permission[]>>('/admin/permissions'),
+    apiClient.patch(`/admin/roles/${id}/permissions`, { permissions }),
 };
 
 // ==================== Staff ====================
+// Backend: AdminUserRolesController @Controller('admin/users') manages staff role assignment.
+//   GET /staff  POST /:id/roles  (assign roles to a user => becomes staff)
 export const staffApi = {
-  getAll: () => apiClient.get<ApiResponse<User[]>>('/admin/staff'),
-  invite: (mobile: string, roles: string[]) => apiClient.post('/admin/staff/invite', { mobile, roles }),
-  updateRoles: (id: string, roles: string[]) => apiClient.patch(`/admin/staff/${id}/roles`, { roles }),
-  toggleActive: (id: string) => apiClient.patch(`/admin/staff/${id}/toggle-active`),
+  getAll: () => apiClient.get<ApiResponse<User[]>>('/admin/users/staff'),
+  updateRoles: (id: string, roleIds: string[]) => apiClient.post(`/admin/users/${id}/roles`, { roleIds }),
 };
 
 // ==================== Audit ====================
+// Backend: AdminAuditController @Controller('admin/audit-logs')
 export const auditApi = {
-  getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<AuditLog[]>>('/admin/audit', { params: p }),
-  getById: (id: string) => apiClient.get<ApiResponse<AuditLog>>(`/admin/audit/${id}`),
+  getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<AuditLog[]>>('/admin/audit-logs', { params: p }),
+  getById: (id: string) => apiClient.get<ApiResponse<AuditLog>>(`/admin/audit-logs/${id}`),
 };
