@@ -28,9 +28,11 @@ export const gamesApi = {
   toggleFeatured: (id: string) =>
     apiClient.post(`/admin/games/${id}/toggle-featured`),
 
-  uploadImage: (id: string, file: File) => {
+  // backend: @Post(':id/images') expects field name "images" (FilesInterceptor, up to 10)
+  uploadImage: (id: string, files: File | File[]) => {
     const fd = new FormData();
-    fd.append('image', file);
+    const list = Array.isArray(files) ? files : [files];
+    list.forEach((f) => fd.append('images', f));
     return apiClient.post(`/admin/games/${id}/images`, fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
