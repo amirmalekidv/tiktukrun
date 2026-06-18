@@ -1,69 +1,173 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { Send, Paperclip, Clock, User, FileText, Tag } from 'lucide-react';
-import { SectionHeader, StatusBadge, Avatar } from '@/components/ui';
+import { Send, Clock, User, RefreshCw } from 'lucide-react';
+import { SectionHeader, StatusBadge, Avatar, EmptyState } from '@/components/ui';
 import { toJalaliDateTime } from '@/lib/utils/format';
-import { ticketsApi } from '@/lib/api';
+import { ticketsApi, staffApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 
-const CANNED_RESPONSES = [
-  'متشکریم که با ما در تماس گذاشتید. در اسرع وقت بررسی می‌کنیم.',
-  'مشکل شما به تیم فنی ارجاع داده شد.',
-  'رزرو شما با موفقیت لغو و مبلغ بازگشت داده شد.',
-  'برای اطلاعات بیشتر با پشتیبانی ۲۴/۷ تماس بگیرید.',
-];
+// admin-tickets findOneAdmin returns { success, data } directly
+interface TicketSender {
+  id: string;
+  fullName?: string | null;
+  avatarUrl?: string | null;
+}
+interface TicketMsg {
+  id: string;
+  ticketId: string;
+  senderId: string;
+  body: string;
+  isStaffReply: boolean;
+  attachments?: string[];
+  createdAt: string;
+  sender?: TicketSender | null;
+}
+interface TicketDetail {
+  id: string;
+  code: string;
+  userId: string;
+  subject: string;
+  body?: string;
+  status: string;
+  priority: string;
+  assigneeId?: string | null;
+  createdAt: string;
+  lastReplyAt?: string | null;
+  closedAt?: string | null;
+  user?: { id: string; fullName?: string | null; mobile?: string | null } | null;
+  assignee?: { id: string; fullName?: string | null } | null;
+  messages?: TicketMsg[];
+}
 
-const MOCK_TICKET = {
-  id: 't1',
-  code: 'TKT-1001',
-  userId: 'u1',
-  user: { id: 'u1', name: 'علی احمدی', mobile: '09121234567', email: 'ali@example.com', roles: [], isActive: true, isVip: true, level: 5, tier: 'GOLD' as const, xp: 2500, coins: 350, diamonds: 12, createdAt: '2024-01-15' },
-  subject: 'مشکل در پرداخت آنلاین',
-  status: 'IN_PROGRESS' as const,
-  priority: 'HIGH' as const,
-  assignee: { id: 'a1', name: 'پشتیبان ۱', mobile: '', roles: [], isActive: true, isVip: false, level: 1, tier: 'SILVER' as const, xp: 0, coins: 0, diamonds: 0, createdAt: '' },
-  tags: ['پرداخت', 'فنی'],
-  messages: [
-    { id: 'm1', ticketId: 't1', senderId: 'u1', sender: { id: 'u1', name: 'علی احمدی', mobile: '', roles: [], isActive: true, isVip: true, level: 5, tier: 'GOLD' as const, xp: 0, coins: 0, diamonds: 0, createdAt: '' }, content: 'سلام، امروز هنگام پرداخت رزرو با خطا مواجه شدم. مبلغ از حسابم کسر شده اما رزرو ثبت نشده است.', isInternal: false, createdAt: new Date(Date.now() - 7200000).toISOString() },
-    { id: 'm2', ticketId: 't1', senderId: 'a1', sender: { id: 'a1', name: 'پشتیبان ۱', mobile: '', roles: [], isActive: true, isVip: false, level: 1, tier: 'SILVER' as const, xp: 0, coins: 0, diamonds: 0, createdAt: '' }, content: 'با سلام، پیگیری می‌کنیم. لطفاً شماره پیگیری تراکنش را ارسال نمایید.', isInternal: false, createdAt: new Date(Date.now() - 3600000).toISOString() },
-    { id: 'm3', ticketId: 't1', senderId: 'a1', sender: { id: 'a1', name: 'پشتیبان ۱', mobile: '', roles: [], isActive: true, isVip: false, level: 1, tier: 'SILVER' as const, xp: 0, coins: 0, diamonds: 0, createdAt: '' }, content: 'یادداشت داخلی: این کاربر VIP است - اولویت بالا برای رفع مشکل', isInternal: true, createdAt: new Date(Date.now() - 1800000).toISOString() },
-  ],
-  createdAt: new Date(Date.now() - 7200000).toISOString(),
-  updatedAt: new Date().toISOString(),
+interface StaffMember {
+  id: string;
+  fullName?: string | null;
+  mobile?: string | null;
+}
+
+const PRIORITY_LABELS: Record<string, string> = {
+  LOW: 'کم',
+  MEDIUM: 'متوسط',
+  HIGH: 'زیاد',
+  URGENT: 'فوری',
 };
+
+// helper for endpoints returning { success, data } directly OR double-wrapped
+function readData<T = unknown>(res: { data?: unknown } | null | undefined): T | null {
+  const d = (res as { data?: unknown } | null | undefined)?.data;
+  if (d && typeof d === 'object' && 'data' in (d as Record<string, unknown>)) {
+    return (d as { data: T }).data;
+  }
+  return (d as T) ?? null;
+}
 
 export default function TicketDetailPage() {
   const params = useParams();
-  const [ticket, setTicket] = useState(MOCK_TICKET);
-  const [replyContent, setReplyContent] = useState('');
-  const [isInternal, setIsInternal] = useState(false);
+  const ticketId = String(params?.id ?? '');
+
+  const [ticket, setTicket] = useState<TicketDetail | null>(null);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
-  const [showCanned, setShowCanned] = useState(false);
+  const [updating, setUpdating] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!ticketId) return;
+    setLoading(true);
+    try {
+      const res = await ticketsApi.getById(ticketId);
+      const data = readData<TicketDetail>(res);
+      setTicket(data);
+    } catch {
+      toast.error('خطا در بارگذاری تیکت');
+      setTicket(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [ticketId]);
+
+  const loadStaff = useCallback(async () => {
+    try {
+      const res = await staffApi.getAll({ limit: 100 });
+      const list = readData<StaffMember[] | { data: StaffMember[] }>(res);
+      const arr = Array.isArray(list) ? list : ((list as { data?: StaffMember[] })?.data ?? []);
+      setStaff(Array.isArray(arr) ? arr : []);
+    } catch {
+      // staff list is optional for assignment; ignore failure silently
+      setStaff([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+    loadStaff();
+  }, [load, loadStaff]);
 
   const handleReply = async () => {
-    if (!replyContent.trim()) return;
+    if (!replyText.trim() || !ticket) return;
     setSending(true);
     try {
-      // Real: await ticketsApi.reply(ticket.id, replyContent, isInternal)
-      const newMsg = {
-        id: `m${Date.now()}`,
-        ticketId: ticket.id,
-        senderId: 'admin',
-        sender: ticket.assignee,
-        content: replyContent,
-        isInternal,
-        createdAt: new Date().toISOString(),
-      };
-      setTicket(prev => ({ ...prev, messages: [...prev.messages, newMsg] }));
-      setReplyContent('');
+      await ticketsApi.reply(ticket.id, replyText.trim());
+      setReplyText('');
       toast.success('پاسخ ارسال شد');
+      await load();
     } catch {
-      toast.error('خطا');
+      toast.error('خطا در ارسال پاسخ');
     } finally {
       setSending(false);
     }
   };
+
+  const handleStatusChange = async (status: string) => {
+    if (!ticket) return;
+    const prev = ticket.status;
+    setTicket({ ...ticket, status });
+    try {
+      await ticketsApi.changeStatus(ticket.id, status);
+      toast.success('وضعیت به‌روزرسانی شد');
+    } catch {
+      toast.error('خطا در تغییر وضعیت');
+      setTicket((t) => (t ? { ...t, status: prev } : t));
+    }
+  };
+
+  const handleAssign = async (assigneeId: string) => {
+    if (!ticket) return;
+    setUpdating(true);
+    try {
+      await ticketsApi.update(ticket.id, { assigneeId: assigneeId || undefined });
+      toast.success('مسئول رسیدگی به‌روزرسانی شد');
+      await load();
+    } catch {
+      toast.error('خطا در تعیین مسئول');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <RefreshCw className="w-8 h-8 text-red-400 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!ticket) {
+    return (
+      <div className="fade-in">
+        <SectionHeader
+          title="تیکت"
+          breadcrumb={[{ label: 'تیکت‌ها', href: '/tickets' }, { label: 'یافت نشد' }]}
+        />
+        <EmptyState title="تیکت یافت نشد" description="این تیکت وجود ندارد یا حذف شده است." />
+      </div>
+    );
+  }
+
+  const messages = ticket.messages ?? [];
 
   return (
     <div className="fade-in">
@@ -77,7 +181,7 @@ export default function TicketDetailPage() {
             <select
               className="select-field text-sm py-1.5"
               value={ticket.status}
-              onChange={e => setTicket(p => ({ ...p, status: e.target.value as typeof ticket.status }))}
+              onChange={(e) => handleStatusChange(e.target.value)}
             >
               <option value="OPEN">باز</option>
               <option value="IN_PROGRESS">در بررسی</option>
@@ -92,84 +196,67 @@ export default function TicketDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Conversation */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Original ticket body */}
+          {ticket.body && (
+            <div className="admin-card">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-white font-medium text-sm">{ticket.user?.fullName ?? 'کاربر'}</span>
+                <span className="text-slate-500 text-xs mr-auto">{toJalaliDateTime(ticket.createdAt)}</span>
+              </div>
+              <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{ticket.body}</p>
+            </div>
+          )}
+
           {/* Messages */}
           <div className="admin-card space-y-4">
-            {ticket.messages.map(msg => (
-              <div key={msg.id} className={`flex gap-3 ${msg.isInternal ? 'opacity-75' : ''}`}>
-                <Avatar name={msg.sender?.name} size="md" />
-                <div className={`flex-1 ${msg.senderId === ticket.userId ? '' : 'items-end'}`}>
-                  <div className={`rounded-xl p-4 ${
-                    msg.isInternal
-                      ? 'bg-yellow-500/10 border border-yellow-500/20'
-                      : msg.senderId === ticket.userId
-                      ? 'bg-slate-700/50'
-                      : 'bg-red-600/10 border border-red-500/20'
-                  }`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-white font-medium text-sm">{msg.sender?.name}</span>
-                      {msg.isInternal && <span className="badge bg-yellow-500/20 text-yellow-400 text-xs">یادداشت داخلی</span>}
-                      <span className="text-slate-500 text-xs mr-auto">{toJalaliDateTime(msg.createdAt)}</span>
+            {messages.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-4">هنوز پیامی ثبت نشده است.</p>
+            ) : (
+              messages.map((msg) => (
+                <div key={msg.id} className="flex gap-3">
+                  <Avatar name={msg.sender?.fullName ?? undefined} size="md" />
+                  <div className="flex-1">
+                    <div
+                      className={`rounded-xl p-4 ${
+                        msg.isStaffReply
+                          ? 'bg-red-600/10 border border-red-500/20'
+                          : 'bg-slate-700/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-white font-medium text-sm">
+                          {msg.sender?.fullName ?? (msg.isStaffReply ? 'پشتیبانی' : 'کاربر')}
+                        </span>
+                        {msg.isStaffReply && (
+                          <span className="badge bg-red-500/20 text-red-400 text-xs">پشتیبانی</span>
+                        )}
+                        <span className="text-slate-500 text-xs mr-auto">{toJalaliDateTime(msg.createdAt)}</span>
+                      </div>
+                      <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</p>
                     </div>
-                    <p className="text-slate-300 text-sm leading-relaxed">{msg.content}</p>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* Reply Form */}
           <div className="admin-card">
-            <div className="flex items-center gap-3 mb-3">
-              <h3 className="text-white font-bold">پاسخ</h3>
-              <label className="flex items-center gap-2 mr-auto cursor-pointer">
-                <input type="checkbox" checked={isInternal} onChange={e => setIsInternal(e.target.checked)} className="accent-yellow-500" />
-                <span className="text-slate-400 text-sm">یادداشت داخلی</span>
-              </label>
-            </div>
-
-            {/* Canned Responses */}
-            <div className="mb-3">
-              <button
-                onClick={() => setShowCanned(!showCanned)}
-                className="btn-ghost text-sm py-1"
-              >
-                <FileText className="w-4 h-4" />
-                پاسخ‌های آماده
-              </button>
-              {showCanned && (
-                <div className="mt-2 space-y-1 p-3 bg-slate-700/30 rounded-xl">
-                  {CANNED_RESPONSES.map((cr, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setReplyContent(cr); setShowCanned(false); }}
-                      className="w-full text-right text-sm text-slate-300 hover:text-white p-2 hover:bg-slate-700 rounded-lg"
-                    >
-                      {cr}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
+            <h3 className="text-white font-bold mb-3">پاسخ</h3>
             <textarea
-              value={replyContent}
-              onChange={e => setReplyContent(e.target.value)}
-              placeholder={isInternal ? 'یادداشت داخلی (قابل مشاهده فقط برای ادمین)...' : 'پاسخ خود را بنویسید...'}
-              className={`input-field resize-none h-32 mb-3 ${isInternal ? 'border-yellow-500/30 bg-yellow-500/5' : ''}`}
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="پاسخ خود را بنویسید..."
+              className="input-field resize-none h-32 mb-3"
             />
-
             <div className="flex items-center gap-2">
-              <button className="btn-ghost">
-                <Paperclip className="w-4 h-4" />
-                پیوست
-              </button>
               <button
                 onClick={handleReply}
-                disabled={!replyContent.trim() || sending}
+                disabled={!replyText.trim() || sending}
                 className="btn-primary mr-auto"
               >
                 <Send className="w-4 h-4" />
-                ارسال پاسخ
+                {sending ? 'در حال ارسال...' : 'ارسال پاسخ'}
               </button>
             </div>
           </div>
@@ -183,22 +270,11 @@ export default function TicketDetailPage() {
               <User className="w-4 h-4 text-red-400" />
               اطلاعات کاربر
             </h3>
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar name={ticket.user.name} size="lg" />
+            <div className="flex items-center gap-3">
+              <Avatar name={ticket.user?.fullName ?? undefined} size="lg" />
               <div>
-                <p className="text-white font-bold">{ticket.user.name}</p>
-                <p className="text-slate-400 text-sm font-mono">{ticket.user.mobile}</p>
-                {ticket.user.isVip && <span className="badge bg-yellow-500/20 text-yellow-400 text-xs mt-1">VIP</span>}
-              </div>
-            </div>
-            <div className="text-sm space-y-1">
-              <div className="flex justify-between">
-                <span className="text-slate-400">لول</span>
-                <span className="text-white">لول {ticket.user.level}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">تیر</span>
-                <span className="text-white">{ticket.user.tier}</span>
+                <p className="text-white font-bold">{ticket.user?.fullName ?? 'کاربر'}</p>
+                <p className="text-slate-400 text-sm font-mono">{ticket.user?.mobile ?? '-'}</p>
               </div>
             </div>
           </div>
@@ -209,25 +285,22 @@ export default function TicketDetailPage() {
               <Clock className="w-4 h-4 text-red-400" />
               مسئول رسیدگی
             </h3>
-            <select className="select-field" defaultValue="a1">
+            <select
+              className="select-field"
+              value={ticket.assigneeId ?? ''}
+              disabled={updating}
+              onChange={(e) => handleAssign(e.target.value)}
+            >
               <option value="">انتخاب مسئول...</option>
-              <option value="a1">پشتیبان ۱</option>
-              <option value="a2">پشتیبان ۲</option>
-              <option value="a3">مدیر فنی</option>
-            </select>
-          </div>
-
-          {/* Tags */}
-          <div className="admin-card">
-            <h3 className="section-title flex items-center gap-2">
-              <Tag className="w-4 h-4 text-red-400" />
-              برچسب‌ها
-            </h3>
-            <div className="flex flex-wrap gap-1">
-              {ticket.tags.map(tag => (
-                <span key={tag} className="badge bg-red-500/20 text-red-400">{tag}</span>
+              {staff.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.fullName ?? s.mobile ?? s.id}
+                </option>
               ))}
-            </div>
+            </select>
+            {ticket.assignee?.fullName && (
+              <p className="text-slate-400 text-xs mt-2">مسئول فعلی: {ticket.assignee.fullName}</p>
+            )}
           </div>
 
           {/* Info */}
@@ -236,13 +309,15 @@ export default function TicketDetailPage() {
               <span className="text-slate-400">ایجاد شده</span>
               <span className="text-slate-300">{toJalaliDateTime(ticket.createdAt)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">آخرین بروزرسانی</span>
-              <span className="text-slate-300">{toJalaliDateTime(ticket.updatedAt)}</span>
-            </div>
+            {ticket.lastReplyAt && (
+              <div className="flex justify-between">
+                <span className="text-slate-400">آخرین پاسخ</span>
+                <span className="text-slate-300">{toJalaliDateTime(ticket.lastReplyAt)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-slate-400">اولویت</span>
-              <span className="text-orange-400">زیاد</span>
+              <span className="text-orange-400">{PRIORITY_LABELS[ticket.priority] ?? ticket.priority}</span>
             </div>
           </div>
         </div>

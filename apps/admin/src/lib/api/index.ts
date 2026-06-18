@@ -73,9 +73,11 @@ export const chatsApi = {
 export const ticketsApi = {
   getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<Ticket[]>>('/admin/tickets', { params: p }),
   getById: (id: string) => apiClient.get<ApiResponse<Ticket>>(`/admin/tickets/${id}`),
-  reply: (id: string, content: string, isInternal?: boolean) =>
-    apiClient.post<ApiResponse<TicketMessage>>(`/admin/tickets/${id}/reply`, { content, isInternal }),
+  reply: (id: string, text: string) =>
+    apiClient.post<ApiResponse<TicketMessage>>(`/admin/tickets/${id}/reply`, { text }),
   changeStatus: (id: string, status: string) => apiClient.patch(`/admin/tickets/${id}`, { status }),
+  update: (id: string, d: { status?: string; priority?: string; assigneeId?: string }) =>
+    apiClient.patch(`/admin/tickets/${id}`, d),
   getStats: () => apiClient.get('/admin/tickets/stats'),
 };
 
@@ -200,7 +202,10 @@ export const rolesApi = {
 // Backend: AdminUserRolesController @Controller('admin/users') manages staff role assignment.
 //   GET /staff  POST /:id/roles  (assign roles to a user => becomes staff)
 export const staffApi = {
-  getAll: () => apiClient.get<ApiResponse<User[]>>('/admin/users/staff'),
+  // Backend has no dedicated /staff route; use admin user list (optionally filtered by role).
+  getAll: (p?: Record<string, unknown>) =>
+    apiClient.get<ApiResponse<User[]>>('/admin/users', { params: p }),
+  getUserRoles: (id: string) => apiClient.get(`/admin/users/${id}/roles`),
   updateRoles: (id: string, roleIds: string[]) => apiClient.post(`/admin/users/${id}/roles`, { roleIds }),
 };
 
