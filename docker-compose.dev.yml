@@ -2,9 +2,9 @@ version: '3.9'
 
 # Development override — hot reload, exposed ports, no SSL
 services:
-  postgres:
+  mongo:
     ports:
-      - "5432:5432"
+      - "27017:27017"
 
   redis:
     ports:
@@ -15,7 +15,8 @@ services:
       context: .
       dockerfile: infra/docker/api.Dockerfile
       target: builder
-    command: sh -c "pnpm --filter @tiktakrun/api exec prisma migrate deploy && pnpm --filter @tiktakrun/api dev"
+    # MongoDB از migrate پشتیبانی نمی‌کند — از prisma db push استفاده می‌شود
+    command: sh -c "pnpm --filter @tiktakrun/api exec prisma db push && pnpm --filter @tiktakrun/api dev"
     environment:
       NODE_ENV: development
     volumes:

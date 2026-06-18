@@ -1,32 +1,49 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # TIK TAK RUN — Production Docker Compose
 # ═══════════════════════════════════════════════════════════════════════════
-# Services: postgres, redis, api, web, admin, nginx
+# Services: mongo (replica set rs0), mongo-init, redis, api, web, admin, nginx
 # Usage: docker compose up -d
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
-  # ─── PostgreSQL 16 ───────────────────────────────────────────────────────
-  postgres:
-    image: postgres:16-alpine
-    container_name: tiktakrun-postgres
+  # ─── MongoDB 7 (Replica Set rs0 — required for Prisma transactions) ───────
+  mongo:
+    image: mongo:7
+    container_name: tiktakrun-mongo
     restart: unless-stopped
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--keyFile", "/etc/mongo-keyfile"]
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-tiktakrun}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
       TZ: ${TZ:-Asia/Tehran}
-      PGTZ: ${TZ:-Asia/Tehran}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./infra/init-scripts:/docker-entrypoint-initdb.d:ro
+      - mongo-data:/data/db
+      - ./infra/mongo/mongo-keyfile:/etc/mongo-keyfile:ro
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:27017:27017"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 20s
+    networks:
+      - tiktakrun-net
+
+  # ─── Mongo replica set initializer (runs once) ───────────────────────────
+  mongo-init:
+    image: mongo:7
+    container_name: tiktakrun-mongo-init
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      MONGO_USER: ${MONGO_USER:-tiktakrun}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+    entrypoint: ["bash", "/init/init-replica.sh"]
+    volumes:
+      - ./infra/mongo/init-replica.sh:/init/init-replica.sh:ro
     networks:
       - tiktakrun-net
 
@@ -85,8 +102,10 @@ services:
     ports:
       - "127.0.0.1:4000:4000"
     depends_on:
-      postgres:
+      mongo:
         condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     healthcheck:
@@ -182,8 +201,8 @@ services:
       - tiktakrun-net
 
 volumes:
-  postgres-data:
-    name: tiktakrun-postgres-data
+  mongo-data:
+    name: tiktakrun-mongo-data
   redis-data:
     name: tiktakrun-redis-data
 

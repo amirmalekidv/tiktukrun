@@ -23,7 +23,7 @@ if [ ! -f .env ]; then
 fi
 
 # ─── Pre-deploy backup ────────────────────────────────────────────────────
-if docker ps --format '{{.Names}}' | grep -q tiktakrun-postgres; then
+if docker ps --format '{{.Names}}' | grep -q tiktakrun-mongo; then
     echo "📦 Creating pre-deploy backup..."
     bash "$SCRIPT_DIR/backup.sh" || echo "⚠️  Backup failed (continuing)"
 fi
@@ -37,18 +37,18 @@ echo "🚀 Starting services..."
 docker compose up -d
 
 # ─── Wait for DB ──────────────────────────────────────────────────────────
-echo "⏳ Waiting for PostgreSQL to be healthy..."
+echo "⏳ Waiting for MongoDB to be healthy..."
 for i in {1..60}; do
-    if docker compose exec -T postgres pg_isready -U "${POSTGRES_USER:-tiktakrun}" >/dev/null 2>&1; then
-        echo "✅ PostgreSQL ready"
+    if docker compose exec -T mongo mongosh --quiet --eval "db.adminCommand('ping')" >/dev/null 2>&1; then
+        echo "✅ MongoDB ready"
         break
     fi
     sleep 2
 done
 
 # ─── Run migrations ───────────────────────────────────────────────────────
-echo "📊 Running database migrations..."
-docker compose exec -T api npx prisma migrate deploy
+echo "📊 Syncing database schema (prisma db push — Mongo has no migrate)..."
+docker compose exec -T api npx prisma db push --skip-generate
 
 # ─── Optional: Seed (only if explicitly requested) ────────────────────────
 if [ "${SEED:-no}" = "yes" ]; then

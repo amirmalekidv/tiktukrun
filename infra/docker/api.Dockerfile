@@ -67,5 +67,5 @@ EXPOSE 4000
 # Use tini as init system (handles signals properly)
 ENTRYPOINT ["/sbin/tini", "--"]
 
-# On startup: run migrations then start
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+# On startup: sync schema to MongoDB (db push — migrate not supported on Mongo) then start
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/main"]

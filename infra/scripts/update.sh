@@ -30,11 +30,11 @@ fi
 echo "[3/5] Rebuilding Docker images..."
 docker compose build --pull
 
-# Apply DB migrations
-echo "[4/5] Applying database migrations..."
-docker compose up -d postgres redis
+# Sync DB schema (MongoDB — db push instead of migrate)
+echo "[4/5] Syncing database schema..."
+docker compose up -d mongo mongo-init redis
 sleep 5
-docker compose run --rm api npx prisma migrate deploy
+docker compose run --rm api npx prisma db push --skip-generate
 
 # Rolling restart
 echo "[5/5] Restarting services..."

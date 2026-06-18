@@ -35,10 +35,13 @@ read -r -p "Type 'RESTORE' to confirm: " confirm
 echo "Stopping API to free DB connections..."
 docker compose stop api web admin || true
 
-echo "Restoring database..."
-gunzip -c "$DB_BACKUP" | docker compose exec -T postgres psql \
-    -U "${POSTGRES_USER:-tiktakrun}" \
-    -d "${POSTGRES_DB:-tiktakrun_db}"
+echo "Restoring database (MongoDB)..."
+docker compose exec -T mongo mongorestore \
+    -u "${MONGO_USER:-tiktakrun}" \
+    -p "${MONGO_PASSWORD}" \
+    --authenticationDatabase admin \
+    --archive --gzip --drop \
+    < "$DB_BACKUP"
 
 if [ -n "$UPLOADS_BACKUP" ] && [ -f "$UPLOADS_BACKUP" ]; then
     echo "Restoring uploads..."

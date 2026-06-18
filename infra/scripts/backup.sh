@@ -25,14 +25,16 @@ fi
 
 echo "📦 Starting backup at $TIMESTAMP"
 
-# ─── DB Dump ──────────────────────────────────────────────────────────────
-DB_BACKUP="$BACKUP_DIR/db_${TIMESTAMP}.sql.gz"
-echo "  → Dumping PostgreSQL to $DB_BACKUP"
-docker compose exec -T postgres pg_dump \
-    -U "${POSTGRES_USER:-tiktakrun}" \
-    -d "${POSTGRES_DB:-tiktakrun_db}" \
-    --no-owner --no-acl \
-    | gzip > "$DB_BACKUP"
+# ─── DB Dump (MongoDB) ──────────────────────────────────────────────────────
+DB_BACKUP="$BACKUP_DIR/db_${TIMESTAMP}.archive.gz"
+echo "  → Dumping MongoDB to $DB_BACKUP"
+docker compose exec -T mongo mongodump \
+    -u "${MONGO_USER:-tiktakrun}" \
+    -p "${MONGO_PASSWORD}" \
+    --authenticationDatabase admin \
+    --db "${MONGO_DB:-tiktakrun_db}" \
+    --archive --gzip \
+    > "$DB_BACKUP"
 
 DB_SIZE=$(du -h "$DB_BACKUP" | cut -f1)
 echo "  ✅ Database backup: $DB_SIZE"
