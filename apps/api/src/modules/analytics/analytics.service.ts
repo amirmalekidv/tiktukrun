@@ -110,30 +110,34 @@ export class AnalyticsService {
         }),
       ]);
 
-      // Daily revenue trend last 30 days
-      const revenueTrend = await this.prisma.$queryRaw<
-        { date: string; revenue: bigint }[]
-      >`
-        SELECT DATE("createdAt")::text as date, COALESCE(SUM("totalAmount"), 0) as revenue
-        FROM "bookings"
-        WHERE "status" = 'COMPLETED' AND "createdAt" >= ${thirtyDaysAgo}
-        GROUP BY DATE("createdAt")
-        ORDER BY date ASC
-      `.catch(() => []);
+      // Daily revenue trend last 30 days (MongoDB: aggregate in JS)
+      const trendBookings = await this.prisma.booking.findMany({
+        where: { status: 'COMPLETED', createdAt: { gte: thirtyDaysAgo } },
+        select: { createdAt: true, totalAmount: true },
+      });
+      const trendMap = new Map<string, number>();
+      for (const b of trendBookings) {
+        const date = b.createdAt.toISOString().slice(0, 10); // YYYY-MM-DD
+        trendMap.set(date, (trendMap.get(date) ?? 0) + Number(b.totalAmount ?? 0));
+      }
+      const revenueTrend = Array.from(trendMap.entries())
+        .map(([date, revenue]) => ({ date, revenue }))
+        .sort((a, b) => a.date.localeCompare(b.date));
 
-      // Category breakdown
-      const categoryBreakdown = await this.prisma.$queryRaw<
-        { name: string; count: bigint }[]
-      >`
-        SELECT c.name, COUNT(b.id) as count
-        FROM "bookings" b
-        JOIN "games" g ON g.id = b."gameId"
-        JOIN "categories" c ON c.id = g."categoryId"
-        WHERE b."status" = 'COMPLETED' AND b."createdAt" >= ${thirtyDaysAgo}
-        GROUP BY c.name
-        ORDER BY count DESC
-        LIMIT 6
-      `.catch(() => []);
+      // Category breakdown last 30 days (group bookings by game→category in JS)
+      const catBookings = await this.prisma.booking.findMany({
+        where: { status: 'COMPLETED', createdAt: { gte: thirtyDaysAgo } },
+        select: { game: { select: { category: { select: { name: true } } } } },
+      });
+      const catMap = new Map<string, number>();
+      for (const b of catBookings) {
+        const name = (b as any).game?.category?.name ?? 'نامشخص';
+        catMap.set(name, (catMap.get(name) ?? 0) + 1);
+      }
+      const categoryBreakdown = Array.from(catMap.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6);
 
       const curRevenue = Number(monthlyRevenue._sum.totalAmount ?? 0);
       const prevRevenue = Number(prevMonthRevenue._sum.totalAmount ?? 0);
@@ -152,14 +156,8 @@ export class AnalyticsService {
             ? Math.round(((newCustomers - prevMonthCustomers) / prevMonthCustomers) * 100)
             : 0,
         activeBookings,
-        revenueTrend: revenueTrend.map((r) => ({
-          date: r.date,
-          revenue: Number(r.revenue),
-        })),
-        categoryBreakdown: categoryBreakdown.map((c) => ({
-          name: c.name,
-          count: Number(c.count),
-        })),
+        revenueTrend,
+        categoryBreakdown,
         topCustomers: topCustomers.map((p: any) => ({
           id: p.user?.id ?? p.userId,
           name: p.user?.fullName ?? p.user?.mobile ?? '—',
@@ -221,25 +219,45 @@ export class AnalyticsService {
 
   async getCohort() {
     return this.cached('analytics:cohort:v2', async () => {
-      const cohortData = await this.prisma.$queryRaw<
-        { signupMonth: string; activeMonth: string; count: bigint }[]
-      >`
-        SELECT 
-          TO_CHAR(u."createdAt", 'YYYY-MM') as "signupMonth",
-          TO_CHAR(b."createdAt", 'YYYY-MM') as "activeMonth",
-          COUNT(DISTINCT u.id) as count
-        FROM "users" u
-        LEFT JOIN "bookings" b ON b."userId" = u.id AND b."status" = 'COMPLETED'
-        WHERE u."createdAt" >= NOW() - INTERVAL '12 months'
-        GROUP BY "signupMonth", "activeMonth"
-        ORDER BY "signupMonth" ASC, "activeMonth" ASC
-      `.catch(() => []);
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
-      return cohortData.map((row) => ({
-        signupMonth: row.signupMonth,
-        activeMonth: row.activeMonth,
-        count: Number(row.count),
-      }));
+      // Users who signed up in the last 12 months + their completed bookings.
+      const users = await this.prisma.user.findMany({
+        where: { createdAt: { gte: twelveMonthsAgo } },
+        select: {
+          id: true,
+          createdAt: true,
+          bookings: {
+            where: { status: 'COMPLETED' },
+            select: { createdAt: true },
+          },
+        },
+      });
+
+      const ym = (d: Date) => d.toISOString().slice(0, 7); // YYYY-MM
+      // key = signupMonth|activeMonth → set of distinct userIds
+      const cells = new Map<string, Set<string>>();
+      for (const u of users) {
+        const signupMonth = ym(u.createdAt);
+        if (!u.bookings.length) continue;
+        for (const b of u.bookings) {
+          const key = `${signupMonth}|${ym(b.createdAt)}`;
+          if (!cells.has(key)) cells.set(key, new Set());
+          cells.get(key)!.add(u.id);
+        }
+      }
+
+      return Array.from(cells.entries())
+        .map(([key, set]) => {
+          const [signupMonth, activeMonth] = key.split('|');
+          return { signupMonth, activeMonth, count: set.size };
+        })
+        .sort(
+          (a, b) =>
+            a.signupMonth.localeCompare(b.signupMonth) ||
+            a.activeMonth.localeCompare(b.activeMonth),
+        );
     });
   }
 
@@ -247,24 +265,29 @@ export class AnalyticsService {
 
   async getHeatmap() {
     return this.cached('analytics:heatmap:v2', async () => {
-      const data = await this.prisma.$queryRaw<
-        { dayOfWeek: number; hour: number; count: bigint }[]
-      >`
-        SELECT 
-          EXTRACT(DOW FROM "createdAt")::int as "dayOfWeek",
-          EXTRACT(HOUR FROM "createdAt" AT TIME ZONE 'Asia/Tehran')::int as hour,
-          COUNT(*) as count
-        FROM "bookings"
-        WHERE "createdAt" >= NOW() - INTERVAL '90 days'
-        GROUP BY "dayOfWeek", hour
-        ORDER BY "dayOfWeek", hour
-      `.catch(() => []);
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600_000);
+      const bookings = await this.prisma.booking.findMany({
+        where: { createdAt: { gte: ninetyDaysAgo } },
+        select: { createdAt: true },
+      });
 
-      return data.map((row) => ({
-        dayOfWeek: row.dayOfWeek,
-        hour: row.hour,
-        count: Number(row.count),
-      }));
+      // Convert UTC → Asia/Tehran (+3:30) for day-of-week & hour buckets.
+      const TEHRAN_OFFSET_MIN = 3 * 60 + 30;
+      const cells = new Map<string, number>(); // "dow|hour" → count
+      for (const b of bookings) {
+        const local = new Date(b.createdAt.getTime() + TEHRAN_OFFSET_MIN * 60_000);
+        const dayOfWeek = local.getUTCDay(); // 0=Sunday
+        const hour = local.getUTCHours();
+        const key = `${dayOfWeek}|${hour}`;
+        cells.set(key, (cells.get(key) ?? 0) + 1);
+      }
+
+      return Array.from(cells.entries())
+        .map(([key, count]) => {
+          const [dayOfWeek, hour] = key.split('|').map(Number);
+          return { dayOfWeek, hour, count };
+        })
+        .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.hour - b.hour);
     });
   }
 
@@ -272,30 +295,55 @@ export class AnalyticsService {
 
   async getGames() {
     return this.cached('analytics:games:v2', async () => {
-      const data = await this.prisma.$queryRaw<any[]>`
-        SELECT 
-          g.id,
-          g.title as name,
-          COUNT(b.id) as bookings,
-          COALESCE(SUM(b."totalAmount"), 0) as revenue,
-          COALESCE(AVG(r.rating), 0) as rating,
-          MAX(b."createdAt") as "lastBooking"
-        FROM "games" g
-        LEFT JOIN "bookings" b ON b."gameId" = g.id AND b."status" = 'COMPLETED'
-        LEFT JOIN "game_reviews" r ON r."gameId" = g.id
-        GROUP BY g.id, g.title
-        ORDER BY revenue DESC NULLS LAST
-        LIMIT 20
-      `.catch(() => []);
+      const games = await this.prisma.game.findMany({
+        select: { id: true, title: true },
+      });
+      if (!games.length) return [];
 
-      return data.map((row) => ({
-        id: row.id,
-        name: row.name,
-        bookings: Number(row.bookings ?? 0),
-        revenue: Number(row.revenue ?? 0),
-        rating: Number(row.rating ?? 0).toFixed(1),
-        lastBooking: row.lastBooking,
-      }));
+      // Completed bookings per game: revenue + count + lastBooking
+      const completed = await this.prisma.booking.findMany({
+        where: { status: 'COMPLETED' },
+        select: { gameId: true, totalAmount: true, createdAt: true },
+      });
+      const bkMap = new Map<
+        string,
+        { bookings: number; revenue: number; lastBooking: Date | null }
+      >();
+      for (const b of completed) {
+        const cur = bkMap.get(b.gameId) ?? { bookings: 0, revenue: 0, lastBooking: null };
+        cur.bookings += 1;
+        cur.revenue += Number(b.totalAmount ?? 0);
+        if (!cur.lastBooking || b.createdAt > cur.lastBooking) cur.lastBooking = b.createdAt;
+        bkMap.set(b.gameId, cur);
+      }
+
+      // Average rating per game (group reviews in JS)
+      const reviews = await this.prisma.review.findMany({
+        select: { gameId: true, rating: true },
+      });
+      const rtMap = new Map<string, { sum: number; n: number }>();
+      for (const r of reviews) {
+        const cur = rtMap.get(r.gameId) ?? { sum: 0, n: 0 };
+        cur.sum += r.rating;
+        cur.n += 1;
+        rtMap.set(r.gameId, cur);
+      }
+
+      return games
+        .map((g) => {
+          const bk = bkMap.get(g.id) ?? { bookings: 0, revenue: 0, lastBooking: null };
+          const rt = rtMap.get(g.id);
+          return {
+            id: g.id,
+            name: g.title,
+            bookings: bk.bookings,
+            revenue: bk.revenue,
+            rating: (rt && rt.n > 0 ? rt.sum / rt.n : 0).toFixed(1),
+            lastBooking: bk.lastBooking,
+          };
+        })
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 20);
     });
   }
 
@@ -303,26 +351,42 @@ export class AnalyticsService {
 
   async getCashflow() {
     return this.cached('analytics:cashflow:v2', async () => {
-      const data = await this.prisma.$queryRaw<
-        { month: string; income: bigint; expense: bigint }[]
-      >`
-        SELECT 
-          TO_CHAR("createdAt", 'YYYY-MM') as month,
-          COALESCE(SUM(CASE WHEN "totalAmount" > 0 THEN "totalAmount" ELSE 0 END), 0) as income,
-          0::bigint as expense
-        FROM "bookings"
-        WHERE "status" = 'COMPLETED'
-          AND "createdAt" >= NOW() - INTERVAL '12 months'
-        GROUP BY month
-        ORDER BY month ASC
-      `.catch(() => []);
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
-      return data.map((row) => ({
-        month: row.month,
-        income: Number(row.income ?? 0),
-        expense: Number(row.expense ?? 0),
-        profit: Number(row.income ?? 0) - Number(row.expense ?? 0),
-      }));
+      const bookings = await this.prisma.booking.findMany({
+        where: { status: 'COMPLETED', createdAt: { gte: twelveMonthsAgo } },
+        select: { createdAt: true, totalAmount: true },
+      });
+
+      const incomeMap = new Map<string, number>(); // YYYY-MM → income
+      for (const b of bookings) {
+        const month = b.createdAt.toISOString().slice(0, 7);
+        const amt = Number(b.totalAmount ?? 0);
+        incomeMap.set(month, (incomeMap.get(month) ?? 0) + (amt > 0 ? amt : 0));
+      }
+
+      // Expenses tracked as REFUND transactions (money out) if available.
+      const refunds = await this.prisma.transaction
+        .findMany({
+          where: { type: 'REFUND', createdAt: { gte: twelveMonthsAgo } },
+          select: { createdAt: true, amount: true },
+        })
+        .catch(() => [] as { createdAt: Date; amount: number }[]);
+      const expenseMap = new Map<string, number>();
+      for (const t of refunds) {
+        const month = t.createdAt.toISOString().slice(0, 7);
+        expenseMap.set(month, (expenseMap.get(month) ?? 0) + Math.abs(Number(t.amount ?? 0)));
+      }
+
+      const months = new Set<string>([...incomeMap.keys(), ...expenseMap.keys()]);
+      return Array.from(months)
+        .sort()
+        .map((month) => {
+          const income = incomeMap.get(month) ?? 0;
+          const expense = expenseMap.get(month) ?? 0;
+          return { month, income, expense, profit: income - expense };
+        });
     });
   }
 
