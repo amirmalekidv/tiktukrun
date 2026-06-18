@@ -2,9 +2,9 @@
 
 > این فایل خلاصه کامل آنچه ساخته شده و آنچه برنامه‌نویس و کارفرما باید انجام دهند.
 
-نسخه تحویل: **1.0.0**
-تاریخ تحویل: **2026-05-25**
-وضعیت: ✅ **آماده دیپلوی**
+نسخه تحویل: **1.1.0**
+تاریخ تحویل: **2026-06-18**
+وضعیت: ✅ **آماده دیپلوی** — مهاجرت کامل به MongoDB + حذف کامل حالت دمو
 
 ---
 
@@ -26,9 +26,32 @@
 پروژه شامل ۳ بخش است:
 - **سایت اصلی** (port 3000): برای کاربران نهایی
 - **داشبورد ادمین** (port 3001): برای مدیریت
-- **API** (port 4000): NestJS + Prisma + PostgreSQL + Redis + Socket.io
+- **API** (port 4000): NestJS + Prisma + **MongoDB** + Redis + Socket.io
 
 تم بصری: **Shadow Realm Gothic** (قرمز خونی روی مشکی). برندینگ: **TIK TAK RUN**.
+
+---
+
+## 1.1 تغییرات نسخه 1.1.0 (مهاجرت MongoDB + حذف دمو)
+
+این نسخه شامل دو کار بزرگ است:
+
+### 🗄️ مهاجرت دیتابیس از PostgreSQL به MongoDB
+- **schema.prisma**: provider به `mongodb` تغییر کرد.
+- **Analytics** (`analytics.service.ts`): همه ۶ بلوک `$queryRaw` (که SQL خام Postgres بودند و در MongoDB کار نمی‌کنند) به Prisma `findMany/groupBy/aggregate` + تجمیع در JavaScript بازنویسی شدند — شامل: `revenueTrend`، `categoryBreakdown`، `cohort`، `heatmap`، `games`، `cashflow`. Heatmap با offset تهران (`+3:30`) محاسبه می‌شود.
+- **Backup** (`backup.service.ts`): از `pg_dump | gzip` به **`mongodump --archive --gzip`** تغییر کرد؛ فایل خروجی `backup-<timestamp>.archive.gz`؛ restore با `mongorestore --gzip --archive`.
+- **Transactions**: نیازمند MongoDB به‌صورت **replica set** (`rs0`). نمونه‌ی `DATABASE_URL`:
+  `mongodb://localhost:27017/tiktakrun?replicaSet=rs0&directConnection=true`
+- اعمال schema با `prisma db push` (در MongoDB از migrate استفاده نمی‌شود).
+
+### 🚫 حذف کامل حالت دمو/Mock از پنل ادمین
+- `USE_MOCK = false` به‌صورت سخت در `apps/admin/src/lib/mock-admin-api.ts`.
+- همه صفحات به API واقعی متصل شدند: NotificationsPanel، games/[id] و زیرصفحه‌های images/reviews، chats/reported و ...
+- **رزرو دستی ادمین**: endpoint جدید `POST /admin/bookings` (با `AdminCreateBookingDto`؛ رزرو CONFIRMED + پرداخت SUCCESS؛ محدود به شعبه برای branch-manager) و فرم واقعی رزرو در `bookings/new` (جست‌وجوی مشتری، انتخاب بازی/اسلات/تعداد بازیکن/روش پرداخت).
+
+### ✅ وضعیت کیفیت
+- **TypeCheck**: API 0 خطا · ADMIN 0 خطا · WEB 0 خطا (۰/۰/۰).
+- **Build**: `nest build` (API) و `next build` (ADMIN) هر دو موفق.
 
 ---
 
@@ -126,9 +149,9 @@ nano .env  # ⚠️ تنظیم متغیرها → مرحله بعد
 # Domain
 PROD_DOMAIN=tiktakrun.ir   # دامنه واقعی شما
 
-# Database - رمز قوی (با openssl rand -base64 32)
-POSTGRES_PASSWORD=<...>
-DATABASE_URL=postgresql://tiktakrun:<همان_رمز>@postgres:5432/tiktakrun_db?schema=public
+# Database - MongoDB (به‌صورت replica set برای transactionها)
+# در production معمولاً با احراز هویت: mongodb://<user>:<pass>@mongo:27017/tiktakrun?replicaSet=rs0&authSource=admin
+DATABASE_URL=mongodb://localhost:27017/tiktakrun?replicaSet=rs0&directConnection=true
 
 # JWT - با openssl rand -base64 48
 JWT_SECRET=<...>
@@ -166,7 +189,7 @@ api.tiktakrun.ir     A    <SERVER_IP>
 docker compose build --pull
 docker compose up -d
 sleep 30
-docker compose exec api npx prisma migrate deploy
+docker compose exec api npx prisma db push   # MongoDB: db push به‌جای migrate
 docker compose exec api pnpm seed
 ```
 

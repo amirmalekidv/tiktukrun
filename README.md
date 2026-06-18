@@ -53,6 +53,20 @@
 - ✅ Real-time updates با Socket.io
 - ✅ خروجی Excel/PDF/CSV
 - ✅ ۲ زبانی (UI فارسی، نام‌های فنی انگلیسی)
+- ✅ **بدون حالت دمو/Mock**: کل پنل ادمین به بک‌اند واقعی متصل است (`USE_MOCK=false` به‌صورت سخت) — همه صفحات روی API واقعی کار می‌کنند
+- ✅ **رزرو دستی ادمین**: ساخت رزرو از پنل (`POST /admin/bookings`) با جست‌وجوی مشتری، انتخاب بازی/اسلات/تعداد بازیکن/روش پرداخت
+
+---
+
+## 🗄️ وضعیت دیتابیس و حالت دمو
+
+| مورد | وضعیت |
+|------|--------|
+| **دیتابیس** | ✅ مهاجرت کامل از PostgreSQL به **MongoDB 7** (Prisma MongoDB connector) |
+| **Analytics** | ✅ همه کوئری‌های `$queryRaw` (SQL) به Prisma + تجمیع JS بازنویسی شد (سازگار با MongoDB) |
+| **Backup/Restore** | ✅ از `pg_dump` به **`mongodump --archive --gzip`** تغییر کرد (restore با `mongorestore`) |
+| **حالت دمو ادمین** | ✅ کاملاً حذف شد — `USE_MOCK=false`، همه صفحات به API واقعی متصل‌اند |
+| **Transactions** | نیازمند MongoDB به‌صورت **replica set** (`rs0`) |
 
 ---
 
@@ -63,7 +77,7 @@
 | **Frontend Site** | Next.js 14 (App Router) + TypeScript + Tailwind RTL + Framer Motion |
 | **Frontend Admin** | Next.js 14 + Chart.js / Recharts + @dnd-kit + react-table |
 | **Backend** | NestJS 10 + Prisma 5 + class-validator |
-| **Database** | PostgreSQL 16 (citext, pgcrypto extensions) |
+| **Database** | MongoDB 7 (replica set `rs0` برای transactionها) |
 | **Cache** | Redis 7 |
 | **Real-time** | Socket.io 4 |
 | **Auth** | JWT + OTP موبایل |
@@ -91,13 +105,15 @@ cd tiktakrun
 
 # 2. کپی و تنظیم متغیرها
 cp .env.example .env
-nano .env  # حداقل POSTGRES_PASSWORD، JWT_SECRET، COOKIE_SECRET را تنظیم کن
+nano .env  # حداقل DATABASE_URL (MongoDB)، JWT_SECRET، COOKIE_SECRET را تنظیم کن
+# نمونه DATABASE_URL:
+# mongodb://localhost:27017/tiktakrun?replicaSet=rs0&directConnection=true
 
-# 3. بالا آوردن سرویس‌ها
+# 3. بالا آوردن سرویس‌ها (MongoDB با replica set راه‌اندازی می‌شود)
 docker compose up -d
 
-# 4. اجرای migration و seed
-docker compose exec api npx prisma migrate deploy
+# 4. اعمال schema و seed (MongoDB از prisma db push استفاده می‌کند، نه migrate)
+docker compose exec api npx prisma db push
 docker compose exec api pnpm seed
 ```
 
@@ -191,8 +207,8 @@ pnpm deploy:setup
 # بکاپ دستی
 pnpm deploy:backup
 
-# مهاجرت‌های دیتابیس
-pnpm migrate
+# اعمال schema روی MongoDB (به‌جای migrate در MongoDB از db push استفاده می‌شود)
+pnpm --filter @tiktakrun/api exec prisma db push
 pnpm seed
 
 # Prisma Studio (GUI دیتابیس)
@@ -220,7 +236,8 @@ docker compose logs -f web
 | مشکل | راه حل |
 |------|--------|
 | `container restart loop` | `docker compose logs <service>` |
-| `DB connection error` | `POSTGRES_PASSWORD` در `.env` را چک کنید |
+| `DB connection error` | `DATABASE_URL` (MongoDB با `replicaSet=rs0`) در `.env` را چک کنید |
+| `Transaction needs replica set` | MongoDB باید به‌صورت replica set اجرا شود (`rs0`) — transactionها بدون آن کار نمی‌کنند |
 | `SMS کار نمی‌کند` | `SMS_MOCK_MODE=true` در dev، `SMSIR_API_KEY` در prod |
 | `ZarinPal callback fail` | `ZARINPAL_CALLBACK_URL` باید HTTPS باشد |
 | `Permission denied uploads` | `chown -R 1001:1001 storage/` |

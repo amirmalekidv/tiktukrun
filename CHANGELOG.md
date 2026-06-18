@@ -6,6 +6,25 @@
 
 ---
 
+## [1.1.0] — 2026-06-18 — MongoDB Migration + De-Demo 🍃
+
+### 🗄️ مهاجرت دیتابیس به MongoDB
+- **Changed**: provider دیتابیس از PostgreSQL به **MongoDB** (Prisma MongoDB connector).
+- **Changed**: `analytics.service.ts` — بازنویسی ۶ بلوک `$queryRaw` SQL (revenueTrend، categoryBreakdown، cohort، heatmap، games، cashflow) به Prisma + تجمیع JS سازگار با MongoDB. Heatmap با offset تهران (`+3:30`).
+- **Changed**: `backup.service.ts` — جایگزینی `pg_dump | gzip` با **`mongodump --archive --gzip`**؛ خروجی `.archive.gz`؛ restore با `mongorestore`.
+- **Note**: transactionها نیازمند MongoDB به‌صورت replica set (`rs0`)؛ اعمال schema با `prisma db push`.
+
+### 🚫 حذف کامل حالت دمو/Mock (ادمین)
+- **Changed**: `USE_MOCK = false` سخت در `mock-admin-api.ts` — کل پنل به API واقعی متصل شد.
+- **Changed**: de-demo صفحات NotificationsPanel، games/[id] (+images/reviews)، chats/reported و ...
+- **Added**: رزرو دستی ادمین — endpoint `POST /admin/bookings` (`AdminCreateBookingDto`، CONFIRMED + paid، branch-scoped) و فرم واقعی رزرو در `bookings/new` (جست‌وجوی مشتری، بازی/اسلات/تعداد/پرداخت).
+- **Added**: `adminCustomersApi.search`، `bookingsApi.create`، `notificationsApi`.
+
+### ✅ کیفیت
+- TypeCheck: API/ADMIN/WEB = ۰/۰/۰ خطا. Build: `nest build` و `next build` موفق.
+
+---
+
 ## [1.0.0] — 2026-05-25 — Initial Release 🎉
 
 ### ✨ ویژگی‌های اصلی
