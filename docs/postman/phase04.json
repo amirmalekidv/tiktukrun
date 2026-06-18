@@ -1,0 +1,229 @@
+{
+  "info": {
+    "name": "TikTakRun — Phase 4 Business APIs",
+    "version": "4.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",    "value": "http://localhost:4000" },
+    { "key": "authToken",  "value": "Bearer <your-jwt-token>" }
+  ],
+  "item": [
+    {
+      "name": "Cities",
+      "item": [
+        { "name": "GET Active Cities (Public)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/cities" }},
+        { "name": "GET All Cities (Admin)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/admin/cities",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }},
+        { "name": "POST Create City (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/cities",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\":\"تهران\",\"slug\":\"tehran\",\"displayOrder\":1,\"isActive\":true}" }}},
+        { "name": "PATCH Update City (Admin)",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/api/v1/admin/cities/:id",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"displayOrder\":2}" }}},
+        { "name": "DELETE Soft Delete City (Admin)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/admin/cities/:id",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }}
+      ]
+    },
+    {
+      "name": "Branches",
+      "item": [
+        { "name": "GET Active Branches (Public)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/branches?cityId=<cityId>" }},
+        { "name": "GET Branch Detail (Public)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/branches/:id" }},
+        { "name": "POST Create Branch (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/branches",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\":\"شعبه تهران مرکز\",\"cityId\":\"<cityId>\",\"address\":\"خیابان ولیعصر\",\"phone\":\"02112345678\",\"lat\":35.7,\"lng\":51.4,\"isActive\":true}" }}}
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        { "name": "GET Categories (Public)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/categories" }},
+        { "name": "POST Create Category (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/categories",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\":\"اتاق فرار ترسناک\",\"slug\":\"horror-escape-room\",\"genre\":\"HORROR\",\"icon\":\"skull\",\"color\":\"#FF0000\"}" }}}
+      ]
+    },
+    {
+      "name": "Games",
+      "item": [
+        { "name": "GET Games List (Public, Filtered)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/games?cityId=<id>&genre=HORROR&minFear=5&sortBy=popular&page=1&limit=10" }},
+        { "name": "GET Game by Slug (Public)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/games/:slug" }},
+        { "name": "GET Featured Hero (Public)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/games/featured/hero" }},
+        { "name": "GET Games by Section (Public)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/games/by-section/weekly-discount" }},
+        { "name": "GET Game Availability (Public)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/games/availability/:gameId?date=2025-06-01" }},
+        { "name": "POST Create Game (Admin, multipart)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/games",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }],
+            "body": { "mode": "formdata", "formdata": [
+              { "key": "title",           "value": "اتاق ترسناک جنگل" },
+              { "key": "categoryId",      "value": "<categoryId>" },
+              { "key": "branchId",        "value": "<branchId>" },
+              { "key": "minPlayers",      "value": "2" },
+              { "key": "maxPlayers",      "value": "6" },
+              { "key": "durationMinutes", "value": "60" },
+              { "key": "pricePerPerson",  "value": "500000" },
+              { "key": "fearLevel",       "value": "8" },
+              { "key": "genre",           "value": "HORROR" },
+              { "key": "cover",           "type": "file", "src": "/path/to/cover.jpg" }
+            ]}}},
+        { "name": "PATCH Set Weekly Discount (Admin)",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/api/v1/admin/games/:id/weekly-discount",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"percent\":20}" }}},
+        { "name": "POST Toggle Featured (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/games/:id/toggle-featured",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }},
+        { "name": "POST Recompute Rank (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/games/:id/recompute-rank",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }}
+      ]
+    },
+    {
+      "name": "Discounts",
+      "item": [
+        { "name": "POST Validate Discount Code (Auth)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/discounts/validate",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"code\":\"WELCOME20\",\"gameId\":\"<gameId>\",\"playersCount\":3,\"slotDateTime\":\"2025-06-10T18:00:00\"}" }}},
+        { "name": "GET Discount Codes (Admin)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/admin/discount-codes",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }},
+        { "name": "POST Create Discount Code (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/discount-codes",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"code\":\"SUMMER30\",\"type\":\"PERCENT\",\"value\":30,\"validFrom\":\"2025-06-01\",\"validUntil\":\"2025-06-30\",\"maxUses\":100,\"isActive\":true}" }}},
+        { "name": "GET Auto Discounts (Admin)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/admin/auto-discounts",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }},
+        { "name": "POST Create Auto Discount (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/auto-discounts",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\":\"تخفیف اول بازی\",\"type\":\"PERCENT\",\"value\":15,\"ruleType\":\"FIRST_BOOKING\",\"isActive\":true}" }}}
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        { "name": "POST Preview Booking (Auth)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/bookings/preview",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"gameId\":\"<gameId>\",\"slotDateTime\":\"2025-06-10T18:00:00\",\"playersCount\":3,\"discountCode\":\"SUMMER30\"}" }}},
+        { "name": "POST Create Booking — WALLET (Auth)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/bookings",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"gameId\":\"<gameId>\",\"slotDateTime\":\"2025-06-10T18:00:00\",\"playersCount\":3,\"paymentMethod\":\"WALLET\"}" }}},
+        { "name": "POST Create Booking — ZARINPAL (Auth)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/bookings",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"gameId\":\"<gameId>\",\"slotDateTime\":\"2025-06-10T18:00:00\",\"playersCount\":3,\"paymentMethod\":\"ZARINPAL\"}" }}},
+        { "name": "GET My Bookings (Auth)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/bookings/me?status=CONFIRMED&page=1",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }},
+        { "name": "POST Cancel Booking (Auth, >24h = full refund)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/bookings/me/:id/cancel",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"reason\":\"برنامه تغییر کرد\"}" }}},
+        { "name": "GET Calendar (Admin)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/admin/bookings/calendar?branchId=<id>&from=2025-06-01&to=2025-06-30",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }},
+        { "name": "PATCH Update Booking Status (Admin)",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/api/v1/admin/bookings/:id/status",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"status\":\"COMPLETED\",\"reason\":\"بازی با موفقیت انجام شد\"}" }}},
+        { "name": "POST Refund Booking (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/bookings/:id/refund",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"amount\":500000,\"reason\":\"درخواست مشتری\"}" }}},
+        { "name": "POST Rate Player (Branch Manager)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/bookings/:id/rate-player",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"xpDelta\":25,\"reason\":\"عملکرد عالی در بازی\"}" }}},
+        { "name": "GET Export Bookings CSV (Admin)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/admin/bookings/export?format=xlsx",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }}
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        { "name": "GET Reviews for Game (Public)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/reviews/game/:gameId?page=1&limit=10" }},
+        { "name": "POST Create Review (Auth, after COMPLETED booking)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/reviews/booking/:bookingId",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"rating\":5,\"text\":\"تجربه فوق‌العاده‌ای بود! قطعاً دوباره می‌آیم.\"}" }}},
+        { "name": "POST Mark Helpful (Auth)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/reviews/:id/helpful",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }},
+        { "name": "POST Approve Review (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/reviews/:id/approve",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }},
+        { "name": "POST Reject Review (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/admin/reviews/:id/reject",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" },
+                       { "key": "Content-Type",  "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"reason\":\"محتوای نامناسب\"}" }}}
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        { "name": "GET ZarinPal Callback (Public — از ZarinPal redirect می‌شود)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/payments/zarinpal/verify?Authority=MOCK_123&Status=OK&paymentId=<paymentId>" }},
+        { "name": "GET All Payments (Admin)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/admin/payments?status=SUCCESS",
+            "header": [{ "key": "Authorization", "value": "{{authToken}}" }] }}
+      ]
+    },
+    {
+      "name": "Top of Week",
+      "item": [
+        { "name": "GET Top Games",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/top/games?period=week&limit=10" }},
+        { "name": "GET Top Players",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/top/players?period=week&limit=10" }},
+        { "name": "GET Top Teams",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/top/teams?period=month&limit=10" }}
+      ]
+    },
+    {
+      "name": "Weekly Discounts",
+      "item": [
+        { "name": "GET Weekly Discounts (Public)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/weekly/discounts" }}
+      ]
+    }
+  ]
+}

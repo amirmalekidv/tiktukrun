@@ -1,0 +1,343 @@
+{
+  "info": {
+    "name": "TIK TAK RUN API — Phase 3",
+    "description": "Auth + Users + Wallet + Profile — فاز ۳",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "3.0.0"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Request OTP",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/otp/request",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile\": \"09123456789\"\n}" }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "event": [{ "listen": "test", "script": { "exec": ["var json = pm.response.json();", "if (json.data) {", "  pm.environment.set('accessToken', json.data.accessToken);", "  pm.environment.set('refreshToken', json.data.refreshToken);", "}"] } }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/otp/verify",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile\": \"09123456789\",\n  \"code\": \"12345\",\n  \"inviteCode\": \"\"\n}" }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/admin/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile\": \"09100000000\",\n  \"password\": \"Admin@123456\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/users/me",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"علی محمدی\",\n  \"nickname\": \"ali_m\",\n  \"bio\": \"علاقه‌مند به بازی‌های فرار\"\n}" }
+          }
+        },
+        {
+          "name": "Get Avatar Items",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/me/avatar/items",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Purchase Avatar Item",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/users/me/avatar/purchase",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"itemId\": \"item-id-here\"\n}" }
+          }
+        },
+        {
+          "name": "Update Avatar Config",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/users/me/avatar/config",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"hatId\": null,\n  \"glassesId\": null\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "My Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/profile/me/stats",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "My Badges",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/profile/me/badges",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Leaderboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/profile/leaderboard?type=xp&period=all&limit=10",
+              "query": [
+                { "key": "type", "value": "xp" },
+                { "key": "period", "value": "all" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Public Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/profile/USER_ID_HERE/public"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallet",
+      "item": [
+        {
+          "name": "My Wallet",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/wallet/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Transactions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/wallet/me/transactions?page=1&limit=20",
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Diamond Packages",
+          "request": { "method": "GET", "url": "{{baseUrl}}/wallet/packages/diamonds" }
+        },
+        {
+          "name": "Coin Packages",
+          "request": { "method": "GET", "url": "{{baseUrl}}/wallet/packages/coins" }
+        },
+        {
+          "name": "Charge Wallet",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/charge",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 100000,\n  \"method\": \"ZARINPAL\"\n}" }
+          }
+        },
+        {
+          "name": "Purchase Diamonds",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/purchase-diamonds",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"packageId\": \"pkg_50\"\n}" }
+          }
+        },
+        {
+          "name": "Purchase Coins",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/purchase-coins",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"packageId\": \"coin_100\"\n}" }
+          }
+        },
+        {
+          "name": "Convert XP to Coins",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/convert",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"from\": \"XP\",\n  \"to\": \"COINS\",\n  \"amount\": 100\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invites",
+      "item": [
+        {
+          "name": "My Invite Info",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/invites/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Validate Invite Code",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/invites/validate",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"ABC12345\"\n}" }
+          }
+        },
+        {
+          "name": "Apply Invite Code",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/invites/apply",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"ABC12345\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Unread Count",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications/me/unread-count",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Mark All Read",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/notifications/me/read-all",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?page=1&limit=20",
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Adjust Wallet (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/wallets/manual-adjust",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"USER_ID\",\n  \"currency\": \"TOMAN\",\n  \"delta\": 100000,\n  \"reason\": \"شارژ دستی\"\n}" }
+          }
+        }
+      ]
+    }
+  ]
+}

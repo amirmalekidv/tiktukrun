@@ -1,0 +1,38 @@
+{
+  "name": "tiktakrun",
+  "version": "1.0.0",
+  "description": "TIK TAK RUN — Persian Entertainment Booking Platform (Monorepo)",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "migrate": "pnpm --filter @tiktakrun/api prisma:migrate:deploy",
+    "migrate:dev": "pnpm --filter @tiktakrun/api prisma:migrate:dev",
+    "seed": "pnpm --filter @tiktakrun/api seed",
+    "prisma:studio": "pnpm --filter @tiktakrun/api prisma:studio",
+    "db:reset": "pnpm --filter @tiktakrun/api db:reset",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "deploy:setup": "bash infra/scripts/deploy.sh",
+    "deploy:backup": "bash infra/scripts/backup.sh",
+    "deploy:ssl": "bash infra/scripts/ssl-setup.sh"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.2",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4",
+    "@types/node": "^20.16.5"
+  },
+  "packageManager": "pnpm@9.10.0"
+}

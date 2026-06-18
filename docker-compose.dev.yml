@@ -1,0 +1,58 @@
+version: '3.9'
+
+# Development override — hot reload, exposed ports, no SSL
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+      target: builder
+    command: sh -c "pnpm --filter @tiktakrun/api exec prisma migrate deploy && pnpm --filter @tiktakrun/api dev"
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./packages:/app/packages
+      - ./storage/uploads:/storage/uploads
+    ports:
+      - "4000:4000"
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      target: deps
+    command: pnpm --filter @tiktakrun/web dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+      - ./packages:/app/packages
+    ports:
+      - "3000:3000"
+
+  admin:
+    build:
+      context: .
+      dockerfile: infra/docker/admin.Dockerfile
+      target: deps
+    command: pnpm --filter @tiktakrun/admin dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./apps/admin/src:/app/apps/admin/src
+      - ./packages:/app/packages
+    ports:
+      - "3001:3001"
+
+  nginx:
+    profiles:
+      - nginx  # only start nginx in dev if explicitly requested

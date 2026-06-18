@@ -1,0 +1,193 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# TIK TAK RUN — Production Docker Compose
+# ═══════════════════════════════════════════════════════════════════════════
+# Services: postgres, redis, api, web, admin, nginx
+# Usage: docker compose up -d
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  # ─── PostgreSQL 16 ───────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: tiktakrun-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: ${TZ:-Asia/Tehran}
+      PGTZ: ${TZ:-Asia/Tehran}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/init-scripts:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tiktakrun-net
+
+  # ─── Redis 7 ─────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: tiktakrun-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - tiktakrun-net
+
+  # ─── NestJS API ──────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    container_name: tiktakrun-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-Asia/Tehran}
+      PORT: 4000
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      WEB_URL: ${WEB_URL}
+      ADMIN_URL: ${ADMIN_URL}
+      PROD_DOMAIN: ${PROD_DOMAIN}
+      SMS_MOCK_MODE: ${SMS_MOCK_MODE}
+      SMSIR_API_KEY: ${SMSIR_API_KEY}
+      SMSIR_LINE_NUMBER: ${SMSIR_LINE_NUMBER}
+      SMSIR_TEMPLATE_ID_OTP: ${SMSIR_TEMPLATE_ID_OTP}
+      ZARINPAL_MERCHANT_ID: ${ZARINPAL_MERCHANT_ID}
+      ZARINPAL_SANDBOX: ${ZARINPAL_SANDBOX}
+      ZARINPAL_CALLBACK_URL: ${ZARINPAL_CALLBACK_URL}
+      STORAGE_PATH: /storage/uploads
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OTP_LENGTH: ${OTP_LENGTH:-5}
+      OTP_TTL_SECONDS: ${OTP_TTL_SECONDS:-120}
+    volumes:
+      - ./storage:/storage
+    ports:
+      - "127.0.0.1:4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - tiktakrun-net
+
+  # ─── Next.js Web Site ────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+        NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-TIK TAK RUN}
+    container_name: tiktakrun-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-Asia/Tehran}
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - tiktakrun-net
+
+  # ─── Next.js Admin Dashboard ─────────────────────────────────────────────
+  admin:
+    build:
+      context: .
+      dockerfile: infra/docker/admin.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+    container_name: tiktakrun-admin
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-Asia/Tehran}
+      PORT: 3001
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - tiktakrun-net
+
+  # ─── Nginx Reverse Proxy ─────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: tiktakrun-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./infra/nginx/sites:/etc/nginx/sites-enabled:ro
+      - ./infra/nginx/ssl:/etc/nginx/ssl:ro
+      - ./storage/uploads:/var/www/uploads:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - api
+      - web
+      - admin
+    networks:
+      - tiktakrun-net
+
+volumes:
+  postgres-data:
+    name: tiktakrun-postgres-data
+  redis-data:
+    name: tiktakrun-redis-data
+
+networks:
+  tiktakrun-net:
+    name: tiktakrun-network
+    driver: bridge

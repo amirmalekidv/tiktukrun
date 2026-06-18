@@ -1,0 +1,561 @@
+{
+  "info": {
+    "name": "TIK TAK RUN — Phase 5 API",
+    "description": "Complete Phase 5 API: Gamification, Chat, CRM, Settings, Backup, Analytics",
+    "version": "5.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:4000", "type": "string" },
+    { "key": "token", "value": "YOUR_JWT_TOKEN_HERE", "type": "string" },
+    { "key": "admin_token", "value": "YOUR_ADMIN_JWT_TOKEN_HERE", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "🎮 Gamification",
+      "item": [
+        {
+          "name": "GET /api/v1/levels",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/levels",
+            "description": "لیست ۲۰ لول"
+          }
+        },
+        {
+          "name": "GET /api/v1/badges",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/badges",
+            "description": "لیست بج‌های فعال"
+          }
+        },
+        {
+          "name": "Admin: GET /api/v1/admin/levels",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/levels",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Admin: PATCH /api/v1/admin/levels/:id",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/admin/levels/LEVEL_ID",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"requiredXp\": 1000, \"perks\": {\"accessories\": [], \"discount\": 10}}"
+            }
+          }
+        },
+        {
+          "name": "Admin: POST /api/v1/admin/badges",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/badges",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\": \"FIRST_BOOKING\", \"name\": \"اولین رزرو\", \"rarity\": \"COMMON\", \"triggerEvent\": \"booking_completed\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎡 Wheel",
+      "item": [
+        {
+          "name": "GET /api/v1/wheel/prizes",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/wheel/prizes" }
+        },
+        {
+          "name": "GET /api/v1/wheel/me/eligibility",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/wheel/me/eligibility",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "POST /api/v1/wheel/spin",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/wheel/spin",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"paidWith\": \"COINS\"}" }
+          }
+        },
+        {
+          "name": "Admin: GET /api/v1/admin/wheel/stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/wheel/stats",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "💬 Chat",
+      "item": [
+        {
+          "name": "GET /api/v1/chat/rooms/global/messages",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/chat/rooms/global/messages?page=1&limit=50",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "POST /api/v1/chat/rooms/global/messages",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/chat/rooms/global/messages",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"text\": \"سلام همه!\"}" }
+          }
+        },
+        {
+          "name": "Admin: GET /api/v1/admin/chats/messages",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/chats/messages?status=REPORTED",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Admin: POST /api/v1/admin/users/:userId/mute",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/users/USER_ID/mute",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"hours\": 24, \"reason\": \"نقض قوانین\"}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Teams",
+      "item": [
+        {
+          "name": "GET /api/v1/teams",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/teams?page=1&limit=20" }
+        },
+        {
+          "name": "POST /api/v1/teams",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"تیم شیران\", \"gameId\": \"GAME_ID\", \"capacity\": 4, \"isPublic\": true}"
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/teams/:id/join",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/teams/TEAM_ID/join",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎫 Tickets",
+      "item": [
+        {
+          "name": "POST /api/v1/tickets",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/tickets",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"subject\": \"مشکل پرداخت\", \"body\": \"پرداخت انجام شد ولی رزرو تایید نشد\", \"priority\": \"HIGH\"}"
+            }
+          }
+        },
+        {
+          "name": "GET /api/v1/tickets/me",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/tickets/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Admin: GET /api/v1/admin/tickets/stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/tickets/stats",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏢 CRM - Customers",
+      "item": [
+        {
+          "name": "GET /api/v1/admin/customers",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/customers?page=1&limit=20&sortBy=ltv",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "GET /api/v1/admin/customers/stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/customers/stats",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "GET /api/v1/admin/customers/top-ltv",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/customers/top-ltv?limit=10",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "POST /api/v1/admin/customers/:id/notes",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/customers/CUSTOMER_ID/notes",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"text\": \"مشتری VIP - نیاز به پیگیری دارد\"}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔖 Segments",
+      "item": [
+        {
+          "name": "GET /api/v1/admin/segments",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/segments",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "POST /api/v1/admin/segments",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/segments",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"VIP\", \"color\": \"#FFD700\", \"icon\": \"👑\", \"conditions\": {\"rules\": [{\"field\": \"ltv\", \"op\": \">=\", \"value\": 5000000}]}}"
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/admin/segments/:id/recompute",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/segments/SEGMENT_ID/recompute",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Pipeline",
+      "item": [
+        {
+          "name": "GET /api/v1/admin/pipeline",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/pipeline",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "POST /api/v1/admin/pipeline",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/pipeline",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"شرکت آلفا - قرارداد سازمانی\", \"value\": 10000000, \"stage\": \"QUALIFIED\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/v1/admin/pipeline/:id/move",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/admin/pipeline/DEAL_ID/move",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"newStage\": \"PROPOSAL\", \"newPosition\": 1}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📣 Campaigns",
+      "item": [
+        {
+          "name": "POST /api/v1/admin/campaigns",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/campaigns",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"جشنواره نوروز\", \"type\": \"INAPP\", \"content\": {\"subject\": \"تخفیف ویژه نوروز\", \"body\": \"{{name}} عزیز، ۲۰٪ تخفیف نوروزی دارید!\"}}"
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/admin/campaigns/:id/start",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/campaigns/CAMPAIGN_ID/start",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "GET /api/v1/admin/campaigns/stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/campaigns/stats",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Settings",
+      "item": [
+        {
+          "name": "GET /api/v1/settings/public",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/settings/public" }
+        },
+        {
+          "name": "Admin: GET /api/v1/admin/settings",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/settings?group=gamification",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Admin: PUT /api/v1/admin/settings/:key",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/admin/settings/gamification.wheelCostCoins",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"value\": \"1000\"}" }
+          }
+        },
+        {
+          "name": "Admin: PUT /api/v1/admin/settings/bulk",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/admin/settings/bulk",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"settings\": [{\"key\": \"public.siteName\", \"value\": \"تیک تاک ران\"}, {\"key\": \"chat.rateLimit\", \"value\": \"10\"}]}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 Roles",
+      "item": [
+        {
+          "name": "GET /api/v1/admin/roles",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/roles",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "POST /api/v1/admin/users/:id/roles",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/users/USER_ID/roles",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"roles\": [\"SUPPORT\", \"MARKETING\"]}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏆 Monthly Rewards",
+      "item": [
+        {
+          "name": "POST /api/v1/admin/monthly/compute",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/monthly/compute?year=2025&month=5",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "POST /api/v1/admin/monthly/distribute",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/monthly/distribute",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"year\": 2025, \"month\": 5, \"customPrizes\": {\"topPlayer\": {\"xp\": 500, \"coins\": 2000, \"freeTicket\": true}, \"topTeam\": {\"coins\": 5000}}}"
+            }
+          }
+        },
+        {
+          "name": "GET /api/v1/admin/monthly/history",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/monthly/history",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 Audit Logs",
+      "item": [
+        {
+          "name": "GET /api/v1/admin/audit-logs",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/audit-logs?page=1&limit=50",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "💾 Backup",
+      "item": [
+        {
+          "name": "POST /api/v1/admin/backup/create",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/backup/create",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "GET /api/v1/admin/backup/list",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/backup/list",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "📈 Analytics",
+      "item": [
+        {
+          "name": "GET /api/v1/admin/analytics/overview",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/analytics/overview",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "GET /api/v1/admin/analytics/financial",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/analytics/financial",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "GET /api/v1/admin/analytics/cohort",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/analytics/cohort",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "GET /api/v1/admin/analytics/heatmap",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/analytics/heatmap",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "GET /api/v1/admin/analytics/gamification",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/analytics/gamification",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}
