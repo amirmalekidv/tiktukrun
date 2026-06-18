@@ -13,7 +13,9 @@ import {
   RefundBookingDto,
   RatePlayerDto,
   BookingQueryDto,
+  AdminCreateBookingDto,
 } from '../dto/booking.dto';
+import { nanoid } from 'nanoid';
 import { UserRole, NotificationType, WalletTxType } from '../../../common/interfaces/phase3-stubs.interface';
 import { TransactionType, CurrencyType } from '@prisma/client';
 import { parsePagination, buildPaginatedResponse } from '../../../common/helpers/pagination.helper';
@@ -292,5 +294,73 @@ export class BookingsAdminService {
     ].join('\n');
 
     return csv;
+  }
+
+  // ─── Manual booking creation (admin / POS) ─────────────────────────────────
+  // Records a booking on behalf of a customer (walk-in / phone). Branch managers
+  // may only create bookings for games in their own branch. Payment is recorded
+  // as already settled with the chosen method.
+  async adminCreate(
+    dto: AdminCreateBookingDto,
+    userRole: UserRole,
+    branchId?: string,
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id: dto.userId } });
+    if (!user) throw new NotFoundException('کاربر یافت نشد');
+
+    const game = await this.prisma.game.findUnique({ where: { id: dto.gameId } });
+    if (!game) throw new NotFoundException('بازی یافت نشد');
+    if (!game.isActive) throw new BadRequestException('این بازی فعال نیست');
+
+    // Branch managers can only book games in their own branch.
+    if (userRole === UserRole.BRANCH_MANAGER && branchId && game.branchId !== branchId) {
+      throw new BadRequestException('شما فقط می‌توانید برای بازی‌های شعبه خود رزرو ثبت کنید');
+    }
+
+    const slotDt = new Date(dto.slotDateTime);
+    if (Number.isNaN(slotDt.getTime())) {
+      throw new BadRequestException('زمان رزرو نامعتبر است');
+    }
+
+    const basePrice = Number(game.pricePerPerson) * dto.playersCount;
+    const totalAmount =
+      dto.totalAmount != null ? Number(dto.totalAmount) : basePrice;
+    const code = nanoid(8).toUpperCase();
+
+    return this.prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.create({
+        data: {
+          userId:          dto.userId,
+          gameId:          dto.gameId,
+          branchId:        game.branchId,
+          slotDateTime:    slotDt,
+          playersCount:    dto.playersCount,
+          basePrice,
+          discountApplied: Math.max(0, basePrice - totalAmount),
+          totalAmount,
+          paymentMethod:   dto.paymentMethod as any,
+          code,
+          note:            dto.note ?? 'رزرو دستی توسط ادمین',
+          status:          'CONFIRMED',
+        },
+        include: {
+          user: { select: { id: true, fullName: true, mobile: true } },
+          game: { select: { id: true, title: true } },
+        },
+      });
+
+      await tx.payment.create({
+        data: {
+          userId:    dto.userId,
+          bookingId: booking.id,
+          amount:    totalAmount,
+          status:    'SUCCESS',
+          method:    dto.paymentMethod as any,
+        },
+      });
+
+      this.logger.log(`Admin manual booking created: ${code} for user ${dto.userId}`);
+      return booking;
+    });
   }
 }

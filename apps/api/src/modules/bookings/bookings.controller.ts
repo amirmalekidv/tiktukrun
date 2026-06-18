@@ -21,6 +21,7 @@ import {
   RefundBookingDto,
   RatePlayerDto,
   BookingQueryDto,
+  AdminCreateBookingDto,
 } from './dto/booking.dto';
 import { CurrentUser }  from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -115,6 +116,15 @@ export class BookingsAdminController {
       .setHeader('Content-Type', 'text/csv; charset=utf-8')
       .setHeader('Content-Disposition', 'attachment; filename=bookings.csv')
       .send(csv);
+  }
+
+  @Post()
+  async adminCreate(
+    @Body() dto: AdminCreateBookingDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    const data = await this.svc.adminCreate(dto, user.role, user.branchId);
+    return { success: true, data };
   }
 
   @Get(':id')

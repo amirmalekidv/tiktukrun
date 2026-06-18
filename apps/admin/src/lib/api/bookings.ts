@@ -11,10 +11,22 @@ import type { Booking, ApiResponse, BookingStatus } from '../types';
 //   POST /:id/refund  -> body { amount, reason }    (RefundBookingDto; ADMIN only)
 //   POST /:id/complete-> no body
 //   POST /:id/rate-player -> body { xpDelta, reason } (RatePlayerDto; BRANCH_MANAGER)
-// NOTE: There is NO admin create / update / cancel route. Use changeStatus(CANCELLED) to cancel.
+//   POST /             -> body { userId, gameId, slotDateTime, playersCount, paymentMethod, totalAmount?, note? }
+//                         (AdminCreateBookingDto; manual/POS booking, recorded as CONFIRMED + paid)
+// NOTE: There is NO admin update route. Use changeStatus(CANCELLED) to cancel.
 export const bookingsApi = {
   getAll: (params?: Record<string, unknown>) =>
     apiClient.get<ApiResponse<Booking[]>>('/admin/bookings', { params }),
+
+  create: (data: {
+    userId: string;
+    gameId: string;
+    slotDateTime: string;
+    playersCount: number;
+    paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'WALLET' | 'ZARINPAL';
+    totalAmount?: number;
+    note?: string;
+  }) => apiClient.post<ApiResponse<Booking>>('/admin/bookings', data),
 
   getById: (id: string) =>
     apiClient.get<ApiResponse<Booking>>(`/admin/bookings/${id}`),

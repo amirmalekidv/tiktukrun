@@ -10,6 +10,18 @@ import type {
   AuditLog, Backup, ApiResponse, User
 } from '../types';
 
+// ==================== Customers (admin) ====================
+// Backend: AdminCustomersController @Controller('admin/customers')
+//   GET / (query: q, status, segmentId, ltvMin, ltvMax, sortBy, page, limit)
+//        -> { success, data: User[], total, meta }
+export const adminCustomersApi = {
+  search: (q: string, limit = 10) =>
+    apiClient.get<ApiResponse<User[]>>('/admin/customers', { params: { q, limit } }),
+  getAll: (p?: Record<string, unknown>) =>
+    apiClient.get<ApiResponse<User[]>>('/admin/customers', { params: p }),
+  getById: (id: string) => apiClient.get<ApiResponse<User>>(`/admin/customers/${id}`),
+};
+
 // ==================== Notifications ====================
 // Backend: NotificationsController @Controller('notifications')
 //   GET   /me                -> { success, data: { items, pagination } }

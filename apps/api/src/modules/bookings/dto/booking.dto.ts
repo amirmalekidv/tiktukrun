@@ -62,6 +62,41 @@ export class CancelBookingDto {
   reason?: string;
 }
 
+// Manual (admin/POS) booking creation. The admin records a booking on behalf
+// of a customer (walk-in / phone reservation). Payment is recorded as already
+// settled with the chosen method; the wallet flow is intentionally bypassed.
+export enum AdminPaymentMethod {
+  CASH          = 'CASH',
+  BANK_TRANSFER = 'BANK_TRANSFER',
+  WALLET        = 'WALLET',
+  ZARINPAL      = 'ZARINPAL',
+}
+
+export class AdminCreateBookingDto {
+  @IsString()
+  userId: string;
+
+  @IsString()
+  gameId: string;
+
+  @IsDateString()
+  slotDateTime: string;
+
+  @IsInt() @Type(() => Number) @Min(1)
+  playersCount: number;
+
+  @IsEnum(AdminPaymentMethod)
+  paymentMethod: AdminPaymentMethod;
+
+  // Optional manual override of the per-booking total (Toman). When omitted,
+  // it is computed from the game's pricePerPerson × playersCount.
+  @IsOptional() @IsInt() @Type(() => Number) @Min(0)
+  totalAmount?: number;
+
+  @IsOptional() @IsString()
+  note?: string;
+}
+
 export class AdminUpdateBookingStatusDto {
   @IsEnum(BookingStatus)
   status: BookingStatus;
