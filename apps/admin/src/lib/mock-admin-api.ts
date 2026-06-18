@@ -515,4 +515,6 @@ export const mockApi = {
   }
 }
 
-export const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
+// Demo/mock mode is permanently disabled across the entire admin site.
+// Every API module wires to the real backend regardless of any env flag.
+export const USE_MOCK = false

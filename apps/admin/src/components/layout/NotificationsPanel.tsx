@@ -1,7 +1,7 @@
 'use client'
 import { useEffect } from 'react'
 import { useNotificationsStore } from '@/stores/notificationsStore'
-import { mockApi } from '@/lib/mock-admin-api'
+import { notificationsApi } from '@/lib/api'
 import { timeAgo, cn } from '@/lib/utils'
 import type { Notification } from '@/types'
 
@@ -19,14 +19,54 @@ const typeIcons = {
   error: 'fa-circle-xmark',
 }
 
+// Map backend NotificationType enum to a UI severity used by this panel.
+function mapType(t: string): Notification['type'] {
+  const s = String(t || '').toUpperCase()
+  if (s.includes('FAIL') || s.includes('CANCEL') || s.includes('REJECT') || s.includes('ERROR') || s.includes('BAN')) return 'error'
+  if (s.includes('WARN') || s.includes('EXPIRE') || s.includes('PENDING')) return 'warning'
+  if (s.includes('SUCCESS') || s.includes('CONFIRM') || s.includes('APPROV') || s.includes('REWARD') || s.includes('WIN') || s.includes('PAID')) return 'success'
+  return 'info'
+}
+
+// notifications/me is single-wrapped: { success, data: { items, pagination } }
+function readItems(res: any): any[] {
+  const body = res?.data
+  const inner = body && typeof body === 'object' && 'data' in body ? body.data : body
+  if (Array.isArray(inner?.items)) return inner.items
+  if (Array.isArray(inner)) return inner
+  return []
+}
+
 export function NotificationsPanel() {
   const { notifications, setNotifications, markAsRead, markAllRead, setOpen } = useNotificationsStore()
 
   useEffect(() => {
-    mockApi.getNotifications().then(res => {
-      if (res.success) setNotifications(res.data as Notification[])
-    })
+    notificationsApi
+      .getMine({ limit: 30 })
+      .then(res => {
+        const items = readItems(res).map((n: any): Notification => ({
+          id: n.id,
+          type: mapType(n.type),
+          title: n.title,
+          message: n.body ?? n.message ?? '',
+          isRead: !!n.isRead,
+          createdAt: n.createdAt,
+          link: n.link ?? undefined,
+        }))
+        setNotifications(items)
+      })
+      .catch(() => setNotifications([]))
   }, [setNotifications])
+
+  const handleMarkAsRead = (id: string) => {
+    markAsRead(id)
+    notificationsApi.markRead(id).catch(() => {})
+  }
+
+  const handleMarkAllRead = () => {
+    markAllRead()
+    notificationsApi.markAllRead().catch(() => {})
+  }
 
   return (
     <>
@@ -39,7 +79,7 @@ export function NotificationsPanel() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/30">
           <h3 className="font-semibold text-slate-200 text-sm">اعلان‌ها</h3>
           <button
-            onClick={markAllRead}
+            onClick={handleMarkAllRead}
             className="text-xs text-red-400 hover:text-red-300 transition-colors"
           >
             همه خواندم
@@ -57,7 +97,7 @@ export function NotificationsPanel() {
             notifications.map(n => (
               <div
                 key={n.id}
-                onClick={() => markAsRead(n.id)}
+                onClick={() => handleMarkAsRead(n.id)}
                 className={cn(
                   'flex gap-3 px-4 py-3 border-b border-slate-700/20 cursor-pointer hover:bg-slate-800/30 transition-colors',
                   !n.isRead && 'bg-slate-800/20'

@@ -10,6 +10,19 @@ import type {
   AuditLog, Backup, ApiResponse, User
 } from '../types';
 
+// ==================== Notifications ====================
+// Backend: NotificationsController @Controller('notifications')
+//   GET   /me                -> { success, data: { items, pagination } }
+//   GET   /me/unread-count   -> { count }
+//   PATCH /me/:id/read       -> mark single as read
+//   PATCH /me/read-all       -> mark all as read
+export const notificationsApi = {
+  getMine: (p?: Record<string, unknown>) => apiClient.get('/notifications/me', { params: p }),
+  getUnreadCount: () => apiClient.get('/notifications/me/unread-count'),
+  markRead: (id: string) => apiClient.patch(`/notifications/me/${id}/read`),
+  markAllRead: () => apiClient.patch('/notifications/me/read-all'),
+};
+
 // ==================== Branches ====================
 // Backend: BranchesAdminController @Controller('admin/branches') has GET/POST/PATCH/DELETE (no GET :id).
 //   Branch detail (with games+category) comes from the public BranchesController GET /branches/:id.
