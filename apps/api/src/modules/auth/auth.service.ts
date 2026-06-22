@@ -5,13 +5,11 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { JwtPayload, Role } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { OtpService } from './otp.service';
 import { hashString, compareHash, generateInviteCode } from '../../common/utils/crypto';
-import { JwtPayload } from './strategies/jwt.strategy';
-import { TransactionType } from '@prisma/client';
-import { Role, AuditAction, TransactionCurrency, TransactionRefType } from '../../common/prisma-shims';
 import { serializeBigInts } from '../../common/utils/bigint';
 
 @Injectable()
@@ -57,8 +55,10 @@ export class AuthService {
       user = await this.createNewUser(mobile, inviteCode);
     }
 
+    const roles = user.roleAssignments.map((roleAssignment) => roleAssignment.role as unknown as Role);
+
     // Create session and tokens
-    const tokens = await this.createTokens(user.id, mobile, user.roleAssignments.map(r => r.role), deviceInfo, ipAddress);
+    const tokens = await this.createTokens(user.id, mobile, roles, deviceInfo, ipAddress);
 
     this.logger.log(`User ${mobile} authenticated (new: ${isNewUser})`);
 
@@ -192,10 +192,11 @@ export class AuthService {
 
     // Create new tokens
     const user = session.user;
+    const roles = user.roleAssignments.map((roleAssignment) => roleAssignment.role as unknown as Role);
     const tokens = await this.createTokens(
       user.id,
       user.mobile,
-      user.roleAssignments.map(r => r.role),
+      roles,
       session.ua ?? undefined,
       ipAddress,
     );

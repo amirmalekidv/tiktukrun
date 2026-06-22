@@ -7,6 +7,7 @@ import {
   ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody, ApiQuery,
 } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
+import { Role } from '@tiktakrun/shared-types';
 import { UsersService } from './users.service';
 import { AvatarService } from './avatar.service';
 import { UpdateMeDto } from './dto/update-me.dto';
@@ -17,7 +18,6 @@ import {
 } from './dto/admin-update-user.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { Role } from '../../common/prisma-shims';
 
 // ─── User Controller ──────────────────────────────────────────────────────────
 

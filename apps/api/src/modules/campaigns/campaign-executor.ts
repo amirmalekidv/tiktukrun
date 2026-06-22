@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SegmentEvaluator } from '../segments/segment-evaluator';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -105,7 +106,7 @@ export class CampaignExecutor {
       case 'INAPP':
         await this.notifications.send({
           userId: user.id,
-          type: 'CAMPAIGN',
+          type: NotificationType.CAMPAIGN,
           title: content.subject ?? campaign.name,
           body,
           data: { campaignId: campaign.id, trackingToken },
@@ -115,7 +116,7 @@ export class CampaignExecutor {
       case 'PUSH':
         await this.notifications.send({
           userId: user.id,
-          type: 'PUSH_CAMPAIGN',
+          type: NotificationType.PUSH_CAMPAIGN,
           title: content.subject ?? campaign.name,
           body,
           data: { campaignId: campaign.id, trackingToken },

@@ -4,6 +4,7 @@ import { Cron } from '@nestjs/schedule';
 import { LevelingService } from '../gamification/leveling.service';
 import { SettingsService } from '../settings/settings.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '@tiktakrun/shared-types';
 
 @Injectable()
 export class MonthlyService {
@@ -198,7 +199,7 @@ export class MonthlyService {
 
       await this.notifications.send({
         userId,
-        type: 'MONTHLY_WINNER',
+        type: NotificationType.MONTHLY_WINNER,
         title: `🏆 برنده برتر ماه ${month}/${year}!`,
         body: 'تبریک! شما بهترین بازیکن این ماه بودید.',
         data: { prizes: p },
@@ -220,7 +221,7 @@ export class MonthlyService {
           }
           await this.notifications.send({
             userId: member.userId,
-            type: 'MONTHLY_WINNER',
+            type: NotificationType.MONTHLY_WINNER,
             title: `🎯 تیم برتر ماه!`,
             body: `تیم "${team.name}" برنده شد!`,
             data: { prizes: p },

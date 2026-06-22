@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -79,7 +80,7 @@ export class LevelingService {
       // Notification
       await this.notifications.send({
         userId,
-        type: 'LEVEL_UP',
+        type: NotificationType.LEVEL_UP,
         title: `🏆 ارتقا به سطح ${nextLevel.id}!`,
         body: `تبریک! شما به سطح "${nextLevel.name}" رسیدید.`,
         data: { levelId: nextLevel.id, levelNumber: nextLevel.id },

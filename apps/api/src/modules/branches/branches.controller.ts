@@ -9,13 +9,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { UserRole }           from '@tiktakrun/shared-types';
 import { BranchesService }    from './branches.service';
 import { CreateBranchDto, UpdateBranchDto } from './dto/branch.dto';
 import { Public }             from '../../common/decorators/public.decorator';
 import { JwtAuthGuard }       from '../../common/guards/jwt-auth.guard';
 import { RolesGuard }         from '../../common/guards/roles.guard';
 import { Roles }              from '../../common/decorators/roles.decorator';
-import { UserRole }           from '../../common/interfaces/phase3-stubs.interface';
 
 // ─── Public ──────────────────────────────────────────────────────────────────
 @Controller('branches')

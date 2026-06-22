@@ -4,19 +4,18 @@
  */
 
 import type { User, Profile, Wallet, UserBadge } from '../models/user';
-import type { Game, GameCard, GameDetail } from '../models/game';
+import type { GameCard, GameDetail } from '../models/game';
 import type { Booking, BookingDetail, Payment, GameReview } from '../models/booking';
 import type { Transaction } from '../models/wallet';
-import type { Level, Badge, AvatarItem, WheelPrize, WheelSpinResult, UserLevelInfo, MonthlyWinner } from '../models/gamification';
-import type { Team, TeamDetail, ChatRoom, ChatMessage } from '../models/chat';
+import type { AvatarItem, WheelSpinResult, UserLevelInfo, MonthlyWinner } from '../models/gamification';
+import type { TeamDetail, ChatRoom, ChatMessage } from '../models/chat';
 import type { Notification } from '../models/notification';
 import type { Ticket } from '../models/ticket';
-import type { Campaign, CustomerSegment, PipelineDeal, PipelineBoard } from '../models/crm';
-import type { DiscountCode, DiscountValidationResult } from '../models/discount';
+import type { Campaign, CustomerSegment, PipelineBoard } from '../models/crm';
+import type { DiscountValidationResult } from '../models/discount';
 import type { City, Branch } from '../models/branch';
 import type { Setting } from '../models/setting';
 import type { PaginatedResponse } from '../utils/pagination';
-import type { ApiResponse } from '../utils/api-response';
 
 // ─── Auth Responses ──────────────────────────────────────────
 

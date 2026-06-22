@@ -8,13 +8,13 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
+import { UserRole }          from '@tiktakrun/shared-types';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
 import { Public }            from '../../common/decorators/public.decorator';
 import { JwtAuthGuard }      from '../../common/guards/jwt-auth.guard';
 import { RolesGuard }        from '../../common/guards/roles.guard';
 import { Roles }             from '../../common/decorators/roles.decorator';
-import { UserRole }          from '../../common/interfaces/phase3-stubs.interface';
 
 @Controller('categories')
 export class CategoriesController {

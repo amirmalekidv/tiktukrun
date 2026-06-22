@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService }      from '../../../prisma/prisma.service';
 import {
   INotificationsService,
-  NotificationType,
-} from '../../../common/interfaces/phase3-stubs.interface';
+} from '../../../common/interfaces/notifications-stub.service';
+import { NotificationType } from '@tiktakrun/shared-types';
 
 const XP_PER_BOOKING    = 10;
 const COINS_PER_BOOKING = 20;

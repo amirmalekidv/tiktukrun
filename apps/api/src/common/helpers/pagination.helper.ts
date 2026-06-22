@@ -1,4 +1,4 @@
-import { PaginationMeta } from '../interfaces/phase3-stubs.interface';
+import { PaginationMeta } from '@tiktakrun/shared-types';
 
 export interface PaginationQuery {
   page?: number;
@@ -22,6 +22,7 @@ export function buildPaginatedResponse<T>(
   page: number,
   limit: number,
 ): { success: true; data: T[]; meta: PaginationMeta } {
+  const totalPages = Math.ceil(total / limit);
   return {
     success: true,
     data: items,
@@ -29,7 +30,9 @@ export function buildPaginatedResponse<T>(
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
     },
   };
 }

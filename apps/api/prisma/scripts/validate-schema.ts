@@ -1,20 +1,15 @@
 #!/usr/bin/env tsx
 /**
- * TIK TAK RUN — Schema Validation Script
- * بررسی یکپارچگی schema.prisma با shared-types و seed data
+ * TIK TAK RUN — MongoDB schema validation
  *
- * اجرا:
- *   cd apps/api
- *   npx tsx prisma/scripts/validate-schema.ts
- *
- * این اسکریپت بررسی می‌کند:
- *   1. اتصال دیتابیس
- *   2. وجود همه جداول اصلی
- *   3. یکپارچگی MonthlyWinner polymorphic
- *   4. یکپارچگی InviteCode/InviteUsage
- *   5. یکپارچگی PlayerRating
- *   6. FK orphans
- *   7. آمار seed data
+ * Checks:
+ *   1. MongoDB connectivity
+ *   2. Replica set presence (`rs0`)
+ *   3. Prisma transaction support
+ *   4. Core collection counts after seed
+ *   5. Monthly winner polymorphic integrity
+ *   6. Invite usage counters consistency
+ *   7. Player rating stats sanity
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -22,8 +17,6 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient({
   log: ['warn', 'error'],
 });
-
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface CheckResult {
   name: string;
@@ -35,8 +28,6 @@ interface CheckResult {
 const results: CheckResult[] = [];
 let hasError = false;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function pass(name: string, message: string, data?: unknown): void {
   results.push({ name, passed: true, message, data });
   console.log(`  ✅ ${name}: ${message}`);
@@ -45,7 +36,9 @@ function pass(name: string, message: string, data?: unknown): void {
 function fail(name: string, message: string, data?: unknown): void {
   results.push({ name, passed: false, message, data });
   console.error(`  ❌ ${name}: ${message}`);
-  if (data) console.error('     data:', JSON.stringify(data, null, 2));
+  if (data) {
+    console.error('     data:', JSON.stringify(data, null, 2));
+  }
   hasError = true;
 }
 
@@ -60,292 +53,231 @@ function section(title: string): void {
   console.log('─'.repeat(60));
 }
 
-// ─── Checks ──────────────────────────────────────────────────────────────────
-
-async function checkDatabaseConnection(): Promise<void> {
-  section('۱. اتصال دیتابیس');
+async function checkMongoConnection(): Promise<void> {
+  section('۱. اتصال MongoDB');
   try {
-    await prisma.$queryRaw`SELECT 1 AS ping`;
-    pass('connection', 'اتصال موفق به PostgreSQL');
-  } catch (e) {
-    fail('connection', `خطای اتصال: ${(e as Error).message}`);
-    throw e; // ادامه ندهیم اگر اتصال نیست
+    await prisma.$runCommandRaw({ ping: 1 });
+    pass('connection', 'اتصال موفق به MongoDB');
+  } catch (error) {
+    fail('connection', `خطای اتصال: ${(error as Error).message}`);
+    throw error;
   }
 }
 
-async function checkExtensions(): Promise<void> {
-  section('۲. PostgreSQL Extensions');
+async function checkReplicaSet(): Promise<void> {
+  section('۲. وضعیت Replica Set');
   try {
-    const exts = await prisma.$queryRaw<{ extname: string }[]>`
-      SELECT extname FROM pg_extension WHERE extname IN ('pgcrypto', 'citext')
-    `;
-    const extNames = exts.map((e) => e.extname);
+    const hello = (await prisma.$runCommandRaw({ hello: 1 })) as {
+      setName?: string;
+      isWritablePrimary?: boolean;
+    };
 
-    if (extNames.includes('pgcrypto')) {
-      pass('pgcrypto', 'extension نصب شده است');
+    if (hello.setName === 'rs0') {
+      pass('replica_set', 'Replica set با نام rs0 فعال است');
     } else {
-      fail('pgcrypto', 'extension نصب نشده — در init-scripts/postgres-init.sql باشد');
+      fail('replica_set', `Replica set نامعتبر است: ${hello.setName ?? 'missing'}`);
     }
 
-    if (extNames.includes('citext')) {
-      pass('citext', 'extension نصب شده است');
+    if (hello.isWritablePrimary) {
+      pass('primary', 'MongoDB PRIMARY آماده‌ی نوشتن است');
     } else {
-      fail('citext', 'extension نصب نشده — در init-scripts/postgres-init.sql باشد');
+      warn('primary', 'MongoDB PRIMARY هنوز writable نیست');
     }
-  } catch (e) {
-    warn('extensions', `بررسی extension ممکن نشد: ${(e as Error).message}`);
+  } catch (error) {
+    fail('replica_set', `بررسی replica set ممکن نشد: ${(error as Error).message}`);
   }
 }
 
-async function checkTableCounts(): Promise<void> {
-  section('۳. آمار جداول اصلی');
+async function checkTransactionSupport(): Promise<void> {
+  section('۳. بررسی Prisma Transaction');
+  const key = `system.validation.transaction.${Date.now()}`;
 
-  const tables = [
-    { name: 'users',             label: 'کاربران' },
-    { name: 'profiles',          label: 'پروفایل‌ها' },
-    { name: 'levels',            label: 'لول‌ها' },
-    { name: 'badges',            label: 'بج‌ها' },
-    { name: 'games',             label: 'بازی‌ها' },
-    { name: 'branches',          label: 'شعبه‌ها' },
-    { name: 'bookings',          label: 'رزروها' },
-    { name: 'payments',          label: 'پرداخت‌ها' },
-    { name: 'wallets',           label: 'کیف‌پول‌ها' },
-    { name: 'transactions',      label: 'تراکنش‌ها' },
-    { name: 'invite_codes',      label: 'کدهای دعوت' },
-    { name: 'invite_usages',     label: 'استفاده از دعوت' },
-    { name: 'player_ratings',    label: 'امتیازات بازیکن' },
-    { name: 'monthly_winners',   label: 'برندگان ماهانه' },
-    { name: 'wheel_prizes',      label: 'جوایز گردونه' },
-    { name: 'wheel_spins',       label: 'چرخش گردونه' },
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.setting.create({
+        data: {
+          key,
+          value: { smoke: true, createdAt: new Date().toISOString() } as any,
+          group: 'system',
+        },
+      });
+
+      const created = await tx.setting.findUnique({ where: { key } });
+      if (!created) {
+        throw new Error('temporary setting was not created inside transaction');
+      }
+
+      await tx.setting.delete({ where: { key } });
+    });
+
+    const leftover = await prisma.setting.findUnique({ where: { key } });
+    if (leftover) {
+      fail('transaction_cleanup', 'رکورد موقت بعد از transaction باقی مانده است');
+      await prisma.setting.delete({ where: { key } });
+    } else {
+      pass('transaction', 'Prisma transaction با موفقیت روی MongoDB اجرا شد');
+    }
+  } catch (error) {
+    fail('transaction', `Prisma transaction شکست خورد: ${(error as Error).message}`);
+  }
+}
+
+async function checkCoreCounts(): Promise<void> {
+  section('۴. آمار مجموعه‌های اصلی');
+
+  const counters = [
+    ['levels', () => prisma.level.count()],
+    ['cities', () => prisma.city.count()],
+    ['branches', () => prisma.branch.count()],
+    ['categories', () => prisma.category.count()],
+    ['games', () => prisma.game.count()],
+    ['users', () => prisma.user.count()],
+    ['wallets', () => prisma.wallet.count()],
+    ['bookings', () => prisma.booking.count()],
+    ['payments', () => prisma.payment.count()],
+    ['transactions', () => prisma.transaction.count()],
+    ['notifications', () => prisma.notification.count()],
+    ['teams', () => prisma.team.count()],
+    ['tickets', () => prisma.ticket.count()],
+    ['settings', () => prisma.setting.count()],
   ] as const;
 
-  for (const table of tables) {
+  for (const [label, counter] of counters) {
     try {
-      const result = await prisma.$queryRawUnsafe<{ count: bigint }[]>(
-        `SELECT COUNT(*) AS count FROM "${table.name}"`
-      );
-      const count = Number(result[0].count);
-
+      const count = await counter();
       if (count === 0) {
-        warn(table.name, `${table.label}: ۰ رکورد — آیا seed اجرا شده؟`);
+        warn(label, `${label}: ۰ رکورد — آیا seed اجرا شده؟`);
       } else {
-        pass(table.name, `${table.label}: ${count} رکورد`);
+        pass(label, `${label}: ${count} رکورد`);
       }
-    } catch (e) {
-      fail(table.name, `جدول "${table.name}" یافت نشد یا خطا: ${(e as Error).message}`);
+    } catch (error) {
+      fail(label, `شمارش ناموفق بود: ${(error as Error).message}`);
     }
   }
 }
 
 async function checkMonthlyWinnerIntegrity(): Promise<void> {
-  section('۴. یکپارچگی MonthlyWinner (Polymorphic)');
+  section('۵. یکپارچگی MonthlyWinner');
 
-  // بررسی CHECK CONSTRAINT: هیچ رکوردی نباید نقض کند
   try {
-    const violations = await prisma.$queryRaw<{ id: number; type: string }[]>`
-      SELECT id, type, "winnerUserId", "winnerTeamId", "winnerGameId"
-      FROM monthly_winners
-      WHERE
-        (type = 'TOP_PLAYER' AND "winnerUserId" IS NULL)
-        OR (type = 'TOP_TEAM'   AND "winnerTeamId" IS NULL)
-        OR (type = 'TOP_GAME'   AND "winnerGameId" IS NULL)
-    `;
+    const winners = await prisma.monthlyWinner.findMany({
+      select: {
+        id: true,
+        type: true,
+        winnerUserId: true,
+        winnerTeamId: true,
+        winnerGameId: true,
+      },
+    });
+
+    const violations = winners.filter((winner) => {
+      if (winner.type === 'TOP_PLAYER') return !winner.winnerUserId;
+      if (winner.type === 'TOP_TEAM') return !winner.winnerTeamId;
+      if (winner.type === 'TOP_GAME') return !winner.winnerGameId;
+      return false;
+    });
 
     if (violations.length === 0) {
-      pass('monthly_winner_check', 'همه رکوردها یکپارچه هستند — CHECK CONSTRAINT رعایت شده');
+      pass('monthly_winner_integrity', 'همه رکوردهای MonthlyWinner معتبر هستند');
     } else {
-      fail('monthly_winner_check', `${violations.length} رکورد ناقص یافت شد`, violations);
+      fail('monthly_winner_integrity', `${violations.length} رکورد ناقص یافت شد`, violations);
     }
-  } catch (e) {
-    fail('monthly_winner_check', `خطا: ${(e as Error).message}`);
-  }
-
-  // بررسی توزیع types
-  try {
-    const typeDist = await prisma.$queryRaw<{ type: string; count: bigint }[]>`
-      SELECT type, COUNT(*) AS count
-      FROM monthly_winners
-      GROUP BY type
-    `;
-
-    const dist = typeDist.map((r) => ({ type: r.type, count: Number(r.count) }));
-    pass('monthly_winner_types', `توزیع types: ${JSON.stringify(dist)}`);
-  } catch (e) {
-    warn('monthly_winner_types', `بررسی توزیع ممکن نشد: ${(e as Error).message}`);
+  } catch (error) {
+    fail('monthly_winner_integrity', `خطا: ${(error as Error).message}`);
   }
 }
 
-async function checkInviteIntegrity(): Promise<void> {
-  section('۵. یکپارچگی InviteCode/InviteUsage');
+async function checkInviteConsistency(): Promise<void> {
+  section('۶. یکپارچگی InviteCode / InviteUsage');
 
-  // بررسی totalUses consistency
   try {
-    const inconsistencies = await prisma.$queryRaw<{ code: string; stored: number; actual: bigint }[]>`
-      SELECT ic.code, ic."totalUses" AS stored, COUNT(iu.id) AS actual
-      FROM invite_codes ic
-      LEFT JOIN invite_usages iu ON iu."codeId" = ic.id
-      GROUP BY ic.id, ic.code, ic."totalUses"
-      HAVING ic."totalUses" != COUNT(iu.id)
-    `;
+    const codes = await prisma.inviteCode.findMany({
+      select: {
+        code: true,
+        totalUses: true,
+        usages: { select: { id: true } },
+      },
+    });
 
-    if (inconsistencies.length === 0) {
-      pass('invite_consistency', 'totalUses همه کدها با تعداد InviteUsage مطابقت دارد');
+    const mismatches = codes
+      .map((code) => ({
+        code: code.code,
+        stored: code.totalUses,
+        actual: code.usages.length,
+      }))
+      .filter((item) => item.stored !== item.actual);
+
+    if (mismatches.length === 0) {
+      pass('invite_usage_counts', 'totalUses با تعداد InviteUsage ها هماهنگ است');
     } else {
-      fail(
-        'invite_consistency',
-        `${inconsistencies.length} کد inconsistent یافت شد`,
-        inconsistencies.map((r) => ({ code: r.code, stored: r.stored, actual: Number(r.actual) }))
-      );
+      fail('invite_usage_counts', `${mismatches.length} کد ناسازگار یافت شد`, mismatches);
     }
-  } catch (e) {
-    fail('invite_consistency', `خطا: ${(e as Error).message}`);
-  }
-
-  // بررسی orphan InviteUsage
-  try {
-    const orphans = await prisma.$queryRaw<{ id: number }[]>`
-      SELECT iu.id
-      FROM invite_usages iu
-      LEFT JOIN invite_codes ic ON ic.id = iu."codeId"
-      WHERE ic.id IS NULL
-    `;
-
-    if (orphans.length === 0) {
-      pass('invite_orphans', 'هیچ InviteUsage orphan وجود ندارد');
-    } else {
-      fail('invite_orphans', `${orphans.length} InviteUsage بدون InviteCode والد`, orphans);
-    }
-  } catch (e) {
-    fail('invite_orphans', `خطا: ${(e as Error).message}`);
+  } catch (error) {
+    fail('invite_usage_counts', `خطا: ${(error as Error).message}`);
   }
 }
 
-async function checkPlayerRatingIntegrity(): Promise<void> {
-  section('۶. یکپارچگی PlayerRating');
+async function checkPlayerRatingStats(): Promise<void> {
+  section('۷. سلامت PlayerRating');
 
-  // بررسی orphan ratings (fromUser وجود ندارد)
   try {
-    const orphanFrom = await prisma.$queryRaw<{ id: number }[]>`
-      SELECT pr.id
-      FROM player_ratings pr
-      LEFT JOIN users u ON u.id = pr."fromUserId"
-      WHERE u.id IS NULL
-    `;
-
-    if (orphanFrom.length === 0) {
-      pass('rating_from_user', 'همه fromUserId ها معتبر هستند');
-    } else {
-      fail('rating_from_user', `${orphanFrom.length} rating با fromUser ناموجود`, orphanFrom);
+    const ratingCount = await prisma.playerRating.count();
+    if (ratingCount === 0) {
+      warn('player_ratings', 'هیچ PlayerRating در دیتابیس وجود ندارد');
+      return;
     }
-  } catch (e) {
-    fail('rating_from_user', `خطا: ${(e as Error).message}`);
-  }
 
-  // بررسی xpChange range
-  try {
-    const stats = await prisma.$queryRaw<{ min: number; max: number; avg: number }[]>`
-      SELECT
-        MIN("xpChange") AS min,
-        MAX("xpChange") AS max,
-        ROUND(AVG("xpChange")::numeric, 2) AS avg
-      FROM player_ratings
-    `;
+    const stats = await prisma.playerRating.aggregate({
+      _avg: { xpChange: true },
+      _min: { xpChange: true },
+      _max: { xpChange: true },
+    });
 
-    if (stats.length > 0 && stats[0].min !== null) {
-      const { min, max, avg } = stats[0];
-      pass('rating_xp_stats', `xpChange — min: ${min}, max: ${max}, avg: ${avg}`);
-    } else {
-      warn('rating_xp_stats', 'هیچ PlayerRating در دیتابیس نیست');
-    }
-  } catch (e) {
-    warn('rating_xp_stats', `بررسی stats ممکن نشد: ${(e as Error).message}`);
+    pass(
+      'player_ratings',
+      `count=${ratingCount}, min=${stats._min.xpChange}, max=${stats._max.xpChange}, avg=${stats._avg.xpChange ?? 0}`,
+    );
+  } catch (error) {
+    fail('player_ratings', `خطا: ${(error as Error).message}`);
   }
 }
-
-async function checkForeignKeyOrphans(): Promise<void> {
-  section('۷. بررسی FK Orphans اصلی');
-
-  const checks = [
-    {
-      label: 'Profile → User',
-      query: `SELECT p.id FROM profiles p LEFT JOIN users u ON u.id = p."userId" WHERE u.id IS NULL`,
-    },
-    {
-      label: 'Wallet → User',
-      query: `SELECT w.id FROM wallets w LEFT JOIN users u ON u.id = w."userId" WHERE u.id IS NULL`,
-    },
-    {
-      label: 'Booking → User',
-      query: `SELECT b.id FROM bookings b LEFT JOIN users u ON u.id = b."userId" WHERE u.id IS NULL`,
-    },
-    {
-      label: 'Booking → Game',
-      query: `SELECT b.id FROM bookings b LEFT JOIN games g ON g.id = b."gameId" WHERE g.id IS NULL`,
-    },
-    {
-      label: 'Transaction → Wallet',
-      query: `SELECT t.id FROM transactions t LEFT JOIN wallets w ON w.id = t."walletId" WHERE w.id IS NULL`,
-    },
-    {
-      label: 'UserBadge → Badge',
-      query: `SELECT ub."userId", ub."badgeId" FROM user_badges ub LEFT JOIN badges b ON b.id = ub."badgeId" WHERE b.id IS NULL`,
-    },
-  ];
-
-  for (const check of checks) {
-    try {
-      const orphans = await prisma.$queryRawUnsafe<{ id?: number }[]>(check.query);
-      if (orphans.length === 0) {
-        pass(check.label, 'هیچ orphan وجود ندارد');
-      } else {
-        fail(check.label, `${orphans.length} orphan یافت شد`, orphans.slice(0, 5));
-      }
-    } catch (e) {
-      warn(check.label, `بررسی ممکن نشد: ${(e as Error).message}`);
-    }
-  }
-}
-
-// ─── Summary ─────────────────────────────────────────────────────────────────
 
 function printSummary(): void {
   section('خلاصه نتایج');
 
-  const passed = results.filter((r) => r.passed).length;
-  const failed = results.filter((r) => !r.passed).length;
+  const passed = results.filter((result) => result.passed).length;
+  const failed = results.filter((result) => !result.passed).length;
 
   console.log(`\n  مجموع بررسی: ${results.length}`);
   console.log(`  موفق:         ${passed}`);
   console.log(`  ناموفق:       ${failed}`);
 
   if (!hasError) {
-    console.log('\n  🎉 همه بررسی‌ها موفق! schema یکپارچه است.\n');
+    console.log('\n  🎉 همه بررسی‌های MongoDB با موفقیت انجام شد.\n');
   } else {
     console.log('\n  ⚠️  برخی بررسی‌ها ناموفق بودند — موارد بالا را مرور کنید.\n');
   }
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
-
 async function main(): Promise<void> {
   console.log('');
   console.log('╔════════════════════════════════════════════════════╗');
-  console.log('║     TIK TAK RUN — Schema Validation Script        ║');
+  console.log('║   TIK TAK RUN — Mongo Schema Validation Script    ║');
   console.log('╚════════════════════════════════════════════════════╝');
   console.log(`  تاریخ: ${new Date().toLocaleString('fa-IR')}`);
 
   try {
-    await checkDatabaseConnection();
-    await checkExtensions();
-    await checkTableCounts();
+    await checkMongoConnection();
+    await checkReplicaSet();
+    await checkTransactionSupport();
+    await checkCoreCounts();
     await checkMonthlyWinnerIntegrity();
-    await checkInviteIntegrity();
-    await checkPlayerRatingIntegrity();
-    await checkForeignKeyOrphans();
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'P1001') {
-      console.error('\n❌ خطای اتصال: مطمئن شوید PostgreSQL در حال اجراست.');
-      console.error('   docker-compose up -d postgres\n');
+    await checkInviteConsistency();
+    await checkPlayerRatingStats();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'P1001') {
+      console.error('\n❌ خطای اتصال: مطمئن شوید MongoDB در حال اجراست.');
+      console.error('   docker compose up -d mongo mongo-init\n');
     }
   } finally {
     printSummary();

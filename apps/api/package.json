@@ -1,7 +1,7 @@
 {
   "name": "@tiktakrun/api",
   "version": "1.0.0",
-  "description": "TIK TAK RUN — Backend API (NestJS + Prisma + PostgreSQL + Redis + Socket.io)",
+  "description": "TIK TAK RUN — Backend API (NestJS + Prisma + MongoDB replica set + Redis + Socket.io)",
   "private": true,
   "scripts": {
     "build": "nest build",
@@ -19,15 +19,15 @@
     "prisma:generate": "prisma generate",
     "prisma:format": "prisma format",
     "prisma:validate": "prisma validate",
-    "prisma:migrate:dev": "prisma migrate dev",
-    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node --transpile-only prisma/seed.mongo.ts",
     "seed": "ts-node --transpile-only prisma/seed.mongo.ts",
     "db:push": "prisma db push",
     "db:seed": "ts-node --transpile-only prisma/seed.mongo.ts",
-    "db:reset": "prisma db push --force-reset && pnpm seed"
+    "db:reset": "prisma db push --force-reset && pnpm seed",
+    "db:validate": "ts-node --transpile-only prisma/scripts/validate-schema.ts",
+    "db:smoke:transaction": "ts-node --transpile-only prisma/scripts/smoke-transaction.ts"
   },
   "dependencies": {
     "@nestjs-modules/ioredis": "^2.0.2",

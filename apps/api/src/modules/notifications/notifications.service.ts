@@ -1,21 +1,22 @@
 /**
  * NotificationsService
  * [QA Fix 2026-05-25]
- *   - schema fields: userId Int, type NotificationType, channel NotificationChannel,
+ *   - schema fields: userId String(ObjectId), type NotificationType, channel NotificationChannel,
  *     title, body, link, isRead, readAt, metadata Json, createdAt
  *   - No `data` field (use `metadata`)
  *   - Added methods used by NotificationsController.
  */
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { NotificationChannel, NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface SendNotificationDto {
   userId: string;
-  type: string;
+  type: NotificationType;
   title: string;
   body: string;
   link?: string;
-  channel?: string;
+  channel?: NotificationChannel;
   data?: Record<string, any>;
 }
 

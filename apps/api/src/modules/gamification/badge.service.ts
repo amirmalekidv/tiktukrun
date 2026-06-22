@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -90,7 +91,7 @@ export class BadgeService {
 
     await this.notifications.send({
       userId,
-      type: 'BADGE_EARNED',
+      type: NotificationType.BADGE_EARNED,
       title: `🏅 بج جدید: ${badge.name}`,
       body: badge.description || `شما بج "${badge.name}" را دریافت کردید!`,
       data: { badgeId: badge.id, badgeCode: badge.code },

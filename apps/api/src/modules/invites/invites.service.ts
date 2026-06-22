@@ -7,8 +7,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ValidateInviteDto, ApplyInviteDto } from './dto/invite.dto';
+import { TransactionCurrency, TransactionRefType } from '@tiktakrun/shared-types';
 import { TransactionType, NotificationType, NotificationChannel } from '@prisma/client';
-import { TransactionCurrency, TransactionRefType } from '../../common/prisma-shims';
 
 const INVITE_REWARD_XP = 5;
 

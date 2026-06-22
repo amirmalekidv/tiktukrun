@@ -3,7 +3,7 @@
  * این فایل فقط type تعریف دارد — هیچ logic ندارد
  */
 
-import type { UserRole, BookingStatus, PaymentMethod, TicketPriority, CampaignType, PipelineStage, DiscountType, AvatarItemType, GenreFilter, GameDifficulty } from '../enums';
+import type { UserRole, BookingStatus, PaymentMethod, TicketPriority, CampaignType, PipelineStage, DiscountType, GenreFilter, GameDifficulty } from '../enums';
 
 // ─── Auth ───────────────────────────────────────────────────
 

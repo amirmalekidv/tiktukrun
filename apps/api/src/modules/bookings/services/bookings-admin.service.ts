@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService }         from '../../../prisma/prisma.service';
+import { NotificationType, UserRole } from '@tiktakrun/shared-types';
 import { BookingStateMachine }   from './booking-state-machine.service';
 import { BookingRewardsService } from './booking-rewards.service';
 import { NotificationsService }  from '../../../common/interfaces/notifications-stub.service';
@@ -16,7 +17,6 @@ import {
   AdminCreateBookingDto,
 } from '../dto/booking.dto';
 import { nanoid } from 'nanoid';
-import { UserRole, NotificationType, WalletTxType } from '../../../common/interfaces/phase3-stubs.interface';
 import { TransactionType, CurrencyType } from '@prisma/client';
 import { parsePagination, buildPaginatedResponse } from '../../../common/helpers/pagination.helper';
 import { v4 as uuid } from 'uuid';

@@ -10,6 +10,7 @@ import {
   Res,
   HttpStatus,
 } from '@nestjs/common';
+import { CurrentUserPayload, UserRole } from '@tiktakrun/shared-types';
 import { Response } from 'express';
 import { BookingsService }      from './services/bookings.service';
 import { BookingsAdminService } from './services/bookings-admin.service';
@@ -27,10 +28,6 @@ import { CurrentUser }  from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard }   from '../../common/guards/roles.guard';
 import { Roles }        from '../../common/decorators/roles.decorator';
-import {
-  UserRole,
-  CurrentUserPayload,
-} from '../../common/interfaces/phase3-stubs.interface';
 
 // ─── User Bookings ───────────────────────────────────────────────────────────
 @UseGuards(JwtAuthGuard)

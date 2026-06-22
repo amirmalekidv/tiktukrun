@@ -7,7 +7,7 @@
  * NOTE: PlayerRating در اینجا تعریف شده چون مستقیماً به booking session مربوط است.
  */
 
-import type { BookingStatus, PaymentMethod, PaymentStatus } from '../enums';
+import type { BookingStatus, PaymentMethod } from '../enums';
 import type { Game } from './game';
 import type { User } from './user';
 import type { Payment } from './wallet';

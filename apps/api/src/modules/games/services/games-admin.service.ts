@@ -3,11 +3,11 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
+import { UserRole } from '@tiktakrun/shared-types';
 import { PrismaService }   from '../../../prisma/prisma.service';
 import { GameImageService } from './game-image.service';
 import { CreateGameDto, UpdateGameDto, WeeklyDiscountDto } from '../dto/create-game.dto';
 import { parsePagination, buildPaginatedResponse } from '../../../common/helpers/pagination.helper';
-import { UserRole } from '../../../common/interfaces/phase3-stubs.interface';
 import { slugify } from '../../../common/helpers/slugify.helper';
 
 /**

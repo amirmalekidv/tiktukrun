@@ -15,6 +15,7 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
 import * as fs   from 'fs';
+import { CurrentUserPayload, UserRole } from '@tiktakrun/shared-types';
 
 import { GamesService }      from './services/games.service';
 import { GamesAdminService } from './services/games-admin.service';
@@ -26,10 +27,6 @@ import { CurrentUser }     from '../../common/decorators/current-user.decorator'
 import { JwtAuthGuard }    from '../../common/guards/jwt-auth.guard';
 import { RolesGuard }      from '../../common/guards/roles.guard';
 import { Roles }           from '../../common/decorators/roles.decorator';
-import {
-  UserRole,
-  CurrentUserPayload,
-} from '../../common/interfaces/phase3-stubs.interface';
 
 // ─── Multer config ─────────────────────────────────────────────────────────────
 const multerStorage = diskStorage({

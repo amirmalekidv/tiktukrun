@@ -16,7 +16,7 @@ services:
       dockerfile: infra/docker/api.Dockerfile
       target: builder
     # MongoDB از migrate پشتیبانی نمی‌کند — از prisma db push استفاده می‌شود
-    command: sh -c "pnpm --filter @tiktakrun/api exec prisma db push && pnpm --filter @tiktakrun/api dev"
+    command: sh -c "pnpm --filter @tiktakrun/api exec prisma db push && pnpm --filter @tiktakrun/api start:dev"
     environment:
       NODE_ENV: development
     volumes:

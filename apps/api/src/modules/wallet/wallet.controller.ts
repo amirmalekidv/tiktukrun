@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Role } from '@tiktakrun/shared-types';
 import { WalletService } from './wallet.service';
 import {
   ChargeWalletDto,
@@ -12,7 +13,6 @@ import {
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Public } from '../../common/decorators/public.decorator';
-import { Role } from '../../common/prisma-shims';
 
 // ─── User Wallet Controller ───────────────────────────────────────────────────
 

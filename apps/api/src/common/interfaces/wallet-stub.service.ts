@@ -3,12 +3,26 @@
  * نسخه MongoDB: id ها String هستند و مبالغ Int.
  */
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  IWalletService,
-  WalletTransactionParams,
-  WalletTransactionResult,
-} from './phase3-stubs.interface';
+import { WalletTxType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
+
+export interface IWalletService {
+  applyTransaction(params: WalletTransactionParams): Promise<WalletTransactionResult>;
+  getBalance(userId: string): Promise<bigint>;
+}
+
+export interface WalletTransactionParams {
+  userId: string;
+  amount: bigint;
+  type: WalletTxType;
+  description: string;
+  refId?: string;
+}
+
+export interface WalletTransactionResult {
+  transactionId: string;
+  newBalance: bigint;
+}
 
 @Injectable()
 export class WalletService implements IWalletService {

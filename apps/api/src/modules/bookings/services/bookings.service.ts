@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService }           from '../../../prisma/prisma.service';
+import { NotificationType } from '@tiktakrun/shared-types';
 import { BookingStateMachine }     from './booking-state-machine.service';
 import { BookingRewardsService }   from './booking-rewards.service';
 import { DiscountResolverService } from '../../discounts/services/discount-resolver.service';
@@ -17,10 +18,6 @@ import {
   PaymentMethod,
   BookingQueryDto,
 } from '../dto/booking.dto';
-import {
-  WalletTxType,
-  NotificationType,
-} from '../../../common/interfaces/phase3-stubs.interface';
 import { parsePagination, buildPaginatedResponse } from '../../../common/helpers/pagination.helper';
 import { DateTime }   from 'luxon';
 import { v4 as uuid } from 'uuid';

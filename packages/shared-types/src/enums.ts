@@ -141,15 +141,30 @@ export enum LevelTier {
 }
 
 export enum NotificationType {
-  BOOKING   = 'BOOKING',
-  PAYMENT   = 'PAYMENT',
-  LEVEL     = 'LEVEL',
-  BADGE     = 'BADGE',
-  WHEEL     = 'WHEEL',
-  TEAM      = 'TEAM',
-  CHAT      = 'CHAT',
-  SYSTEM    = 'SYSTEM',
-  PROMOTION = 'PROMOTION',
+  BOOKING            = 'BOOKING',
+  BOOKING_CONFIRMED  = 'BOOKING_CONFIRMED',
+  BOOKING_CANCELLED  = 'BOOKING_CANCELLED',
+  BOOKING_COMPLETED  = 'BOOKING_COMPLETED',
+  PAYMENT            = 'PAYMENT',
+  PAYMENT_FAILED     = 'PAYMENT_FAILED',
+  REFUND_ISSUED      = 'REFUND_ISSUED',
+  LEVEL              = 'LEVEL',
+  LEVEL_UP           = 'LEVEL_UP',
+  BADGE              = 'BADGE',
+  BADGE_EARNED       = 'BADGE_EARNED',
+  WHEEL              = 'WHEEL',
+  WHEEL_PRIZE        = 'WHEEL_PRIZE',
+  TEAM               = 'TEAM',
+  TEAM_FULL          = 'TEAM_FULL',
+  CHAT               = 'CHAT',
+  SYSTEM             = 'SYSTEM',
+  PROMOTION          = 'PROMOTION',
+  CAMPAIGN           = 'CAMPAIGN',
+  PUSH_CAMPAIGN      = 'PUSH_CAMPAIGN',
+  TICKET_REPLY       = 'TICKET_REPLY',
+  REVIEW_APPROVED    = 'REVIEW_APPROVED',
+  REVIEW_REJECTED    = 'REVIEW_REJECTED',
+  MONTHLY_WINNER     = 'MONTHLY_WINNER',
 }
 
 export enum NotificationChannel {
@@ -164,6 +179,14 @@ export enum GameDifficulty {
   HARD      = 'HARD',
   VERY_HARD = 'VERY_HARD',
   LEGENDARY = 'LEGENDARY',
+}
+
+export enum GameTier {
+  STANDARD  = 'STANDARD',
+  SILVER    = 'SILVER',
+  GOLD      = 'GOLD',
+  PLATINUM  = 'PLATINUM',
+  DIAMOND   = 'DIAMOND',
 }
 
 export enum GenreFilter {
@@ -210,3 +233,81 @@ export enum Gender {
   OTHER             = 'OTHER',
   PREFER_NOT_TO_SAY = 'PREFER_NOT_TO_SAY',
 }
+
+// ─── Canonical aliases used across legacy API modules ────────────────────────
+
+export const Role = UserRole;
+export type Role = UserRole;
+
+export const WalletTxType = TransactionType;
+export type WalletTxType = TransactionType;
+
+export const TransactionCurrency = CurrencyType;
+export type TransactionCurrency = CurrencyType;
+
+export const PaymentGateway = PaymentMethod;
+export type PaymentGateway = PaymentMethod;
+
+// ─── Canonical string constants for non-schema fields ────────────────────────
+
+export const AuditAction = {
+  CREATE: 'CREATE',
+  UPDATE: 'UPDATE',
+  DELETE: 'DELETE',
+  LOGIN: 'LOGIN',
+  LOGOUT: 'LOGOUT',
+  BAN_USER: 'BAN_USER',
+  UNBAN_USER: 'UNBAN_USER',
+  MUTE_USER: 'MUTE_USER',
+  UNMUTE_USER: 'UNMUTE_USER',
+  GRANT_BADGE: 'GRANT_BADGE',
+  REVOKE_BADGE: 'REVOKE_BADGE',
+  ADJUST_WALLET: 'ADJUST_WALLET',
+  ADJUST_XP: 'ADJUST_XP',
+  ROLE_CHANGE: 'ROLE_CHANGE',
+  PASSWORD_CHANGE: 'PASSWORD_CHANGE',
+  SETTING_CHANGE: 'SETTING_CHANGE',
+  BACKUP_CREATE: 'BACKUP_CREATE',
+  BACKUP_RESTORE: 'BACKUP_RESTORE',
+  CAMPAIGN_SEND: 'CAMPAIGN_SEND',
+  DEAL_MOVE: 'DEAL_MOVE',
+  SEGMENT_RECOMPUTE: 'SEGMENT_RECOMPUTE',
+  WHEEL_SPIN: 'WHEEL_SPIN',
+  PRIZE_DISTRIBUTE: 'PRIZE_DISTRIBUTE',
+  BOOKING_CONFIRM: 'BOOKING_CONFIRM',
+  BOOKING_CANCEL: 'BOOKING_CANCEL',
+  PAYMENT_REFUND: 'PAYMENT_REFUND',
+  REVIEW_APPROVE: 'REVIEW_APPROVE',
+  REVIEW_REJECT: 'REVIEW_REJECT',
+  TICKET_REPLY: 'TICKET_REPLY',
+  USER_UPDATED: 'USER_UPDATED',
+  USER_BANNED: 'USER_BANNED',
+  USER_UNBANNED: 'USER_UNBANNED',
+  USER_MUTED: 'USER_MUTED',
+  USER_UNMUTED: 'USER_UNMUTED',
+  BADGE_GRANTED: 'BADGE_GRANTED',
+  BADGE_REVOKED: 'BADGE_REVOKED',
+  XP_ADJUSTED: 'XP_ADJUSTED',
+  WALLET_ADJUSTED: 'WALLET_ADJUSTED',
+} as const;
+
+export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
+
+export const TransactionRefType = {
+  BOOKING: 'BOOKING',
+  PAYMENT: 'PAYMENT',
+  WHEEL_SPIN: 'WHEEL_SPIN',
+  INVITE: 'INVITE',
+  MONTHLY_REWARD: 'MONTHLY_REWARD',
+  ADMIN_ADJUST: 'ADMIN_ADJUST',
+  REFUND: 'REFUND',
+  LEVEL_UP: 'LEVEL_UP',
+  ACCESSORY_PURCHASE: 'ACCESSORY_PURCHASE',
+  REVIEW_REWARD: 'REVIEW_REWARD',
+  CONVERSION: 'CONVERSION',
+  MANUAL_ADJUST: 'MANUAL_ADJUST',
+  AVATAR_PURCHASE: 'AVATAR_PURCHASE',
+} as const;
+
+export type TransactionRefType =
+  (typeof TransactionRefType)[keyof typeof TransactionRefType];

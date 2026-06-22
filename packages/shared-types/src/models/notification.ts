@@ -5,8 +5,8 @@
 import type { NotificationType, NotificationChannel } from '../enums';
 
 export interface Notification {
-  id: number;
-  userId: number;
+  id: string;
+  userId: string;
   type: NotificationType;
   channel: NotificationChannel;
   title: string;
@@ -19,7 +19,7 @@ export interface Notification {
 }
 
 export interface SmsLog {
-  id: number;
+  id: string;
   mobile: string;
   template: string;
   vars?: Record<string, unknown>;
@@ -27,7 +27,7 @@ export interface SmsLog {
   providerRef?: string;
   sentAt: string;
   error?: string;
-  userId?: number;
+  userId?: string;
 }
 
 /** خلاصه اعلان برای header badge */

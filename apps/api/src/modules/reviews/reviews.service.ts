@@ -7,10 +7,10 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService }         from '../../prisma/prisma.service';
+import { NotificationType } from '@tiktakrun/shared-types';
 import { NotificationsService }  from '../../common/interfaces/notifications-stub.service';
 import { BookingRewardsService } from '../bookings/services/booking-rewards.service';
 import { CreateReviewDto, UpdateReviewDto, RejectReviewDto } from './dto/review.dto';
-import { NotificationType }      from '../../common/interfaces/phase3-stubs.interface';
 import { parsePagination, buildPaginatedResponse } from '../../common/helpers/pagination.helper';
 
 @Injectable()

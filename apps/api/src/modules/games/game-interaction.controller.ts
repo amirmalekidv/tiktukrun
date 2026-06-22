@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
+import { CurrentUserPayload, UserRole } from '@tiktakrun/shared-types';
 
 import { GameInteractionService } from './services/game-interaction.service';
 import { Public } from '../../common/decorators/public.decorator';
@@ -17,10 +18,6 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import {
-  UserRole,
-  CurrentUserPayload,
-} from '../../common/interfaces/phase3-stubs.interface';
 
 class AddCommentDto {
   @IsString()

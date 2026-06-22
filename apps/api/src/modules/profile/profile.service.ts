@@ -4,8 +4,8 @@ import { RedisService } from '../../redis/redis.service';
 import { LevelingService } from '../users/leveling.service';
 import { BadgeService } from './badge.service';
 import { serializeBigInts } from '../../common/utils/bigint';
+import { TransactionCurrency } from '@tiktakrun/shared-types';
 import { TransactionType } from '@prisma/client';
-import { TransactionCurrency } from '../../common/prisma-shims';
 
 const LEADERBOARD_CACHE_TTL = 300; // 5 minutes
 

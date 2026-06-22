@@ -2,15 +2,17 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { CurrentUserPayload, JwtPayload, UserRole } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../../prisma/prisma.service';
 
-export interface JwtPayload {
-  sub: string;
-  mobile: string;
-  roles: string[];
-  sessionId: string;
-  type: 'access' | 'refresh';
-}
+const ROLE_PRIORITY: UserRole[] = [
+  UserRole.SUPER_ADMIN,
+  UserRole.ADMIN,
+  UserRole.BRANCH_MANAGER,
+  UserRole.SUPPORT,
+  UserRole.MARKETING,
+  UserRole.CUSTOMER,
+];
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -53,6 +55,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       where: { id: userId },
       include: {
         roleAssignments: true,
+        managedBranches: { select: { id: true } },
       },
     });
 
@@ -65,11 +68,21 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('حساب کاربری شما مسدود شده است');
     }
 
-    return {
+    const roles = user.roleAssignments.map((r) => r.role as UserRole);
+    const primaryRole =
+      ROLE_PRIORITY.find((role) => roles.includes(role)) ??
+      roles[0] ??
+      UserRole.CUSTOMER;
+
+    const requestUser: CurrentUserPayload = {
       id: user.id,
       mobile: user.mobile,
-      roles: user.roleAssignments.map((r) => r.role),
+      roles,
+      role: primaryRole,
+      branchId: user.managedBranches[0]?.id,
       sessionId,
     };
+
+    return requestUser;
   }
 }

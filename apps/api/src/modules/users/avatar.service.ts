@@ -10,8 +10,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateAvatarConfigDto } from './dto/update-avatar-config.dto';
 import { PurchaseAvatarItemDto } from './dto/purchase-avatar-item.dto';
 import { serializeBigInts } from '../../common/utils/bigint';
+import { TransactionCurrency, TransactionRefType } from '@tiktakrun/shared-types';
 import { AvatarItemType, TransactionType } from '@prisma/client';
-import { TransactionCurrency, TransactionRefType } from '../../common/prisma-shims';
 import * as path from 'path';
 import * as fs from 'fs';
 

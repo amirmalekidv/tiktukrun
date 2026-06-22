@@ -12,6 +12,7 @@
 
 // ─── Enums ───────────────────────────────────────────────────
 export * from './enums';
+export * from './auth';
 
 // ─── Core Models (dependency order) ──────────────────────────
 // gamification باید قبل از user باشد — user از آن re-export می‌کند
@@ -25,13 +26,13 @@ export * from './models/user';
 export * from './models/game';
 export * from './models/booking';
 export * from './models/wallet';
-export * from './models/review';
+export type { ReviewStats } from './models/review';
 export * from './models/chat';
 export * from './models/notification';
 export * from './models/ticket';
 export * from './models/crm';
 export * from './models/discount';
-export * from './models/branch';
+export type { BranchSummary } from './models/branch';
 export * from './models/setting';
 
 // ─── API DTOs ────────────────────────────────────────────────

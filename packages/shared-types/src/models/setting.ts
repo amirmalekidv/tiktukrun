@@ -9,7 +9,7 @@ export interface Setting {
   value: unknown;
   group: SettingGroup;
   updatedAt: string;
-  updatedBy?: number;
+  updatedBy?: string;
 }
 
 /** تنظیمات گروه‌بندی‌شده */
@@ -56,8 +56,8 @@ export interface SettingsMap {
 }
 
 export interface AuditLog {
-  id: number;
-  actorId?: number;
+  id: string;
+  actorId?: string;
   action: string;
   entity: string;
   entityId?: string;

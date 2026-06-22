@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -113,7 +114,7 @@ export class TeamsService {
       for (const m of members) {
         await this.notifications.send({
           userId: m.userId,
-          type: 'TEAM_FULL',
+          type: NotificationType.TEAM_FULL,
           title: '✅ تیم کامل شد!',
           body: `تیم "${team.name}" به ظرفیت کامل رسید.`,
           data: { teamId },

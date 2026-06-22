@@ -18,8 +18,13 @@ import {
 import { LevelingService } from './leveling.service';
 import { parsePagination, paginate } from '../../common/utils/pagination.helper';
 import { serializeBigInts } from '../../common/utils/bigint';
+import {
+  AuditAction,
+  Role,
+  TransactionCurrency,
+  TransactionRefType,
+} from '@tiktakrun/shared-types';
 import { TransactionType, NotificationType, NotificationChannel } from '@prisma/client';
-import { Role, AuditAction, TransactionCurrency, TransactionRefType } from '../../common/prisma-shims';
 
 @Injectable()
 export class UsersService {

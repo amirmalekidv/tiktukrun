@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { CurrentUserPayload, UserRole } from '@tiktakrun/shared-types';
 import { DiscountsService }  from './services/discounts.service';
 import {
   ValidateDiscountDto,
@@ -21,7 +22,6 @@ import { CurrentUser }    from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard }   from '../../common/guards/jwt-auth.guard';
 import { RolesGuard }     from '../../common/guards/roles.guard';
 import { Roles }          from '../../common/decorators/roles.decorator';
-import { UserRole, CurrentUserPayload } from '../../common/interfaces/phase3-stubs.interface';
 
 // ─── Public / User ────────────────────────────────────────────────────────────
 @UseGuards(JwtAuthGuard)

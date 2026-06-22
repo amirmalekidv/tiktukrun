@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LevelingService } from '../gamification/leveling.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -164,7 +165,7 @@ export class WheelService {
     // Notification
     await this.notifications.send({
       userId,
-      type: 'WHEEL_PRIZE',
+      type: NotificationType.WHEEL_PRIZE,
       title: `🎡 جایزه گردونه: ${prize.name}`,
       body: `تبریک! شما "${prize.name}" را برنده شدید!`,
       data: { prizeId: prize.id },

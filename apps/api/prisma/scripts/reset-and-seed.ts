@@ -4,7 +4,7 @@
  *
  * استفاده:
  *   npx ts-node prisma/scripts/reset-and-seed.ts
- *   npx ts-node prisma/scripts/reset-and-seed.ts --skip-migrate
+ *   npx ts-node prisma/scripts/reset-and-seed.ts --skip-db-push
  *
  * ⚠️ هشدار: این اسکریپت همه داده‌ها را پاک می‌کند!
  */
@@ -26,19 +26,18 @@ function runCommand(cmd: string, label: string): void {
 }
 
 async function main() {
-  const skipMigrate = process.argv.includes('--skip-migrate');
+  const skipDbPush = process.argv.includes('--skip-db-push');
 
   console.log('════════════════════════════════════════');
   console.log('  TIK TAK RUN — Database Reset & Seed  ');
   console.log('════════════════════════════════════════');
   console.log('⚠️  این عملیات همه داده‌ها را پاک می‌کند!');
 
-  if (!skipMigrate) {
-    // Drop و ریکریت دیتابیس
-    runCommand('npx prisma migrate reset --force --skip-seed', 'Reset دیتابیس و اجرای migrations');
+  if (!skipDbPush) {
+    runCommand('npx prisma db push --force-reset', 'Reset دیتابیس با prisma db push');
   }
 
-  // اجرای seed
+  // اجرای seed سازگار با MongoDB
   runCommand('npx ts-node prisma/seed.ts', 'اجرای Seed');
 
   console.log('\n🎉 Reset و Seed با موفقیت انجام شد!');

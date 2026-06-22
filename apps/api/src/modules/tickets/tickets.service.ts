@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -99,7 +100,7 @@ export class TicketsService {
     if (ticket.assigneeId) {
       await this.notifications.send({
         userId: ticket.assigneeId,
-        type: 'TICKET_REPLY',
+        type: NotificationType.TICKET_REPLY,
         title: `📩 پاسخ کاربر - تیکت ${ticket.code}`,
         body: text.slice(0, 100),
         data: { ticketId },
@@ -189,7 +190,7 @@ export class TicketsService {
     // Notify user
     await this.notifications.send({
       userId: ticket.userId,
-      type: 'TICKET_REPLY',
+      type: NotificationType.TICKET_REPLY,
       title: `💬 پاسخ پشتیبانی - تیکت ${ticket.code}`,
       body: text.slice(0, 100),
       data: { ticketId },
