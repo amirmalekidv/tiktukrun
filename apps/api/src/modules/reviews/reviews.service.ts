@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService }         from '../../prisma/prisma.service';
 import { NotificationType } from '@tiktakrun/shared-types';
-import { NotificationsService }  from '../../common/interfaces/notifications-stub.service';
+import { NotificationsService }  from '../notifications/notifications.service';
 import { BookingRewardsService } from '../bookings/services/booking-rewards.service';
 import { CreateReviewDto, UpdateReviewDto, RejectReviewDto } from './dto/review.dto';
 import { parsePagination, buildPaginatedResponse } from '../../common/helpers/pagination.helper';
@@ -65,7 +65,7 @@ export class ReviewsService {
     });
 
     // اعطای XP و coins
-    await this.rewards.awardReviewCompletion(userId, this.notif);
+    await this.rewards.awardReviewCompletion(userId);
 
     this.logger.log(`Review created: bookingId=${bookingId} userId=${userId}`);
     return review;

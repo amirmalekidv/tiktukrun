@@ -10,8 +10,8 @@ import { BookingStateMachine }     from './booking-state-machine.service';
 import { BookingRewardsService }   from './booking-rewards.service';
 import { DiscountResolverService } from '../../discounts/services/discount-resolver.service';
 import { PaymentsService }         from '../../payments/payments.service';
-import { NotificationsService }    from '../../../common/interfaces/notifications-stub.service';
-import { WalletService }           from '../../../common/interfaces/wallet-stub.service';
+import { NotificationsService }    from '../../notifications/notifications.service';
+import { WalletService }           from '../../wallet/wallet.service';
 import {
   BookingPreviewDto,
   CreateBookingDto,

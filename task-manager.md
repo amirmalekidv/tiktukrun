@@ -64,11 +64,11 @@
 
 | # | Priority | Task | Description |
 |---|----------|------|-------------|
-| **1.1** | 🔴 | Export real services from modules | Ensure `WalletModule` and `NotificationsModule` export their services for DI. Add `@Global()` or explicit exports if needed. |
-| **1.2** | 🔴 | Remove stub providers from `BookingsModule` | `apps/api/src/modules/bookings/bookings.module.ts` registers local `notifications-stub.service` and `wallet-stub.service`. Replace with injected `NotificationsService` and `WalletService` from real modules. Update `bookings.service.ts`, `bookings-admin.service.ts`, `booking-cron.service.ts`, `booking-rewards.service.ts`. |
-| **1.3** | 🔴 | Remove stub provider from `ReviewsModule` | Same pattern in `reviews.module.ts` / `reviews.service.ts` — use global notifications service. |
-| **1.4** | 🟠 | Delete stub bridge files after migration | Once all consumers use real services, remove `apps/api/src/common/interfaces/notifications-stub.service.ts` and `wallet-stub.service.ts`. Ensure booking wallet debits use proper `WalletTxType` (not always `MANUAL_ADJUST`). |
-| **1.5** | 🟠 | Unify notification type mapping | Real `notifications.service.ts` and former stub used different type strings. Align all callers to Prisma `NotificationType` enum; add missing values to schema if needed (task 0.1). |
+| **1.1** | 🔴 | `[done]` Export real services from modules | Ensure `WalletModule` and `NotificationsModule` export their services for DI. Add `@Global()` or explicit exports if needed. |
+| **1.2** | 🔴 | `[done]` Remove stub providers from `BookingsModule` | `apps/api/src/modules/bookings/bookings.module.ts` registers local `notifications-stub.service` and `wallet-stub.service`. Replace with injected `NotificationsService` and `WalletService` from real modules. Update `bookings.service.ts`, `bookings-admin.service.ts`, `booking-cron.service.ts`, `booking-rewards.service.ts`. |
+| **1.3** | 🔴 | `[done]` Remove stub provider from `ReviewsModule` | Same pattern in `reviews.module.ts` / `reviews.service.ts` — use global notifications service. |
+| **1.4** | 🟠 | `[done]` Delete stub bridge files after migration | Once all consumers use real services, remove `apps/api/src/common/interfaces/notifications-stub.service.ts` and `wallet-stub.service.ts`. Ensure booking wallet debits use proper `WalletTxType` (not always `MANUAL_ADJUST`). |
+| **1.5** | 🟠 | `[done]` Unify notification type mapping | Real `notifications.service.ts` and former stub used different type strings. Align all callers to Prisma `NotificationType` enum; add missing values to schema if needed (task 0.1). |
 
 **Depends on:** 0.1, 0.2  
 **Blocks:** Phase 4 (bookings/reviews rewards), Phase 6 (campaigns)
@@ -81,13 +81,13 @@
 
 | # | Priority | Task | Description |
 |---|----------|------|-------------|
-| **2.1** | 🔴 | Wire SMS.ir provider | `apps/api/src/modules/sms/sms.service.ts` has `// TODO: Real SMS.ir implementation`. Connect existing `smsir.provider.ts` / `mock-sms.provider.ts` via `SmsModule` factory based on `SMS_MOCK_MODE` and `SMSIR_API_KEY`. Respect `settings` keys `sms.provider`, `sms.sendOtp`, `sms.sendBookingConfirm`. |
-| **2.2** | 🔴 | Fix campaign SMS recipient field | `campaign-executor.ts` uses `user.phone`; User model field is `mobile`. Fix mapping and add null checks for users without mobile. |
-| **2.3** | 🔴 | Implement wallet charge + ZarinPal callback | `wallet.service.ts` `chargeWallet()` references `/api/v1/wallet/charge/callback` but **no route exists**. Add controller endpoint that verifies via `PaymentsService` / `ZarinpalProvider`, credits wallet, marks `Payment` SUCCESS. Support sandbox and production (`payments.sandboxMode` setting). |
-| **2.4** | 🟠 | Integrate wallet charge with PaymentsService | Non-sandbox path should call `PaymentsService.initiate()` like bookings do, not fake URLs. Return real `paymentUrl` to client. |
-| **2.5** | 🟠 | Read OTP/security timing from settings | `otp.service.ts` hardcodes TTL and rate limits. Read `security.otpExpiry`, `security.maxLoginAttempts`, `security.lockoutMinutes` from `SettingsService` with sensible defaults. |
-| **2.6** | 🟡 | IDPay provider (optional) | Schema/env mention IDPay; only ZarinPal is implemented. Either implement provider or remove from schema/docs to avoid confusion. |
-| **2.7** | 🟡 | Booking payment callback documentation | Ensure `GET /payments/zarinpal/verify` handles both booking and wallet `Payment` records by `Authority` / metadata. Add integration test. |
+| **2.1** | 🔴 | `[done]` Wire SMS.ir provider | `apps/api/src/modules/sms/sms.service.ts` has `// TODO: Real SMS.ir implementation`. Connect existing `smsir.provider.ts` / `mock-sms.provider.ts` via `SmsModule` factory based on `SMS_MOCK_MODE` and `SMSIR_API_KEY`. Respect `settings` keys `sms.provider`, `sms.sendOtp`, `sms.sendBookingConfirm`. |
+| **2.2** | 🔴 | `[done]` Fix campaign SMS recipient field | `campaign-executor.ts` uses `user.phone`; User model field is `mobile`. Fix mapping and add null checks for users without mobile. |
+| **2.3** | 🔴 | `[done]` Implement wallet charge + ZarinPal callback | `wallet.service.ts` `chargeWallet()` references `/api/v1/wallet/charge/callback` but **no route exists**. Add controller endpoint that verifies via `PaymentsService` / `ZarinpalProvider`, credits wallet, marks `Payment` SUCCESS. Support sandbox and production (`payments.sandboxMode` setting). |
+| **2.4** | 🟠 | `[done]` Integrate wallet charge with PaymentsService | Non-sandbox path should call `PaymentsService.initiate()` like bookings do, not fake URLs. Return real `paymentUrl` to client. |
+| **2.5** | 🟠 | `[done]` Read OTP/security timing from settings | `otp.service.ts` hardcodes TTL and rate limits. Read `security.otpExpiry`, `security.maxLoginAttempts`, `security.lockoutMinutes` from `SettingsService` with sensible defaults. |
+| **2.6** | 🟡 | `[done]` IDPay provider (optional) | Schema/env mention IDPay; only ZarinPal is implemented. Either implement provider or remove from schema/docs to avoid confusion. |
+| **2.7** | 🟡 | `[done]` Booking payment callback documentation | Ensure `GET /payments/zarinpal/verify` handles both booking and wallet `Payment` records by `Authority` / metadata. Add integration test. |
 
 **Depends on:** 0.5 (env docs), 1.1  
 **Blocks:** Phase 4.3, Phase 9 (web wallet/booking flows)
@@ -369,7 +369,7 @@ These are noted in QA/DELIVERY docs but not required for initial completion:
 
 Before marking the project **complete**, verify:
 
-- [ ] All Phase 0–2 tasks done (foundation + stubs + SMS/payments)
+- [x] All Phase 0–2 tasks done (foundation + stubs + SMS/payments)
 - [ ] Chat socket tested with real JWT from web login
 - [ ] Wallet charge + booking payment tested with ZarinPal sandbox
 - [ ] Admin settings save and load from MongoDB

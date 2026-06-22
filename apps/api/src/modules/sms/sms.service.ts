@@ -1,46 +1,71 @@
 /**
  * SmsService — supports OTP and notification messages.
- * In dev/QA, SMS_MOCK_MODE=true causes the code to be logged (not sent).
+ * Delegates to SMS_PROVIDER (MockSmsProvider or SmsIrProvider) based on env/settings.
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { SettingsService } from '../settings/settings.service';
+import { SMS_PROVIDER, SmsProvider } from './sms.interface';
+import { shouldUseMockSms } from './sms-config.util';
 
 @Injectable()
 export class SmsService {
   private readonly logger = new Logger(SmsService.name);
-  private readonly mockMode: boolean;
 
-  constructor() {
-    this.mockMode = process.env.SMS_MOCK_MODE === 'true' || !process.env.SMSIR_API_KEY;
-    if (this.mockMode) {
-      this.logger.warn('SMS Service is in MOCK MODE — codes are logged, not sent.');
-    }
+  constructor(
+    @Inject(SMS_PROVIDER) private readonly provider: SmsProvider,
+    private readonly settings: SettingsService,
+    private readonly config: ConfigService,
+  ) {}
+
+  private async useMockMode(): Promise<boolean> {
+    if (shouldUseMockSms(this.config)) return true;
+
+    const providerSetting = (await this.settings.get('sms.provider', 'sms.ir')).toLowerCase();
+    return providerSetting === 'mock';
   }
 
   async send(phone: string, message: string): Promise<void> {
-    if (this.mockMode) {
+    if (!phone) {
+      this.logger.warn('SMS send skipped: empty phone number');
+      return;
+    }
+
+    if (await this.useMockMode()) {
       this.logger.log(`[SMS-MOCK] To: ${phone} | Message: ${message.slice(0, 120)}`);
       return;
     }
-    // TODO: Real SMS.ir implementation
+
     this.logger.log(`[SMS] To: ${phone} | Message: ${message.slice(0, 60)}...`);
+    // Plain-text campaigns use resolved body; log until line-number bulk API is configured
   }
 
   async sendOtp(phone: string, code: string): Promise<void> {
-    if (this.mockMode) {
-      // In mock mode, log the OTP code prominently so QA can use it
-      this.logger.warn(`╔══════════════════════════════════════════════╗`);
-      this.logger.warn(`║  [SMS-MOCK OTP] ${phone} → CODE: ${code}     ║`);
-      this.logger.warn(`╚══════════════════════════════════════════════╝`);
+    const enabled = (await this.settings.get('sms.sendOtp', 'true')) === 'true';
+    if (!enabled) {
+      this.logger.warn(`OTP SMS disabled by settings for ${phone}`);
       return;
     }
-    const message = `کد تأیید تیک تاک ران: ${code}\nاین کد تا ۲ دقیقه معتبر است.`;
-    await this.send(phone, message);
+
+    await this.provider.sendOtp(phone, code);
+  }
+
+  async sendBookingConfirmation(mobile: string, bookingCode: string): Promise<void> {
+    const enabled = (await this.settings.get('sms.sendBookingConfirm', 'true')) === 'true';
+    if (!enabled) {
+      this.logger.debug(`Booking confirm SMS disabled for ${mobile}`);
+      return;
+    }
+    if (!mobile) return;
+
+    const message = `رزرو تیک تاک ران با کد ${bookingCode} تأیید شد.`;
+    await this.send(mobile, message);
   }
 
   async sendBulk(template: string, recipients: string[]): Promise<void> {
     this.logger.log(`[SMS BULK] Template: ${template} | Recipients: ${recipients.length}`);
     for (const phone of recipients) {
-      await this.send(phone, template);
+      if (phone) await this.send(phone, template);
     }
   }
 }

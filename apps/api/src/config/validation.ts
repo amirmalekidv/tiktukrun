@@ -54,10 +54,15 @@ export function validate(config: EnvRecord): EnvRecord {
     JWT_ACCESS_TTL: toNumber(config.JWT_ACCESS_TTL, 900),
     JWT_REFRESH_TTL: toNumber(config.JWT_REFRESH_TTL, 2592000),
 
-    SMSIR_API_KEY: toString(config.SMSIR_API_KEY, ''),
-    SMSIR_TEMPLATE_ID_OTP: toString(config.SMSIR_TEMPLATE_ID_OTP, ''),
+    SMS_PROVIDER: toString(config.SMS_PROVIDER, 'sms.ir'),
+    SMS_IR_API_URL: toString(config.SMS_IR_API_URL, 'https://api.sms.ir/v1/send/verify'),
+    SMS_IR_API_KEY: toString(config.SMS_IR_API_KEY, toString(config.SMSIR_API_KEY, '')),
+    SMS_IR_TEMPLATE_ID: toString(config.SMS_IR_TEMPLATE_ID, toString(config.SMSIR_TEMPLATE_ID_OTP, '')),
+    SMS_IR_TEMPLATE_PARAM: toString(config.SMS_IR_TEMPLATE_PARAM, 'OTP'),
+    SMSIR_API_KEY: toString(config.SMSIR_API_KEY, toString(config.SMS_IR_API_KEY, '')),
+    SMSIR_TEMPLATE_ID_OTP: toString(config.SMSIR_TEMPLATE_ID_OTP, toString(config.SMS_IR_TEMPLATE_ID, '')),
     SMSIR_LINE_NUMBER: toString(config.SMSIR_LINE_NUMBER, ''),
-    SMS_MOCK_MODE: toBoolean(config.SMS_MOCK_MODE, true),
+    SMS_MOCK_MODE: toBoolean(config.SMS_MOCK_MODE, false),
 
     ZARINPAL_MERCHANT_ID: toString(config.ZARINPAL_MERCHANT_ID, ''),
     ZARINPAL_SANDBOX: toBoolean(config.ZARINPAL_SANDBOX, true),

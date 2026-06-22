@@ -3,7 +3,7 @@ export interface PaymentInitiateParams {
   description: string;
   callbackUrl: string;
   userId:      string;
-  bookingId:   string;
+  bookingId?:  string;
   paymentId:   string;
 }
 

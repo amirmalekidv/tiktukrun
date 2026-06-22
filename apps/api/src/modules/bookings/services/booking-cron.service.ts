@@ -3,7 +3,7 @@ import { Cron }                from '@nestjs/schedule';
 import { NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService }        from '../../../prisma/prisma.service';
 import { BookingRewardsService } from './booking-rewards.service';
-import { NotificationsService }  from '../../../common/interfaces/notifications-stub.service';
+import { NotificationsService }  from '../../notifications/notifications.service';
 
 const PENDING_TIMEOUT_MINUTES   = 60;
 const COMPLETION_BUFFER_MINUTES = 60;
@@ -85,7 +85,7 @@ export class BookingCronService {
         data:  { status: 'COMPLETED', completedAt: new Date() },
       });
 
-      await this.rewards.awardBookingCompletion(booking.id, booking.userId, this.notif);
+      await this.rewards.awardBookingCompletion(booking.id, booking.userId);
 
       // استفاده از enum به جای string literal
       await this.notif.send({

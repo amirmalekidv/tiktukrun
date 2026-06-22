@@ -43,7 +43,7 @@ const DEFAULT_SETTINGS: Record<string, { value: string; group: string; descripti
   },
 
   // SMS
-  'sms.provider': { value: 'kavenegar', group: 'sms' },
+  'sms.provider': { value: 'sms.ir', group: 'sms' },
   'sms.sendBookingConfirm': { value: 'true', group: 'sms' },
   'sms.sendOtp': { value: 'true', group: 'sms' },
 

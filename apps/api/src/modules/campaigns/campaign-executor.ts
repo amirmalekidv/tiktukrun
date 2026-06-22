@@ -93,14 +93,19 @@ export class CampaignExecutor {
 
     // Resolve variables
     const body = this.resolveTemplate(content.body, {
-      name: user.name,
-      phone: user.phone,
+      name: user.fullName ?? user.nickname ?? '',
+      phone: user.mobile ?? '',
+      mobile: user.mobile ?? '',
       trackingToken,
     });
 
     switch (campaign.type) {
       case 'SMS':
-        await this.sms.send(user.phone, body);
+        if (!user.mobile) {
+          this.logger.warn(`Skipping SMS campaign for user ${user.id}: no mobile`);
+          return;
+        }
+        await this.sms.send(user.mobile, body);
         break;
 
       case 'INAPP':

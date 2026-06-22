@@ -7,8 +7,6 @@ import { BookingRewardsService } from './services/booking-rewards.service';
 import { BookingCronService }    from './services/booking-cron.service';
 import { DiscountsModule }       from '../discounts/discounts.module';
 import { PaymentsModule }        from '../payments/payments.module';
-import { NotificationsService }  from '../../common/interfaces/notifications-stub.service';
-import { WalletService }         from '../../common/interfaces/wallet-stub.service';
 
 // ScheduleModule.forRoot() در app.module.ts ثبت شده — نباید تکرار شود
 @Module({
@@ -23,9 +21,7 @@ import { WalletService }         from '../../common/interfaces/wallet-stub.servi
     BookingStateMachine,
     BookingRewardsService,
     BookingCronService,
-    NotificationsService,
-    WalletService,
   ],
-  exports: [BookingsService],
+  exports: [BookingsService, BookingRewardsService],
 })
 export class BookingsModule {}

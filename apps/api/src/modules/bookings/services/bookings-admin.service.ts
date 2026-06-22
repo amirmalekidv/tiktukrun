@@ -8,7 +8,7 @@ import { PrismaService }         from '../../../prisma/prisma.service';
 import { NotificationType, UserRole } from '@tiktakrun/shared-types';
 import { BookingStateMachine }   from './booking-state-machine.service';
 import { BookingRewardsService } from './booking-rewards.service';
-import { NotificationsService }  from '../../../common/interfaces/notifications-stub.service';
+import { NotificationsService }  from '../../notifications/notifications.service';
 import {
   AdminUpdateBookingStatusDto,
   RefundBookingDto,
@@ -161,7 +161,7 @@ export class BookingsAdminService {
 
     // اگر COMPLETED، اعطای جوایز
     if (dto.status === 'COMPLETED') {
-      await this.rewards.awardBookingCompletion(id, booking.userId, this.notif);
+      await this.rewards.awardBookingCompletion(id, booking.userId);
     }
 
     // اطلاع‌رسانی
@@ -240,7 +240,7 @@ export class BookingsAdminService {
       data:  { status: 'COMPLETED', completedAt: new Date() },
     });
 
-    await this.rewards.awardBookingCompletion(id, booking.userId, this.notif);
+    await this.rewards.awardBookingCompletion(id, booking.userId);
     return { success: true, data: { bookingId: id, status: 'COMPLETED' } };
   }
 

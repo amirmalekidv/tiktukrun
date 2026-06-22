@@ -16,6 +16,7 @@ import {
   MuteUserDto,
 } from './dto/admin-update-user.dto';
 import { LevelingService } from './leveling.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { parsePagination, paginate } from '../../common/utils/pagination.helper';
 import { serializeBigInts } from '../../common/utils/bigint';
 import {
@@ -23,8 +24,9 @@ import {
   Role,
   TransactionCurrency,
   TransactionRefType,
+  NotificationType,
 } from '@tiktakrun/shared-types';
-import { TransactionType, NotificationType, NotificationChannel } from '@prisma/client';
+import { TransactionType } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -33,6 +35,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly levelingService: LevelingService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -277,17 +280,6 @@ export class UsersService {
         data: { userId: userId, badgeId: badge.id, reason: dto.reason, grantedBy: adminId } as any,
       });
 
-      await tx.notification.create({
-        data: {
-          userId: userId,
-          type: NotificationType.BADGE,
-          title: 'بج جدید!',
-          body: `بج «${badge.name}» به پروفایل شما اضافه شد`,
-          channel: NotificationChannel.INAPP,
-          metadata: { badgeId: badge.id, badgeCode: badge.code },
-        },
-      });
-
       await tx.auditLog.create({
         data: {
           actorId: adminId, entity: 'User',
@@ -296,6 +288,14 @@ export class UsersService {
           afterJson: { badgeCode: dto.badgeCode, reason: dto.reason },
         },
       });
+    });
+
+    await this.notifications.send({
+      userId,
+      type: NotificationType.BADGE_EARNED,
+      title: 'بج جدید!',
+      body: `بج «${badge.name}» به پروفایل شما اضافه شد`,
+      data: { badgeId: badge.id, badgeCode: badge.code },
     });
 
     return { message: `بج «${badge.name}» به کاربر اعطا شد` };
@@ -346,19 +346,6 @@ export class UsersService {
         data: { xp: newXp, levelId: newLevel } as any,
       });
 
-      if (leveledUp) {
-        await tx.notification.create({
-          data: {
-            userId: userId,
-            type: NotificationType.LEVEL,
-            title: '🎉 ارتقاء سطح!',
-            body: `تبریک! شما به سطح ${newLevel} رسیدید`,
-            channel: NotificationChannel.INAPP,
-            metadata: { oldLevel: (profile as any).levelId, newLevel },
-          },
-        });
-      }
-
       await tx.auditLog.create({
         data: {
           actorId: adminId, entity: 'User',
@@ -368,6 +355,16 @@ export class UsersService {
         },
       });
     });
+
+    if (leveledUp) {
+      await this.notifications.send({
+        userId,
+        type: NotificationType.LEVEL_UP,
+        title: '🎉 ارتقاء سطح!',
+        body: `تبریک! شما به سطح ${newLevel} رسیدید`,
+        data: { oldLevel: (profile as any).levelId, newLevel },
+      });
+    }
 
     return { oldXp, newXp, oldLevel: (profile as any).levelId, newLevel, leveledUp };
   }

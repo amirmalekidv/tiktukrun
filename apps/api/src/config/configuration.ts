@@ -26,8 +26,11 @@ export default () => ({
   },
 
   sms: {
-    apiKey: process.env.SMSIR_API_KEY || '',
-    templateIdOtp: process.env.SMSIR_TEMPLATE_ID_OTP || '',
+    provider: process.env.SMS_PROVIDER || 'sms.ir',
+    apiUrl: process.env.SMS_IR_API_URL || 'https://api.sms.ir/v1/send/verify',
+    apiKey: process.env.SMS_IR_API_KEY || process.env.SMSIR_API_KEY || '',
+    templateId: process.env.SMS_IR_TEMPLATE_ID || process.env.SMSIR_TEMPLATE_ID_OTP || '',
+    templateParam: process.env.SMS_IR_TEMPLATE_PARAM || 'OTP',
     lineNumber: process.env.SMSIR_LINE_NUMBER || '',
     mockMode: process.env.SMS_MOCK_MODE === 'true',
   },

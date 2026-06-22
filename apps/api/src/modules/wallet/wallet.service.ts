@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { SettingsService } from '../settings/settings.service';
+import { PaymentsService } from '../payments/payments.service';
 import {
   ChargeWalletDto,
   PurchaseDiamondsDto,
@@ -46,7 +48,18 @@ export class WalletService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly settings: SettingsService,
+    private readonly payments: PaymentsService,
   ) {}
+
+  /** موجودی تومانی کاربر (برای بررسی قبل از پرداخت رزرو) */
+  async getBalance(userId: string): Promise<bigint> {
+    const wallet = await this.prisma.wallet.findUnique({
+      where:  { userId },
+      select: { tomanBalance: true },
+    });
+    return BigInt(wallet?.tomanBalance ?? 0);
+  }
 
   // اطمینان از وجود کیف پول
   private async ensureWallet(userId: string) {
@@ -83,18 +96,30 @@ export class WalletService {
 
   /** شروع شارژ کیف پول (درگاه پرداخت) */
   async chargeWallet(userId: string, dto: ChargeWalletDto) {
-    const isSandbox = this.configService.get<string>('ZARINPAL_SANDBOX', 'true') === 'true';
+    const sandboxSetting = await this.settings.get('payments.sandboxMode', 'true');
+    const isSandbox = sandboxSetting === 'true'
+      || this.configService.get<string>('ZARINPAL_SANDBOX', 'true') === 'true';
+
+    const wallet = await this.ensureWallet(userId);
 
     const payment = await this.prisma.payment.create({
       data: {
         userId,
-        amount:  dto.amount,
-        method:  PaymentMethod.ZARINPAL,
-        status:  PaymentStatus.PENDING,
-        gateway: 'zarinpal',
-        gatewayResponse: { method: dto.method, description: `شارژ کیف پول - ${dto.amount.toLocaleString()} تومان` },
+        walletId: wallet.id,
+        amount:   dto.amount,
+        method:   PaymentMethod.ZARINPAL,
+        status:   PaymentStatus.PENDING,
+        gateway:  'zarinpal',
+        gatewayResponse: {
+          purpose: 'wallet_charge',
+          method:  dto.method,
+          description: `شارژ کیف پول - ${dto.amount.toLocaleString()} تومان`,
+        },
       },
     });
+
+    const apiUrl = this.configService.get('API_URL', 'http://localhost:4000');
+    const verifyBase = `${apiUrl}/api/v1/payments/zarinpal/verify?paymentId=${payment.id}`;
 
     if (isSandbox) {
       const fakeAuthority = `TEST_${payment.id}`;
@@ -105,15 +130,23 @@ export class WalletService {
 
       return serializeBigInts({
         paymentId:  payment.id,
-        paymentUrl: `${this.configService.get('APP_URL', 'http://localhost:4000')}/api/v1/wallet/charge/callback?Authority=${fakeAuthority}&Status=OK`,
+        paymentUrl: `${verifyBase}&Authority=${fakeAuthority}&Status=OK`,
         isSandbox:  true,
         message:    'در حالت تست - پرداخت شبیه‌سازی شده است',
       });
     }
 
+    const initiateResult = await this.payments.initiate({
+      amount:      dto.amount,
+      description: `شارژ کیف پول - ${dto.amount.toLocaleString()} تومان`,
+      callbackUrl: '',
+      userId,
+      paymentId:   payment.id,
+    });
+
     return serializeBigInts({
       paymentId:  payment.id,
-      paymentUrl: `https://www.zarinpal.com/pg/StartPay/${payment.gatewayAuthority}`,
+      paymentUrl: initiateResult.paymentUrl,
       isSandbox:  false,
     });
   }

@@ -1,8 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService }      from '../../../prisma/prisma.service';
-import {
-  INotificationsService,
-} from '../../../common/interfaces/notifications-stub.service';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { NotificationType } from '@tiktakrun/shared-types';
 
 const XP_PER_BOOKING    = 10;
@@ -16,6 +14,7 @@ export class BookingRewardsService {
 
   constructor(
     private prisma: PrismaService,
+    private notif: NotificationsService,
   ) {}
 
   /** افزایش سکه در کیف پول (coins در Wallet نگه‌داری می‌شود نه profile) */
@@ -27,11 +26,7 @@ export class BookingRewardsService {
     });
   }
 
-  async awardBookingCompletion(
-    bookingId: string,
-    userId:    string,
-    notif:     INotificationsService,
-  ): Promise<void> {
+  async awardBookingCompletion(bookingId: string, userId: string): Promise<void> {
     const booking = await this.prisma.booking.findUnique({
       where:   { id: bookingId },
       include: { game: { select: { id: true, tags: true, categoryId: true, category: { select: { genre: true } } } } },
@@ -60,11 +55,11 @@ export class BookingRewardsService {
 
     this.logger.log(`Rewards awarded to userId=${userId} for bookingId=${bookingId}`);
 
-    await this.checkAndAwardBadges(userId, notif);
-    await this.checkLevelUp(userId, notif);
+    await this.checkAndAwardBadges(userId);
+    await this.checkLevelUp(userId);
   }
 
-  async awardReviewCompletion(userId: string, notif: INotificationsService): Promise<void> {
+  async awardReviewCompletion(userId: string): Promise<void> {
     await this.prisma.userProfile.update({
       where: { userId },
       data:  { xp: { increment: XP_PER_REVIEW } },
@@ -72,10 +67,7 @@ export class BookingRewardsService {
     await this.addCoins(userId, COINS_PER_REVIEW);
   }
 
-  private async checkAndAwardBadges(
-    userId: string,
-    notif:  INotificationsService,
-  ): Promise<void> {
+  private async checkAndAwardBadges(userId: string): Promise<void> {
     const profile = await this.prisma.userProfile.findUnique({
       where:  { userId },
       select: { totalBookings: true, totalSpent: true, statsCache: true },
@@ -104,7 +96,7 @@ export class BookingRewardsService {
         data: { userId, badgeId: badge.id, awardedAt: new Date() },
       });
 
-      await notif.send({
+      await this.notif.send({
         userId,
         type:  NotificationType.BADGE_EARNED,
         title: `بج "${badge.name}" دریافت کردی! 🏅`,
@@ -116,20 +108,15 @@ export class BookingRewardsService {
     }
   }
 
-  private async checkLevelUp(
-    userId: string,
-    notif:  INotificationsService,
-  ): Promise<void> {
+  private async checkLevelUp(userId: string): Promise<void> {
     const profile = await this.prisma.userProfile.findUnique({
       where:  { userId },
       select: { xp: true, levelId: true },
     });
     if (!profile) return;
 
-    // فرمول ساده: هر 100 XP یک لول
     const newLevel = Math.floor((profile.xp ?? 0) / 100) + 1;
     if (newLevel > (profile.levelId ?? 1)) {
-      // اطمینان از وجود رکورد Level (در غیر این صورت از تغییر صرف‌نظر کن)
       const levelRecord = await this.prisma.level.findUnique({ where: { id: newLevel } });
       if (!levelRecord) return;
 
@@ -137,7 +124,7 @@ export class BookingRewardsService {
         where: { userId },
         data:  { levelId: newLevel },
       });
-      await notif.send({
+      await this.notif.send({
         userId,
         type:  NotificationType.LEVEL_UP,
         title: `🎉 لول ${newLevel} رسیدی!`,

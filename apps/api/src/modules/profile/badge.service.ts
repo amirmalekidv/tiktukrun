@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LevelingService } from '../users/leveling.service';
-import { NotificationType, NotificationChannel } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '@tiktakrun/shared-types';
 
 interface BadgeCondition {
   type: 'bookings' | 'level' | 'spent' | 'invites' | 'xp';
@@ -16,6 +17,7 @@ export class BadgeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly levelingService: LevelingService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -77,17 +79,14 @@ export class BadgeService {
                 badgeId: badge.id,
               },
             });
+          });
 
-            await tx.notification.create({
-              data: {
-                userId: userId,
-                type: NotificationType.BADGE,
-                title: '🏆 بج جدید کسب کردید!',
-                body: `بج «${badge.name}» به پروفایل شما اضافه شد`,
-                channel: NotificationChannel.INAPP,
-                metadata: { badgeId: badge.id, badgeCode: badge.code },
-              },
-            });
+          await this.notifications.send({
+            userId,
+            type: NotificationType.BADGE_EARNED,
+            title: '🏆 بج جدید کسب کردید!',
+            body: `بج «${badge.name}» به پروفایل شما اضافه شد`,
+            data: { badgeId: badge.id, badgeCode: badge.code },
           });
 
           granted.push(badge.code);

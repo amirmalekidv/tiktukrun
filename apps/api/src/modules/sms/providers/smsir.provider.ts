@@ -2,27 +2,40 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { SmsProvider } from '../sms.interface';
+import {
+  getSmsIrApiKey,
+  getSmsIrApiUrl,
+  getSmsIrTemplateId,
+  getSmsIrTemplateParam,
+} from '../sms-config.util';
 
 export class SmsIrProvider implements SmsProvider {
   private readonly logger = new Logger(SmsIrProvider.name);
   private readonly apiKey: string;
+  private readonly apiUrl: string;
   private readonly otpTemplateId: string;
-  private readonly baseUrl = 'https://api.sms.ir/v1';
+  private readonly otpTemplateParam: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.apiKey = this.configService.get<string>('SMSIR_API_KEY', '');
-    this.otpTemplateId = this.configService.get<string>('SMSIR_OTP_TEMPLATE_ID', '');
+    this.apiKey = getSmsIrApiKey(configService);
+    this.apiUrl = getSmsIrApiUrl(configService);
+    this.otpTemplateId = getSmsIrTemplateId(configService);
+    this.otpTemplateParam = getSmsIrTemplateParam(configService);
   }
 
   async sendOtp(mobile: string, code: string): Promise<void> {
+    if (!this.apiKey || !this.otpTemplateId) {
+      throw new Error('SMS.ir is not configured: SMS_IR_API_KEY and SMS_IR_TEMPLATE_ID are required');
+    }
+
     try {
       const response = await axios.post(
-        `${this.baseUrl}/send/verify`,
+        this.apiUrl,
         {
           mobile,
-          templateId: parseInt(this.otpTemplateId),
+          templateId: parseInt(this.otpTemplateId, 10),
           parameters: [
-            { name: 'Code', value: code },
+            { name: this.otpTemplateParam, value: code },
           ],
         },
         {
@@ -39,7 +52,7 @@ export class SmsIrProvider implements SmsProvider {
       }
 
       this.logger.log(`OTP sent to ${mobile}`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to send OTP to ${mobile}: ${error.message}`);
       throw error;
     }
@@ -57,10 +70,10 @@ export class SmsIrProvider implements SmsProvider {
       }));
 
       const response = await axios.post(
-        `${this.baseUrl}/send/verify`,
+        this.apiUrl,
         {
           mobile,
-          templateId: parseInt(templateId),
+          templateId: parseInt(templateId, 10),
           parameters,
         },
         {
@@ -77,7 +90,7 @@ export class SmsIrProvider implements SmsProvider {
       }
 
       this.logger.log(`Notification sent to ${mobile}`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to send notification to ${mobile}: ${error.message}`);
       throw error;
     }
