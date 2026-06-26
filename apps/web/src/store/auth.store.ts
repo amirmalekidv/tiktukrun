@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User } from '@/types'
+import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, clearAuthTokens, setAuthTokens } from '@/lib/http'
 
 interface AuthState {
   user: User | null
@@ -9,7 +10,7 @@ interface AuthState {
   isLoading: boolean
   setUser: (user: User | null) => void
   setAccessToken: (token: string | null) => void
-  login: (user: User, token: string) => void
+  login: (user: User, token: string, refreshToken?: string) => void
   logout: () => void
   setLoading: (loading: boolean) => void
 }
@@ -23,17 +24,13 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       setAccessToken: (token) => set({ accessToken: token }),
-      login: (user, token) => {
+      login: (user, token, refreshToken) => {
         set({ user, accessToken: token, isAuthenticated: true })
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('tiktakrun_access_token', token)
-        }
+        setAuthTokens(token, refreshToken)
       },
       logout: () => {
         set({ user: null, accessToken: null, isAuthenticated: false })
-        if (typeof localStorage !== 'undefined') {
-          localStorage.removeItem('tiktakrun_access_token')
-        }
+        clearAuthTokens()
       },
       setLoading: (isLoading) => set({ isLoading }),
     }),

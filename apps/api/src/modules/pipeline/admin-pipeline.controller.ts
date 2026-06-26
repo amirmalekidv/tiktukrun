@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PipelineService } from './pipeline.service';
@@ -73,9 +74,9 @@ export class AdminPipelineController {
   constructor(private readonly pipelineService: PipelineService) {}
 
   @Get()
-  @ApiOperation({ summary: 'همه deals گروه‌بندی بر اساس stage' })
-  async findAll() {
-    const data = await this.pipelineService.findAll();
+  @ApiOperation({ summary: 'همه deals — grouped by default; ?format=flat for admin Kanban' })
+  async findAll(@Query('format') format?: string) {
+    const data = await this.pipelineService.findAll(format);
     return { success: true, data };
   }
 

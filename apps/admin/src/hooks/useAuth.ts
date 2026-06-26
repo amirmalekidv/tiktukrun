@@ -1,7 +1,7 @@
 'use client'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/lib/api/auth'
-import { can } from '@/lib/permissions'
+import { can, getRoleLabel } from '@/lib/permissions'
 import toast from 'react-hot-toast'
 import type { AdminUser, AdminRole } from '@/types'
 
@@ -22,7 +22,7 @@ function isAuthResponse(data: unknown): data is AuthResponse {
 }
 
 // Module-level constant — not recreated on every render
-const ADMIN_ROLES: AdminRole[] = ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SUPPORT', 'ANALYST']
+const ADMIN_ROLES: AdminRole[] = ['SUPER_ADMIN', 'ADMIN', 'BRANCH_MANAGER', 'SUPPORT', 'MARKETING']
 
 export function useAuth() {
   const { user, isAuthenticated, isLoading, setAuth, logout, setLoading } = useAuthStore()
@@ -48,10 +48,12 @@ export function useAuth() {
   const verifyOtp = async (mobile: string, otp: string) => {
     setLoading(true)
     try {
-      const res = await authApi.verifyOtp(mobile, otp)
-      if (res.success && res.data && isAuthResponse(res.data)) {
-        const { user: u, accessToken, refreshToken } = res.data
-        // Check admin role
+      const payload = await authApi.verifyOtp(mobile, otp) as AuthResponse | { data?: AuthResponse }
+      const data = 'accessToken' in (payload as AuthResponse)
+        ? (payload as AuthResponse)
+        : (payload as { data?: AuthResponse }).data
+      if (data && isAuthResponse(data)) {
+        const { user: u, accessToken, refreshToken } = data
         if (!u.roles.some((r: AdminRole) => ADMIN_ROLES.includes(r))) {
           toast.error('شما دسترسی به پنل مدیریت ندارید')
           return false
@@ -60,7 +62,7 @@ export function useAuth() {
         toast.success('ورود موفق')
         return true
       }
-      toast.error(res.message || 'کد وارد شده صحیح نیست')
+      toast.error('کد وارد شده صحیح نیست')
       return false
     } catch {
       toast.error('خطا در تأیید کد')
@@ -73,9 +75,12 @@ export function useAuth() {
   const loginWithPassword = async (mobile: string, password: string) => {
     setLoading(true)
     try {
-      const res = await authApi.loginWithPassword(mobile, password)
-      if (res.success && res.data && isAuthResponse(res.data)) {
-        const { user: u, accessToken, refreshToken } = res.data
+      const payload = await authApi.loginWithPassword(mobile, password) as AuthResponse | { data?: AuthResponse }
+      const data = 'accessToken' in (payload as AuthResponse)
+        ? (payload as AuthResponse)
+        : (payload as { data?: AuthResponse }).data
+      if (data && isAuthResponse(data)) {
+        const { user: u, accessToken, refreshToken } = data
         if (!u.roles.some((r: AdminRole) => ADMIN_ROLES.includes(r))) {
           toast.error('شما دسترسی به پنل مدیریت ندارید')
           return false
@@ -84,7 +89,7 @@ export function useAuth() {
         toast.success('ورود موفق')
         return true
       }
-      toast.error(res.message || 'رمز عبور اشتباه است')
+      toast.error('رمز عبور اشتباه است')
       return false
     } catch {
       toast.error('خطا در ورود')

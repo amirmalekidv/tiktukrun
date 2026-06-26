@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { toggleGameLike, getGameLikeStatus } from '@/lib/api'
+import { AUTH_TOKEN_KEY } from '@/lib/http'
 import { toPersianDigits } from '@/lib/utils'
 
 export default function LikeButton({
@@ -39,7 +40,7 @@ export default function LikeButton({
   const handleClick = async () => {
     if (busy) return
     const isLoggedIn =
-      typeof localStorage !== 'undefined' && !!localStorage.getItem('accessToken')
+      typeof localStorage !== 'undefined' && !!localStorage.getItem(AUTH_TOKEN_KEY)
     if (!isLoggedIn) {
       if (typeof window !== 'undefined') window.location.href = '/login'
       return

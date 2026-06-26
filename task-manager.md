@@ -141,14 +141,14 @@
 
 | # | Priority | Task | Description |
 |---|----------|------|-------------|
-| **5.1** | 🟠 | Implement real `topTeams` | `top.service.ts` stub returns top spenders, not teams. Query teams by activity/bookings/wins per product policy. |
-| **5.2** | 🟠 | Fix monthly top-team winner logic | `monthly.service.ts` uses member count proxy; should use bookings/XP per team per policy doc. |
-| **5.3** | 🟠 | Team create/join validation | Align API DTO with web: accept `gameId`, `capacity` (web sends `gameType`, `maxMembers`). Support optional `cityId` filter on list. |
-| **5.4** | 🟡 | `TEAM_FULL` notification | Add to Prisma `NotificationType` enum; emit when team reaches capacity. |
-| **5.5** | 🟡 | Optional `TeamsModule` registration | Teams live inside `ChatModule`; consider standalone module in `app.module.ts` for clarity. |
-| **5.6** | 🟡 | Wheel history endpoint | Web calls `GET /wheel/history`; not implemented. Add paginated spin history for current user. |
-| **5.7** | 🟢 | `GET /wheel/me/eligibility` alias | Web uses wrong path; add alias or fix client (see Phase 9). |
-| **5.8** | 🟢 | Validate `paidWith` enum casing | Accept `XP`/`COINS`/`DIAMONDS` case-insensitively in wheel spin DTO. |
+| **5.1** | 🟠 | `[done]` Implement real `topTeams` | `top.service.ts` stub returns top spenders, not teams. Query teams by activity/bookings/wins per product policy. |
+| **5.2** | 🟠 | `[done]` Fix monthly top-team winner logic | `monthly.service.ts` uses member count proxy; should use bookings/XP per team per policy doc. |
+| **5.3** | 🟠 | `[done]` Team create/join validation | Align API DTO with web: accept `gameId`, `capacity` (web sends `gameType`, `maxMembers`). Support optional `cityId` filter on list. |
+| **5.4** | 🟡 | `[done]` `TEAM_FULL` notification | Add to Prisma `NotificationType` enum; emit when team reaches capacity. |
+| **5.5** | 🟡 | `[done]` Optional `TeamsModule` registration | Teams live inside `ChatModule`; consider standalone module in `app.module.ts` for clarity. |
+| **5.6** | 🟡 | `[done]` Wheel history endpoint | Web calls `GET /wheel/history`; not implemented. Add paginated spin history for current user. |
+| **5.7** | 🟢 | `[done]` `GET /wheel/me/eligibility` alias | Web uses wrong path; add alias or fix client (see Phase 9). |
+| **5.8** | 🟢 | `[done]` Validate `paidWith` enum casing | Accept `XP`/`COINS`/`DIAMONDS` case-insensitively in wheel spin DTO. |
 
 **Depends on:** 0.1, 3.5  
 **Blocks:** Phase 9.5
@@ -161,16 +161,16 @@
 
 | # | Priority | Task | Description |
 |---|----------|------|-------------|
-| **6.1** | 🔴 | Fix tickets stats for MongoDB | `tickets.service.ts` `getStats()` uses PostgreSQL `$queryRaw` (returns empty via Prisma stub). Rewrite with Prisma aggregations on `Ticket` model. Remove mock `satisfactionRate: 4.2` or compute from reviews/ratings. |
-| **6.2** | 🟠 | Campaign tracking endpoints | `trackClick`, `trackOpen`, `trackConversion` exist in service but have **no HTTP routes**. Add public `GET /campaigns/track/:token` (or similar) wired to executor. |
-| **6.3** | 🟠 | Campaign executor completeness | Implement EMAIL channel or return clear 501; fix PUSH to use proper notification channel enum; align `INAPP` vs `IN_APP`. |
-| **6.4** | 🟠 | Pipeline API response adapter | Backend returns grouped stage map; admin expects flat `Deal[]`. Either add `?format=flat` query or transform in admin — document contract. Map `LEADS` ↔ `LEAD`, `title` ↔ `name`. |
-| **6.5** | 🟠 | Segments create/preview API | Admin sends `{ logic, rules }`; backend expects `{ conditions: { rules, logic } }`. Add `POST /admin/segments/preview` for count preview. Expose `cachedCount` as `count`. |
-| **6.6** | 🟠 | Admin activities feed | Admin calls `GET /admin/activities` — **no controller**. Implement as filtered `audit` log stream or dedicated activity aggregation. |
-| **6.7** | 🟡 | Analytics placeholder KPIs | `analytics.service.ts` hardcodes `cac: 50000`, `nps: 67`. Replace with computed values or settings; document unavailable metrics. |
-| **6.8** | 🟡 | Customer detail sub-resources | Admin `customersApi` calls `/customers/:id/bookings|transactions|reviews` — use embedded `findOne` or add nested admin routes under `/admin/users/:id/`. |
-| **6.9** | 🟡 | Campaign admin actions | Implement `resume`, `duplicate`, `delete` or remove from admin client; map `launch` → `start`. |
-| **6.10** | 🟢 | Ticket close endpoint | Add `POST /tickets/me/:id/close` if product policy allows customer closure. |
+| **6.1** | 🔴 | `[done]` Fix tickets stats for MongoDB | `tickets.service.ts` `getStats()` uses PostgreSQL `$queryRaw` (returns empty via Prisma stub). Rewrite with Prisma aggregations on `Ticket` model. Remove mock `satisfactionRate: 4.2` or compute from reviews/ratings. |
+| **6.2** | 🟠 | `[done]` Campaign tracking endpoints | `trackClick`, `trackOpen`, `trackConversion` exist in service but have **no HTTP routes**. Add public `GET /campaigns/track/:token` (or similar) wired to executor. |
+| **6.3** | 🟠 | `[done]` Campaign executor completeness | Implement EMAIL channel or return clear 501; fix PUSH to use proper notification channel enum; align `INAPP` vs `IN_APP`. |
+| **6.4** | 🟠 | `[done]` Pipeline API response adapter | Backend returns grouped stage map; admin expects flat `Deal[]`. Either add `?format=flat` query or transform in admin — document contract. Map `LEADS` ↔ `LEAD`, `title` ↔ `name`. |
+| **6.5** | 🟠 | `[done]` Segments create/preview API | Admin sends `{ logic, rules }`; backend expects `{ conditions: { rules, logic } }`. Add `POST /admin/segments/preview` for count preview. Expose `cachedCount` as `count`. |
+| **6.6** | 🟠 | `[done]` Admin activities feed | Admin calls `GET /admin/activities` — **no controller**. Implement as filtered `audit` log stream or dedicated activity aggregation. |
+| **6.7** | 🟡 | `[done]` Analytics placeholder KPIs | `analytics.service.ts` hardcodes `cac: 50000`, `nps: 67`. Replace with computed values or settings; document unavailable metrics. |
+| **6.8** | 🟡 | `[done]` Customer detail sub-resources | Admin `customersApi` calls `/customers/:id/bookings|transactions|reviews` — use embedded `findOne` or add nested admin routes under `/admin/users/:id/`. |
+| **6.9** | 🟡 | `[done]` Campaign admin actions | Implement `resume`, `duplicate`, `delete` or remove from admin client; map `launch` → `start`. |
+| **6.10** | 🟢 | `[done]` Ticket close endpoint | Add `POST /tickets/me/:id/close` if product policy allows customer closure. |
 
 **Depends on:** 1.5, 2.2, 0.4  
 **Blocks:** Phase 8, Phase 9.6
@@ -183,13 +183,13 @@
 
 | # | Priority | Task | Description |
 |---|----------|------|-------------|
-| **7.1** | 🔴 | Normalize settings API for admin | Backend: `GET /admin/settings?group=general`, `PUT /admin/settings/:key`, `PUT /admin/settings/bulk`. Fix admin `settingsApi` which wrongly uses `/admin/settings/${group}` as path segment. |
-| **7.2** | 🟠 | Map admin settings forms to DB keys | Wire 8 admin settings pages (currently fake `setTimeout` saves) to real API. Map UI fields to `public.*`, `financial.*`, `chat.*`, `security.*`, `gamification.*`, `sms.*`, `payments.*` keys from `settings.service.ts` `DEFAULT_SETTINGS`. |
-| **7.3** | 🟠 | Wallet packages from settings or DB | `wallet.service.ts` hardcodes diamond/coin package arrays. Move to settings JSON or `Package` collection for admin configurability. |
-| **7.4** | 🟠 | Roles API clarity | `roles.service.ts` throws on create/setPermissions (system enum only). Document read-only role matrix; fix admin `roles/[id]` placeholder page to read from API. |
-| **7.5** | 🟡 | Permission naming unification | Backend uses `bookings.write`; admin uses `bookings.*` and `customers.view`. Generate admin permission helpers from shared-types matching `roles.service.ts` `PERMISSIONS`. |
-| **7.6** | 🟡 | Branch-scoped access audit | Verify all admin controllers respect `BRANCH_MANAGER` branch filter per policy doc. |
-| **7.7** | 🟢 | Maintenance mode enforcement | `public.maintenanceMode` setting should block customer APIs (except auth/health) with 503. |
+| **7.1** | 🔴 | Normalize settings API for admin | `[done]` Backend: `GET /admin/settings?group=general`, `PUT /admin/settings/:key`, `PUT /admin/settings/bulk`. Fix admin `settingsApi` which wrongly uses `/admin/settings/${group}` as path segment. |
+| **7.2** | 🟠 | Map admin settings forms to DB keys | `[done]` Wire 8 admin settings pages (currently fake `setTimeout` saves) to real API. Map UI fields to `public.*`, `financial.*`, `chat.*`, `security.*`, `gamification.*`, `sms.*`, `payments.*` keys from `settings.service.ts` `DEFAULT_SETTINGS`. |
+| **7.3** | 🟠 | Wallet packages from settings or DB | `[done]` `wallet.service.ts` hardcodes diamond/coin package arrays. Move to settings JSON or `Package` collection for admin configurability. |
+| **7.4** | 🟠 | Roles API clarity | `[done]` `roles.service.ts` throws on create/setPermissions (system enum only). Document read-only role matrix; fix admin `roles/[id]` placeholder page to read from API. |
+| **7.5** | 🟡 | Permission naming unification | `[done]` Backend uses `bookings.write`; admin uses `bookings.*` and `customers.view`. Generate admin permission helpers from shared-types matching `roles.service.ts` `PERMISSIONS`. |
+| **7.6** | 🟡 | Branch-scoped access audit | `[done]` Verify all admin controllers respect `BRANCH_MANAGER` branch filter per policy doc. |
+| **7.7** | 🟢 | Maintenance mode enforcement | `[done]` `public.maintenanceMode` setting should block customer APIs (except auth/health) with 503. |
 
 **Depends on:** 0.1, 4.1  
 **Blocks:** Phase 8.3, Phase 9.7
@@ -202,12 +202,12 @@
 
 | # | Priority | Task | Description |
 |---|----------|------|-------------|
-| **8.1** | 🔴 | Admin auth path aliases (if needed) | Admin client calls wrong auth paths (`/admin/auth/...`). **Preferred fix:** correct admin client (Phase 9). **Backend option:** add deprecated aliases redirecting to `/api/v1/auth/admin/login`, `/auth/otp/request`, etc. |
-| **8.2** | 🟠 | Analytics overview response shape | Backend `getOverview()` returns flat fields; admin dashboard expects nested `kpis`, `revenueChart`, `categoryStats`. Add response transformer DTO or dedicated `/admin/analytics/overview/formatted` endpoint. |
-| **8.3** | 🟠 | Customer mutation routes | Ensure `/admin/users/:id/ban`, `grant-badge`, `adjust-xp`, `adjust-wallet` are documented in `API_DOCS.md` and match admin client after fix. |
-| **8.4** | 🟡 | Backup restore endpoint | `backup.service.ts` supports create/list/download/delete only. Add SUPER_ADMIN restore with safeguards (confirm token, pre-restore backup) or document manual `mongorestore` only. |
-| **8.5** | 🟡 | Contact form endpoint | Web contact page fakes submit; add `POST /public/contact` or create ticket with `SYSTEM` category. |
-| **8.6** | 🟢 | Invites admin endpoints | `GET /invites/me/users`, `POST /invites/regenerate` missing — add if product requires. |
+| **8.1** | 🔴 | Admin auth path aliases (if needed) | `[done]` Admin client fixed to use `/api/v1/auth/*` (Phase 9.6). |
+| **8.2** | 🟠 | Analytics overview response shape | `[done]` `GET /admin/analytics/overview?format=formatted` returns nested `OverviewData` shape. |
+| **8.3** | 🟠 | Customer mutation routes | `[done]` CRM aliases on `/admin/customers/:id/*` delegate to `UsersService`; admin client bodies fixed. |
+| **8.4** | 🟡 | Backup restore endpoint | `[done]` `POST /admin/backup/restore` with `confirmToken` safeguard + pre-restore backup. |
+| **8.5** | 🟡 | Contact form endpoint | `[done]` `POST /api/v1/public/contact` creates support ticket; web contact page wired. |
+| **8.6** | 🟢 | Invites admin endpoints | `[done]` `GET /invites/me/users`, `POST /invites/regenerate`; field aliases on `GET /invites/me`. |
 
 **Depends on:** 6.6, 6.8, 7.1  
 **Blocks:** Phase 9.8
@@ -221,18 +221,18 @@
 
 | # | Priority | Task | Description |
 |---|----------|------|-------------|
-| **9.1** | 🔴 | Unify auth token storage (web) | Three keys today: `accessToken`, `tiktakrun_access_token`, `auth_token`. Pick one (recommend `auth_token`); set on login; use in axios, fetch clients, socket, layout guard. |
-| **9.2** | 🔴 | Unify web API client | Merge `src/lib/api.ts` (axios) and `src/lib/api/*.ts` (fetch): single base URL convention, unwrap `{ success, data }` envelope, shared 401 refresh. |
-| **9.3** | 🔴 | Fix web authenticated API paths | Update `lib/api/*.ts` paths per backend: `/wallet/me`, `/notifications/me`, `/tickets/me`, `/bookings/me/:id`, `/profile/me/badges`, `/users/me/avatar/*`, etc. (see exploration report table). |
-| **9.4** | 🔴 | Fix web chat socket client | Align `roomType` casing, message shape, load REST history before socket (`GET /chat/rooms/global/messages`), fix socket URL (host only vs `/api/v1`). |
-| **9.5** | 🟠 | Remove silent demo fallbacks | Pages using `DEMO_*` constants when API fails (wallet, bookings, tickets, leaderboard, chat, teams). Show errors; gate demo behind explicit `NEXT_PUBLIC_USE_MOCK=true` if retained. |
-| **9.6** | 🟠 | Admin: fix auth client paths | Point to `/api/v1/auth/admin/login`, `/auth/otp/request`, `/auth/me`; allow `BRANCH_MANAGER` and `MARKETING` roles in `useAuth` gate. |
-| **9.7** | 🟠 | Admin: wire settings pages | Replace fake saves with `settingsApi` bulk updates (after 7.1). |
-| **9.8** | 🟠 | Admin: unify API client | Consolidate `lib/api.ts` and `lib/api/client.ts`; single token refresh; migrate customers, pipeline, segments, campaigns. |
-| **9.9** | 🟡 | Admin: dashboard analytics adapter | Map backend overview to `OverviewData` type or update components. |
-| **9.10** | 🟡 | Admin: permissions + sidebar | Use one permission system (`usePermissions` + backend roles); add CRM routes to active sidebar or remove dead `layout/Sidebar`. |
-| **9.11** | 🟡 | Web: booking payment return page | Dedicated result page for ZarinPal booking callback (distinct from wallet charge). |
-| **9.12** | 🟢 | Remove dead mock files | `mock-api.ts`, unused `mock-data.ts` imports; fix `ecosystem.config.cjs` `NEXT_PUBLIC_USE_MOCK`. |
+| **9.1** | 🔴 | Unify auth token storage (web) | `[done]` Single `auth_token` key via `lib/http.ts`; login, axios, fetch, socket aligned. |
+| **9.2** | 🔴 | Unify web API client | `[done]` Shared `apiFetch` in `lib/http.ts`; all `lib/api/*.ts` modules migrated. |
+| **9.3** | 🔴 | Fix web authenticated API paths | `[done]` Wallet, notifications, tickets, bookings, profile, chat REST paths corrected. |
+| **9.4** | 🔴 | Fix web chat socket client | `[done]` WS URL, `auth_token`, `onlineCount` shape, `report` event, REST history preload. |
+| **9.5** | 🟠 | Remove silent demo fallbacks | `[done]` Demo data gated behind `NEXT_PUBLIC_USE_MOCK`; errors shown on API failure. |
+| **9.6** | 🟠 | Admin: fix auth client paths | `[done]` Auth uses `/api/v1/auth/*`; OTP field `code`; `BRANCH_MANAGER`/`MARKETING` allowed. |
+| **9.7** | 🟠 | Admin: wire settings pages | `[done]` Completed in Phase 7 via `useAdminSettings` hook. |
+| **9.8** | 🟠 | Admin: unify API client | `[done]` `client.ts` has token refresh on both `apiClient` and `adminApi`; CRM modules fixed. |
+| **9.9** | 🟡 | Admin: dashboard analytics adapter | `[done]` `analyticsApi` requests `?format=formatted` from backend mapper. |
+| **9.10** | 🟡 | Admin: permissions + sidebar | `[done]` CRM section added to active `ui/Sidebar.tsx`; permissions unified in Phase 7. |
+| **9.11** | 🟡 | Web: booking payment return page | `[done]` `bookings/[id]?status=success|failed` shows payment toast on booking detail. |
+| **9.12** | 🟢 | Remove dead mock files | `[done]` Deleted `mock-api.ts`/`mock-data.ts`; fixed `ecosystem.config.cjs` USE_MOCK and API URL. |
 
 **Depends on:** Phases 2–8 (backend contracts stable)  
 **Blocks:** Phase 10 integration tests
@@ -372,6 +372,8 @@ Before marking the project **complete**, verify:
 - [x] All Phase 0–2 tasks done (foundation + stubs + SMS/payments)
 - [x] Phase 3 chat socket protocol aligned (gateway + API docs)
 - [x] Phase 4 booking/wallet/review policy driven from settings
+- [x] Phase 5 teams/wheel/monthly community features complete
+- [x] Phase 6 CRM/campaigns/analytics admin APIs aligned
 - [ ] Chat socket tested with real JWT from web login
 - [ ] Wallet charge + booking payment tested with ZarinPal sandbox
 - [ ] Admin settings save and load from MongoDB

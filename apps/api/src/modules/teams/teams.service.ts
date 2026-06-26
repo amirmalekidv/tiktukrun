@@ -13,8 +13,16 @@ export class TeamsService {
     private readonly chatGateway: ChatGateway,
   ) {}
 
-  async findAll(cityId?: string, gameId?: string, page = 1, limit = 20) {
-    const where: any = { status: 'FORMING' };
+  async findAll(
+    cityId?: string,
+    gameId?: string,
+    page = 1,
+    limit = 20,
+    status?: string,
+  ) {
+    const where: any = {};
+    if (status) where.status = status;
+    else where.status = 'FORMING';
     if (cityId) where.branch = { cityId };
     if (gameId) where.gameId = gameId;
 
@@ -56,12 +64,37 @@ export class TeamsService {
   }
 
   async create(captainId: string, dto: any) {
+    const capacity = Number(dto.capacity ?? dto.maxMembers);
+    if (!capacity || capacity < 2) {
+      throw new BadRequestException('ظرفیت تیم باید حداقل ۲ باشد');
+    }
+
+    let gameId = dto.gameId;
+    if (!gameId && dto.gameType) {
+      const game = await this.prisma.game.findFirst({
+        where: {
+          isActive: true,
+          OR: [
+            { slug: dto.gameType },
+            { category: { slug: dto.gameType } },
+            { title: { contains: dto.gameType, mode: 'insensitive' } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (!game) throw new BadRequestException('بازی یافت نشد');
+      gameId = game.id;
+    }
+    if (!gameId) {
+      throw new BadRequestException('gameId یا gameType لازم است');
+    }
+
     const team = await this.prisma.team.create({
       data: {
         name: dto.name,
-        gameId: dto.gameId,
+        gameId,
         branchId: dto.branchId,
-        capacity: dto.capacity,
+        capacity,
         slotDateTime: dto.slotDateTime ? new Date(dto.slotDateTime) : undefined,
         description: dto.description,
         isPublic: dto.isPublic ?? true,

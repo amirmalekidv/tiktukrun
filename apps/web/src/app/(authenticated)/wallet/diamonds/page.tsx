@@ -21,8 +21,10 @@ export default function DiamondsPage() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
-    walletApi.getDiamondPackages().then((d) => {
-      if (d?.packages?.length) setPackages(d.packages);
+    walletApi.getDiamondPackages().then((raw) => {
+      const d = raw as { packages?: Package[] } | Package[];
+      const list = Array.isArray(d) ? d : d?.packages;
+      if (list?.length) setPackages(list as Package[]);
     }).catch(() => {});
   }, []);
 

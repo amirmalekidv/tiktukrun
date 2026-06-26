@@ -19,8 +19,10 @@ export default function CoinsPage() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
-    walletApi.getCoinPackages().then((d) => {
-      if (d?.packages?.length) setPackages(d.packages);
+    walletApi.getCoinPackages().then((raw) => {
+      const d = raw as { packages?: Package[] } | Package[];
+      const list = Array.isArray(d) ? d : d?.packages;
+      if (list?.length) setPackages(list as Package[]);
     }).catch(() => {});
   }, []);
 

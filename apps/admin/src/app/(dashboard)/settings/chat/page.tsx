@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { SectionHeader } from '@/components/ui';
 import { FiMessageCircle, FiSave, FiAlertCircle } from 'react-icons/fi';
+import { useAdminSettings } from '@/lib/hooks/useAdminSettings';
 
 interface ChatSettings {
   chatEnabled: boolean;
@@ -37,11 +38,21 @@ const defaults: ChatSettings = {
   readReceipts: true,
 };
 
-export default function ChatSettingsPage() {
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(false);
+const FIELD_MAP: Record<string, string> = {
+  maxMessageLength: 'chat.maxMessageLength',
+  operatorResponseSLA: 'chat.rateLimit',
+  autoReplyMessage: 'chat.autoReplyMessage',
+  offlineMessage: 'chat.offlineMessage',
+};
 
-  const { register, handleSubmit, watch, setValue } = useForm<ChatSettings>({ defaultValues: defaults });
+export default function ChatSettingsPage() {
+  const { loading, saving, saved, save, values } = useAdminSettings('chat', FIELD_MAP, defaults);
+
+  const { register, handleSubmit, watch, setValue, reset } = useForm<ChatSettings>({ defaultValues: defaults });
+
+  useEffect(() => {
+    if (!loading) reset(values);
+  }, [loading, values, reset]);
 
   const toggles = {
     chatEnabled: watch('chatEnabled'),
@@ -53,11 +64,7 @@ export default function ChatSettingsPage() {
   };
 
   const onSubmit = async (data: ChatSettings) => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setLoading(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    await save(data);
   };
 
   return (

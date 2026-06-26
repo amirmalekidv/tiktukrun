@@ -1,5 +1,6 @@
 'use client';
 import { io, Socket } from 'socket.io-client';
+import { AUTH_TOKEN_KEY, getWsRoot } from './http';
 
 let socket: Socket | null = null;
 
@@ -9,11 +10,10 @@ export function getSocket(): Socket {
   }
 
   if (!socket) {
-    const token = localStorage.getItem('auth_token');
-    const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const wsRoot = getWsRoot();
 
-    // Namespace must be appended to the base URL, not passed as option
-    socket = io(`${BASE}/chat`, {
+    socket = io(`${wsRoot}/chat`, {
       path: '/socket.io',
       auth: { token },
       transports: ['websocket', 'polling'],
@@ -33,8 +33,7 @@ export function getSocket(): Socket {
 
     socket.on('connect_error', (err) => {
       console.error('[Socket] Connection error:', err.message);
-      // Refresh token and retry
-      const newToken = localStorage.getItem('auth_token');
+      const newToken = localStorage.getItem(AUTH_TOKEN_KEY);
       if (socket && newToken) {
         socket.auth = { token: newToken };
         socket.connect();
@@ -73,7 +72,7 @@ export function leaveRoom(roomType: 'global' | 'team', teamId?: string) {
 export function sendMessage(
   text: string,
   roomType: 'global' | 'team',
-  teamId?: string
+  teamId?: string,
 ) {
   try {
     const s = getSocket();
@@ -95,7 +94,7 @@ export function emitTyping(roomType: 'global' | 'team', teamId?: string) {
 export function reportMessage(messageId: string, reason: string) {
   try {
     const s = getSocket();
-    s.emit('reportMessage', { messageId, reason });
+    s.emit('report', { messageId, reason });
   } catch {
     // SSR or socket unavailable
   }

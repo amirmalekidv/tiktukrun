@@ -89,7 +89,7 @@ function LoginForm() {
     try {
       const res = await verifyOtp(mobile, code)
       await setRefreshTokenCookie(res.refreshToken)
-      login(res.user, res.accessToken)
+      login(res.user, res.accessToken, res.refreshToken)
       toast.success(res.isNewUser ? 'خوش آمدید! 🎉' : `خوش برگشتی، ${res.user.name || 'دوست'} 👋`)
       router.push(redirectUrl)
     } catch (e: any) {

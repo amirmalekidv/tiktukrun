@@ -3,35 +3,29 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { walletApi } from '@/lib/api/wallet';
 
+/** Wallet charge callback — backend redirects with ?status=success|failed */
 function PaymentResultContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
-  const [amount, setAmount] = useState<number | null>(null);
 
   useEffect(() => {
-    const authority = searchParams.get('Authority');
-    const statusParam = searchParams.get('Status');
+    const statusParam =
+      searchParams.get('status') ??
+      searchParams.get('Status') ??
+      searchParams.get('Authority');
 
-    if (!authority) {
+    if (statusParam === 'success' || statusParam === 'OK') {
+      setStatus('success');
+      toast.success('پرداخت با موفقیت انجام شد!');
+    } else if (statusParam === 'failed' || statusParam === 'NOK') {
       setStatus('failed');
-      return;
+    } else if (searchParams.get('Authority')) {
+      setStatus('success');
+    } else {
+      setStatus('failed');
     }
-
-    walletApi
-      .verifyCharge(authority, statusParam ?? '')
-      .then((d) => {
-        if (d?.success) {
-          setStatus('success');
-          setAmount(d.amount ?? null);
-          toast.success('پرداخت با موفقیت انجام شد!');
-        } else {
-          setStatus('failed');
-        }
-      })
-      .catch(() => setStatus('failed'));
   }, [searchParams]);
 
   return (
@@ -59,11 +53,6 @@ function PaymentResultContent() {
               <i className="fas fa-check text-3xl text-green-500" />
             </motion.div>
             <h2 className="font-cinzel text-xl text-white mb-2">پرداخت موفق!</h2>
-            {amount !== null && (
-              <p className="text-green-400 font-cinzel text-lg mb-4">
-                {amount.toLocaleString('fa-IR')} تومان
-              </p>
-            )}
             <p className="text-gray-500 font-vazir text-sm mb-6">
               موجودی کیف پول شما بروز شد
             </p>

@@ -20,7 +20,7 @@ export enum DealStage {
 export class PipelineService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(format?: string) {
     const deals = await this.prisma.deal.findMany({
       orderBy: [{ stage: 'asc' }, { position: 'asc' }],
       include: {
@@ -29,35 +29,49 @@ export class PipelineService {
       },
     });
 
-    // Group by stage
+    const normalized = (deals as any[]).map((deal) => ({
+      ...deal,
+      value: deal.value?.toString() || '0',
+      title: deal.name,
+      name: deal.name,
+    }));
+
+    if (format === 'flat') {
+      return normalized.map((deal) => ({
+        ...deal,
+        stage: deal.stage === 'LEADS' ? 'LEAD' : deal.stage,
+      }));
+    }
+
     const grouped: Record<string, any[]> = {};
     for (const stage of Object.values(DealStage)) {
       grouped[stage] = [];
     }
-    for (const deal of deals as any[]) {
+    for (const deal of normalized) {
       grouped[deal.stage] = grouped[deal.stage] ?? [];
-      grouped[deal.stage].push({
-        ...deal,
-        value: deal.value?.toString() || '0',
-      });
+      grouped[deal.stage].push(deal);
     }
 
     return grouped;
   }
 
   async create(dto: any) {
+    const stageInput = dto.stage ?? DealStage.LEADS;
+    const stage =
+      stageInput === 'LEAD' ? DealStage.LEADS : stageInput;
+
     const maxPosition = await this.prisma.deal.aggregate({
-      where: { stage: dto.stage ?? DealStage.LEADS } as any,
+      where: { stage: stage as any },
       _max: { position: true },
     });
     const position = (maxPosition._max.position ?? 0) + 1;
 
     return this.prisma.deal.create({
       data: {
-        name: dto.name,
+        name: dto.name ?? dto.title,
         customerId: dto.customerId ? dto.customerId : null,
         value: Number(dto.value ?? 0),
-        stage: (dto.stage ?? DealStage.LEADS) as any,
+        stage: stage as any,
         ownerId: dto.ownerId,
         tag: dto.tag,
         expectedCloseDate: dto.expectedCloseDate

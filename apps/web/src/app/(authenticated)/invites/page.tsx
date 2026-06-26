@@ -4,6 +4,7 @@ import InviteCodeCard from '@/components/invites/InviteCodeCard';
 import InviteRewardsBox from '@/components/invites/InviteRewardsBox';
 import InviteListItem from '@/components/invites/InviteListItem';
 import { useInvites } from '@/hooks/useInvites';
+import { USE_MOCK } from '@/lib/http';
 
 const DEMO_USERS = [
   { id: 'u1', name: 'Shadow Walker', joinedAt: '۱۴۰۳/۰۹/۱۵', xpEarned: 200 },
@@ -13,7 +14,7 @@ const DEMO_USERS = [
 export default function InvitesPage() {
   const { invite, shareLink, invitedUsers, isLoading } = useInvites();
   const code = invite?.code ?? 'SHADOW42';
-  const users = invitedUsers.length > 0 ? invitedUsers : DEMO_USERS;
+  const users = invitedUsers.length > 0 ? invitedUsers : (USE_MOCK ? DEMO_USERS : []);
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-lg mx-auto space-y-6">
       <div><h1 className="font-cinzel text-2xl text-red-500">کد دعوت</h1><p className="text-gray-500 font-vazir text-sm mt-1">دوستان خود را دعوت کنید و XP کسب کنید</p></div>

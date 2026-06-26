@@ -1,27 +1,19 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL || '';
-
-function authHeaders(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  const token = localStorage.getItem('auth_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+import { apiFetch } from '../http';
 
 export const leaderboardApi = {
-  getLeaderboard: async (period: 'week' | 'month' | 'all' = 'week', page = 1) => {
-    const res = await fetch(
-      `${BASE}/api/v1/leaderboard?period=${period}&page=${page}`,
-      { headers: authHeaders() }
-    );
-    if (!res.ok) throw new Error('Failed to fetch leaderboard');
-    return res.json();
-    // Returns: { entries: [{ rank, userId, name, avatar, level, xp, badge }], myRank, total }
-  },
-
-  getMyRank: async () => {
-    const res = await fetch(`${BASE}/api/v1/leaderboard/me`, {
-      headers: authHeaders(),
+  getLeaderboard: (typeOrParams?: string | { type?: string; limit?: number }, limit = 50) => {
+    const params =
+      typeof typeOrParams === 'object' && typeOrParams !== null
+        ? typeOrParams
+        : { type: typeOrParams, limit };
+    const q = new URLSearchParams({
+      ...(params.type ? { type: params.type } : {}),
+      limit: String(params.limit ?? limit),
     });
-    if (!res.ok) throw new Error('Failed to fetch my rank');
-    return res.json();
+    return apiFetch(`/profile/leaderboard?${q}`);
+  },
+  getMyRank: (type?: string) => {
+    const q = type ? `?type=${type}` : '';
+    return apiFetch(`/profile/leaderboard/me${q}`);
   },
 };

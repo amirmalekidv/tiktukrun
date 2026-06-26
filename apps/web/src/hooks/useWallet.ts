@@ -13,7 +13,7 @@ export function useWallet() {
     { refreshInterval: 30000 }
   );
   return {
-    wallet: data?.wallet ?? null,
+    wallet: (data as { wallet?: unknown } | null)?.wallet ?? data ?? null,
     isLoading,
     error,
     mutate,
@@ -30,8 +30,10 @@ export function useTransactions(page = 1, type?: string) {
     }
   );
   return {
-    transactions: data?.transactions ?? [],
-    total: data?.total ?? 0,
+    transactions: (data as { transactions?: unknown[]; items?: unknown[] } | null)?.transactions
+      ?? (data as { items?: unknown[] } | null)?.items
+      ?? [],
+    total: (data as { total?: number } | null)?.total ?? 0,
     isLoading,
     error,
     mutate,

@@ -10,15 +10,18 @@ export function useNotifications(page = 1) {
 
   const { data, error, isLoading, mutate } = useSWR(
     ['notifications', page],
-    ([, p]) => notificationsApi.getNotifications(p as number).catch(() => null),
+    ([, p]) => notificationsApi.getNotifications({ page: p as number }).catch(() => null),
     { refreshInterval: 30000 }
   );
 
+  const payload = data as { notifications?: unknown[]; items?: unknown[]; total?: number } | null;
+
   useEffect(() => {
-    if (data?.notifications) {
-      setNotifications(data.notifications);
+    const list = payload?.notifications ?? payload?.items;
+    if (list) {
+      setNotifications(list as never);
     }
-  }, [data, setNotifications]);
+  }, [payload, setNotifications]);
 
   // Real-time socket subscription
   useEffect(() => {
@@ -60,8 +63,8 @@ export function useNotifications(page = 1) {
   });
 
   return {
-    notifications: data?.notifications ?? [],
-    total: data?.total ?? 0,
+    notifications: payload?.notifications ?? payload?.items ?? [],
+    total: payload?.total ?? 0,
     isLoading,
     error,
     mutate,

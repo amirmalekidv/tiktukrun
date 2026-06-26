@@ -1,54 +1,19 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  PERMISSIONS,
+  Permission,
+  DEFAULT_ROLE_PERMISSIONS,
+} from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 
-// ─── Hard-coded permissions enum ──────────────────────────────────────────────
-export const PERMISSIONS = [
-  'users.read', 'users.write', 'users.ban',
-  'games.read', 'games.write',
-  'bookings.read', 'bookings.write', 'bookings.refund',
-  'wallet.adjust',
-  'chats.moderate',
-  'crm.read', 'crm.write',
-  'finance.read', 'finance.export',
-  'settings.read', 'settings.write',
-  'gamification.manage',
-  'branch.read', 'branch.write',
-  'analytics.read',
-  'tickets.read', 'tickets.write',
-  'campaigns.manage',
-  'pipeline.manage',
-] as const;
-export type Permission = typeof PERMISSIONS[number];
+export { PERMISSIONS, Permission };
 
-// ─── Built-in roles (UserRole enum keys) ──────────────────────────────────────
-const DEFAULT_ROLES: Record<string, Permission[]> = {
-  SUPER_ADMIN: PERMISSIONS.slice() as unknown as Permission[],
-  ADMIN: [
-    'users.read', 'users.write', 'users.ban',
-    'games.read', 'games.write',
-    'bookings.read', 'bookings.write', 'bookings.refund',
-    'wallet.adjust', 'chats.moderate',
-    'crm.read', 'crm.write',
-    'finance.read', 'finance.export',
-    'settings.read', 'settings.write',
-    'gamification.manage', 'branch.read', 'branch.write',
-    'analytics.read', 'tickets.read', 'tickets.write',
-    'campaigns.manage', 'pipeline.manage',
-  ],
-  SUPPORT: [
-    'users.read', 'bookings.read', 'tickets.read', 'tickets.write',
-    'chats.moderate',
-  ],
-  MARKETING: [
-    'crm.read', 'crm.write', 'campaigns.manage',
-    'pipeline.manage', 'analytics.read',
-  ],
-  BRANCH_MANAGER: [
-    'bookings.read', 'bookings.write', 'games.read',
-    'branch.read', 'branch.write', 'analytics.read',
-  ],
-  CUSTOMER: [],
-};
+const DEFAULT_ROLES: Record<string, Permission[]> = Object.fromEntries(
+  Object.entries(DEFAULT_ROLE_PERMISSIONS).map(([name, perms]) => [
+    name,
+    [...perms],
+  ]),
+) as Record<string, Permission[]>;
 
 /**
  * RolesService
@@ -77,6 +42,28 @@ export class RolesService {
       isSystem: true,
       createdAt: new Date('2024-01-01T00:00:00.000Z'),
     }));
+  }
+
+  async findOne(idOrName: string) {
+    const roles = await this.findAll();
+    const match =
+      roles.find((r) => String(r.id) === idOrName) ??
+      roles.find((r) => r.name === idOrName);
+    if (!match) throw new NotFoundException('نقش یافت نشد');
+    return match;
+  }
+
+  async getUsersWithRole(roleName: string, limit = 50) {
+    const assignments = await this.prisma.userRoleAssignment.findMany({
+      where: { role: roleName as any },
+      take: limit,
+      include: {
+        user: {
+          select: { id: true, fullName: true, mobile: true, avatarUrl: true },
+        },
+      },
+    });
+    return assignments.map((a: any) => a.user);
   }
 
   async create(_dto: { code?: string; name: string; displayName?: string; permissions: Permission[]; description?: string }) {

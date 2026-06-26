@@ -8,6 +8,7 @@ import BadgesList from '@/components/profile/BadgesList';
 import BadgesPossibleList from '@/components/profile/BadgesPossibleList';
 import LevelTierBanner from '@/components/profile/LevelTierBanner';
 import { profileApi } from '@/lib/api/profile';
+import { USE_MOCK } from '@/lib/http';
 
 // Demo profile used as fallback when API is unavailable
 const DEMO_PROFILE = {
@@ -49,11 +50,32 @@ export default function ProfilePage() {
       profileApi.getBadges().catch(() => null),
       profileApi.getStats().catch(() => null),
     ])
-      .then(([p, b, s]) => {
-        setProfile(p?.profile ?? DEMO_PROFILE);
-        setBadges(b?.earned ?? DEMO_BADGES);
+      .then(([pRaw, bRaw, sRaw]) => {
+        const b = bRaw as { earned?: typeof DEMO_BADGES; available?: typeof DEMO_BADGES } | null;
+        const s = sRaw as { stats?: typeof DEMO_STATS } | null;
+
+        let profileData: typeof DEMO_PROFILE | null = USE_MOCK ? DEMO_PROFILE : null;
+        if (pRaw && typeof pRaw === 'object') {
+          if ('profile' in pRaw && (pRaw as { profile?: typeof DEMO_PROFILE }).profile) {
+            profileData = (pRaw as { profile: typeof DEMO_PROFILE }).profile;
+          } else if ('name' in pRaw) {
+            profileData = pRaw as typeof DEMO_PROFILE;
+          }
+        }
+
+        let statsData: typeof DEMO_STATS | null = USE_MOCK ? DEMO_STATS : null;
+        if (sRaw && typeof sRaw === 'object') {
+          if ('stats' in sRaw && (sRaw as { stats?: typeof DEMO_STATS }).stats) {
+            statsData = (sRaw as { stats: typeof DEMO_STATS }).stats;
+          } else if ('totalXp' in sRaw) {
+            statsData = sRaw as typeof DEMO_STATS;
+          }
+        }
+
+        setProfile(profileData);
+        setBadges(b?.earned ?? (USE_MOCK ? DEMO_BADGES : []));
         setPossibleBadges(b?.available ?? []);
-        setStats(s?.stats ?? DEMO_STATS);
+        setStats(statsData);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -65,6 +87,14 @@ export default function ProfilePage() {
           <i className="fas fa-skull fa-spin text-4xl text-red-600 mb-4" />
           <p className="text-gray-500 font-vazir">در حال بارگذاری...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (!loading && !profile && !USE_MOCK) {
+    return (
+      <div className="flex items-center justify-center min-h-64 text-gray-500 font-vazir">
+        پروفایل بارگذاری نشد
       </div>
     );
   }

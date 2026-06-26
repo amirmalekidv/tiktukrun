@@ -3,6 +3,7 @@
  * Connected directly to the real TIK TAK RUN backend (no mock mode).
  */
 import axios, { AxiosError } from 'axios'
+import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, getApiV1, getApiRoot } from './http'
 import type {
   Game,
   City,
@@ -22,14 +23,14 @@ import type {
 } from '@/types'
 
 const httpClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1',
+  baseURL: getApiV1(),
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })
 
 httpClient.interceptors.request.use((config) => {
   if (typeof localStorage !== 'undefined') {
-    const token = localStorage.getItem('accessToken')
+    const token = localStorage.getItem(AUTH_TOKEN_KEY)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -41,24 +42,29 @@ httpClient.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Try refresh
       try {
+        const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
         const res = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/auth/refresh`,
-          {},
-          { withCredentials: true }
+          `${getApiV1()}/auth/refresh`,
+          refreshToken ? { refreshToken } : {},
+          { withCredentials: true },
         )
-        const { accessToken } = res.data
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('accessToken', accessToken)
+        const payload = res.data?.data ?? res.data
+        const accessToken = payload.accessToken
+        if (accessToken && typeof localStorage !== 'undefined') {
+          localStorage.setItem(AUTH_TOKEN_KEY, accessToken)
+          if (payload.refreshToken) {
+            localStorage.setItem(REFRESH_TOKEN_KEY, payload.refreshToken)
+          }
         }
-        if (error.config) {
+        if (error.config && accessToken) {
           error.config.headers.Authorization = `Bearer ${accessToken}`
           return httpClient(error.config)
         }
       } catch {
         if (typeof localStorage !== 'undefined') {
-          localStorage.removeItem('accessToken')
+          localStorage.removeItem(AUTH_TOKEN_KEY)
+          localStorage.removeItem(REFRESH_TOKEN_KEY)
         }
         if (typeof window !== 'undefined') {
           window.location.href = '/login'
@@ -75,17 +81,17 @@ export { httpClient }
 // ==================== AUTH ====================
 export async function requestOtp(mobile: string, inviteCode?: string): Promise<OtpRequestResponse> {
   const { data } = await httpClient.post('/auth/otp/request', { mobile, inviteCode })
-  return data
+  return data.data ?? data
 }
 
 export async function verifyOtp(mobile: string, code: string): Promise<OtpVerifyResponse> {
   const { data } = await httpClient.post('/auth/otp/verify', { mobile, code })
-  return data
+  return data.data ?? data
 }
 
 export async function getCurrentUser() {
   const { data } = await httpClient.get('/auth/me')
-  return data
+  return data.data ?? data
 }
 
 export async function refreshToken() {
@@ -199,7 +205,7 @@ function normalizeLike(payload: any): GameLikeStatus {
 }
 
 export async function getGameLikeStatus(gameId: string): Promise<GameLikeStatus> {
-  const isLoggedIn = typeof localStorage !== 'undefined' && !!localStorage.getItem('accessToken')
+  const isLoggedIn = typeof localStorage !== 'undefined' && !!localStorage.getItem(AUTH_TOKEN_KEY)
   // Authenticated users get likedByMe via /likes/me; anonymous users get public count only
   const url = isLoggedIn ? `/games/${gameId}/likes/me` : `/games/${gameId}/likes`
   const { data } = await httpClient.get(url)

@@ -1,19 +1,46 @@
-import api from '../api'
+import axios from 'axios'
 import { mockApi, USE_MOCK } from '../mock-admin-api'
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(
+  /\/api\/v1\/?$/,
+  '',
+)
+
+/** Auth routes live under /api/v1/auth — NOT /api/v1/admin */
+const authHttp = axios.create({
+  baseURL: `${API_URL}/api/v1`,
+  timeout: 15000,
+  headers: { 'Content-Type': 'application/json' },
+})
+
+function unwrap<T>(res: { data: T & { data?: T } }): T {
+  const body = res.data as T & { data?: T }
+  return (body as { data?: T }).data ?? body
+}
 
 export const authApi = {
   sendOtp: (mobile: string) =>
-    USE_MOCK ? mockApi.sendOtp(mobile) : api.post('/auth/otp/send', { mobile }).then(r => r.data),
+    USE_MOCK
+      ? mockApi.sendOtp(mobile)
+      : authHttp.post('/auth/otp/request', { mobile }).then((r) => unwrap(r)),
 
-  verifyOtp: (mobile: string, otp: string) =>
-    USE_MOCK ? mockApi.verifyOtp(mobile, otp) : api.post('/auth/otp/verify', { mobile, otp }).then(r => r.data),
+  verifyOtp: (mobile: string, code: string) =>
+    USE_MOCK
+      ? mockApi.verifyOtp(mobile, code)
+      : authHttp.post('/auth/otp/verify', { mobile, code }).then((r) => unwrap(r)),
 
   loginWithPassword: (mobile: string, password: string) =>
-    USE_MOCK ? mockApi.loginWithPassword(mobile, password) : api.post('/auth/login', { mobile, password }).then(r => r.data),
+    USE_MOCK
+      ? mockApi.loginWithPassword(mobile, password)
+      : authHttp.post('/auth/admin/login', { mobile, password }).then((r) => unwrap(r)),
 
   logout: () =>
-    USE_MOCK ? Promise.resolve({ success: true }) : api.post('/auth/logout').then(r => r.data),
+    USE_MOCK
+      ? Promise.resolve({ success: true })
+      : authHttp.post('/auth/logout').then((r) => r.data),
 
   getMe: () =>
-    USE_MOCK ? Promise.resolve({ success: true, data: null }) : api.get('/auth/me').then(r => r.data),
+    USE_MOCK
+      ? Promise.resolve({ success: true, data: null })
+      : authHttp.get('/auth/me').then((r) => unwrap(r)),
 }

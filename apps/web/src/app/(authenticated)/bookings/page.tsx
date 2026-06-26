@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import useSWR from 'swr';
 import { bookingsApi } from '@/lib/api/bookings';
+import { USE_MOCK } from '@/lib/http';
 import BookingListItem from '@/components/bookings/BookingListItem';
 
 type StatusFilter = '' | 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
@@ -39,7 +40,9 @@ export default function BookingsPage() {
     { keepPreviousData: true }
   );
 
-  const bookings: Booking[] = data?.bookings ?? DEMO_BOOKINGS;
+  const bookingsData = data as { bookings?: Booking[] } | null;
+  const bookings: Booking[] =
+    bookingsData?.bookings ?? (USE_MOCK ? DEMO_BOOKINGS : []);
   const filtered = statusFilter
     ? bookings.filter((b) => b.status === statusFilter)
     : bookings;

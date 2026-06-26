@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { SegmentEvaluator, SegmentConditions } from './segment-evaluator';
+import { SegmentEvaluator, SegmentConditions, SegmentRule } from './segment-evaluator';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Logger } from '@nestjs/common';
 
@@ -19,17 +19,84 @@ export class SegmentsService {
     return s;
   }
 
+  private normalizeOp(op: string): SegmentRule['op'] {
+    const map: Record<string, SegmentRule['op']> = {
+      eq: '==',
+      gte: '>=',
+      lte: '<=',
+      gt: '>',
+      lt: '<',
+      in: 'in',
+      not_in: 'not_in',
+      '==': '==',
+      '>=': '>=',
+      '<=': '<=',
+      '>': '>',
+      '<': '<',
+    };
+    return map[op] ?? (op as SegmentRule['op']);
+  }
+
+  private normalizeConditions(dto: any): SegmentConditions {
+    const raw = dto.conditions ?? {
+      rules: dto.rules ?? [],
+      logic: dto.logic ?? 'AND',
+    };
+    return {
+      logic: raw.logic ?? 'AND',
+      rules: (raw.rules ?? []).map((r: any) => ({
+        field: r.field,
+        op: this.normalizeOp(r.op),
+        value: r.value,
+      })),
+    };
+  }
+
   async findAll() {
-    return this.prisma.segment.findMany({
+    const segments = await this.prisma.segment.findMany({
       orderBy: { createdAt: 'desc' },
     });
+    return segments.map((s) => ({
+      ...s,
+      count: s.cachedCount,
+    }));
+  }
+
+  async preview(conditions: any): Promise<{ count: number }> {
+    const normalized = this.normalizeConditions({ conditions });
+    const users = await this.prisma.user.findMany({
+      where: { deletedAt: null, isActive: true } as any,
+      include: {
+        profile: { include: { level: true } },
+        _count: { select: { bookings: true } },
+        bookings: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { createdAt: true },
+        },
+      } as any,
+      take: 5000,
+    });
+
+    let count = 0;
+    for (const user of users as any[]) {
+      const userData = {
+        ...user.profile,
+        level: user.profile?.level,
+        _count: user._count,
+        lastBookingAt: user.bookings?.[0]?.createdAt,
+      };
+      if (this.evaluator.evaluate(normalized, userData)) count++;
+    }
+    return { count };
   }
 
   async create(dto: any) {
+    const conditions = this.normalizeConditions(dto);
     const segment = await this.prisma.segment.create({
       data: {
         name: dto.name,
-        conditions: dto.conditions ?? { rules: [], logic: 'AND' },
+        conditions: conditions as any,
         color: dto.color ?? '#8B0000',
         icon: dto.icon ?? 'fa-users',
         cachedCount: 0,
@@ -47,17 +114,21 @@ export class SegmentsService {
 
   async update(id: string | number, dto: any) {
     const sid = this.toIntId(id);
+    const updateData: any = {
+      ...(dto.name && { name: dto.name }),
+      ...(dto.color && { color: dto.color }),
+      ...(dto.icon && { icon: dto.icon }),
+    };
+    if (dto.conditions || dto.rules) {
+      updateData.conditions = this.normalizeConditions(dto);
+    }
+
     const segment = await this.prisma.segment.update({
       where: { id: sid },
-      data: {
-        ...(dto.name && { name: dto.name }),
-        ...(dto.conditions && { conditions: dto.conditions }),
-        ...(dto.color && { color: dto.color }),
-        ...(dto.icon && { icon: dto.icon }),
-      },
+      data: updateData,
     });
 
-    if (dto.conditions) {
+    if (dto.conditions || dto.rules) {
       try {
         await this.evaluator.recompute(sid);
       } catch (e) {

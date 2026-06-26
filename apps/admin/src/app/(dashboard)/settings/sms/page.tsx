@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { SectionHeader } from '@/components/ui';
 import { FiSmartphone, FiSave, FiAlertCircle, FiEye, FiEyeOff, FiSend } from 'react-icons/fi';
+import { useAdminSettings } from '@/lib/hooks/useAdminSettings';
 
 interface SMSSettings {
   provider: string;
@@ -48,14 +49,39 @@ const defaults: SMSSettings = {
   testPhone: '',
 };
 
+const FIELD_MAP: Record<string, string> = {
+  provider: 'sms.provider',
+  bookingConfirmEnabled: 'sms.sendBookingConfirm',
+  otpEnabled: 'sms.sendOtp',
+};
+
+const BOOL_TRANSFORMS = {
+  fromDb: {
+    bookingConfirmEnabled: (v: string) => v === 'true',
+    otpEnabled: (v: string) => v === 'true',
+  },
+  toDb: {
+    bookingConfirmEnabled: (v: unknown) => (v ? 'true' : 'false'),
+    otpEnabled: (v: unknown) => (v ? 'true' : 'false'),
+  },
+};
+
 export default function SMSSettingsPage() {
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { loading, saving, saved, save, values } = useAdminSettings(
+    'sms',
+    FIELD_MAP,
+    defaults,
+    BOOL_TRANSFORMS,
+  );
   const [testing, setTesting] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
 
-  const { register, handleSubmit, watch, setValue } = useForm<SMSSettings>({ defaultValues: defaults });
+  const { register, handleSubmit, watch, setValue, reset } = useForm<SMSSettings>({ defaultValues: defaults });
+
+  useEffect(() => {
+    if (!loading) reset(values);
+  }, [loading, values, reset]);
 
   const provider = watch('provider');
   const bools = {
@@ -67,11 +93,7 @@ export default function SMSSettingsPage() {
   };
 
   const onSubmit = async (data: SMSSettings) => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setLoading(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    await save(data);
   };
 
   const sendTest = async () => {

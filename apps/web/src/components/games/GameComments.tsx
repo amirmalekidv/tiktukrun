@@ -8,6 +8,7 @@ import {
   toggleCommentLike,
   deleteGameComment,
 } from '@/lib/api'
+import { AUTH_TOKEN_KEY } from '@/lib/http'
 import { toPersianDigits, getRelativeTime } from '@/lib/utils'
 import type { GameComment } from '@/types'
 
@@ -30,7 +31,7 @@ function CommentItem({
 
   const handleLike = async () => {
     const isLoggedIn =
-      typeof localStorage !== 'undefined' && !!localStorage.getItem('accessToken')
+      typeof localStorage !== 'undefined' && !!localStorage.getItem(AUTH_TOKEN_KEY)
     if (!isLoggedIn) {
       if (typeof window !== 'undefined') window.location.href = '/login'
       return
@@ -159,7 +160,7 @@ export default function GameComments({ gameId }: { gameId: string }) {
 
   const requireLogin = () => {
     const isLoggedIn =
-      typeof localStorage !== 'undefined' && !!localStorage.getItem('accessToken')
+      typeof localStorage !== 'undefined' && !!localStorage.getItem(AUTH_TOKEN_KEY)
     if (!isLoggedIn) {
       if (typeof window !== 'undefined') window.location.href = '/login'
       return false

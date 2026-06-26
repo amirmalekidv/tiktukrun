@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -34,6 +35,41 @@ export class TicketsService {
       },
     });
     return ticket;
+  }
+
+  /** Public contact form — stored as support ticket linked to system user. */
+  async createPublicContactTicket(dto: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+    phone?: string;
+  }) {
+    const systemUser = await this.prisma.user.findFirst({
+      where: {
+        roleAssignments: { some: { role: 'SUPER_ADMIN' } },
+      } as any,
+      select: { id: true },
+    });
+    if (!systemUser) {
+      throw new BadRequestException('سیستم تماس پیکربندی نشده است');
+    }
+
+    const body = [
+      `نام: ${dto.name}`,
+      `ایمیل: ${dto.email}`,
+      dto.phone ? `تلفن: ${dto.phone}` : null,
+      '',
+      dto.message,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    return this.create(systemUser.id, {
+      subject: `[تماس عمومی] ${dto.subject}`,
+      body,
+      priority: 'LOW',
+    });
   }
 
   async findMyTickets(userId: string, page = 1, limit = 20) {
@@ -112,11 +148,22 @@ export class TicketsService {
 
   // ─── Admin operations ──────────────────────────────
 
-  async findAllAdmin(filter: any, page = 1, limit = 20) {
+  async findAllAdmin(
+    filter: any,
+    page = 1,
+    limit = 20,
+    userRole?: string,
+    branchId?: string,
+  ) {
     const where: any = {};
     if (filter.status) where.status = filter.status;
     if (filter.priority) where.priority = filter.priority;
     if (filter.assigneeId) where.assigneeId = filter.assigneeId;
+    if (userRole === 'BRANCH_MANAGER' && branchId) {
+      where.branchId = branchId;
+    } else if (filter.branchId) {
+      where.branchId = filter.branchId;
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.ticket.findMany({
@@ -211,23 +258,53 @@ export class TicketsService {
       }),
     ]);
 
-    // Avg response time (first staff reply - ticket creation)
-    // [QA Fix 2026-05-25] table=tickets/ticket_messages, column=isStaffReply
+    // Avg response time (first staff reply − ticket creation) — MongoDB-safe
     let avgResponseTime = 0;
     try {
-      const avgResult = await this.prisma.$queryRaw<{ avg: number }[]>`
-        SELECT AVG(EXTRACT(EPOCH FROM (m."createdAt" - t."createdAt")) / 3600) as avg
-        FROM "tickets" t
-        JOIN "ticket_messages" m ON m."ticketId" = t.id
-        WHERE m."isStaffReply" = true
-        AND m."createdAt" = (
-          SELECT MIN(m2."createdAt") FROM "ticket_messages" m2
-          WHERE m2."ticketId" = t.id AND m2."isStaffReply" = true
-        )
-      `;
-      avgResponseTime = Number(avgResult[0]?.avg ?? 0);
+      const tickets = await this.prisma.ticket.findMany({
+        where: { messages: { some: { isStaffReply: true } } },
+        select: {
+          createdAt: true,
+          messages: {
+            where: { isStaffReply: true },
+            orderBy: { createdAt: 'asc' },
+            take: 1,
+            select: { createdAt: true },
+          },
+        },
+        take: 500,
+        orderBy: { createdAt: 'desc' },
+      });
+      const deltas: number[] = [];
+      for (const t of tickets) {
+        const first = t.messages[0];
+        if (first) {
+          deltas.push(
+            (first.createdAt.getTime() - t.createdAt.getTime()) / 3600_000,
+          );
+        }
+      }
+      if (deltas.length > 0) {
+        avgResponseTime =
+          Math.round((deltas.reduce((a, b) => a + b, 0) / deltas.length) * 10) /
+          10;
+      }
     } catch {
-      /* table may be empty */
+      /* empty */
+    }
+
+    let satisfactionRate: number | null = null;
+    try {
+      const reviewAvg = await this.prisma.review.aggregate({
+        where: { isApproved: true },
+        _avg: { rating: true },
+      });
+      if (reviewAvg._avg.rating != null) {
+        satisfactionRate =
+          Math.round((reviewAvg._avg.rating / 5) * 100) / 10;
+      }
+    } catch {
+      /* no reviews */
     }
 
     return {
@@ -235,7 +312,23 @@ export class TicketsService {
       inProgress,
       closedToday,
       avgResponseTime,
-      satisfactionRate: 4.2, // Mock — implement via rating after close
+      satisfactionRate,
     };
+  }
+
+  async closeByUser(userId: string, ticketId: string) {
+    const ticket = await this.prisma.ticket.findUnique({
+      where: { id: ticketId },
+    });
+    if (!ticket) throw new NotFoundException('تیکت یافت نشد');
+    if (ticket.userId !== userId) throw new ForbiddenException('دسترسی ندارید');
+    if (ticket.status === 'CLOSED') {
+      throw new BadRequestException('تیکت قبلاً بسته شده');
+    }
+
+    return this.prisma.ticket.update({
+      where: { id: ticketId },
+      data: { status: 'CLOSED', closedAt: new Date() },
+    });
   }
 }

@@ -44,14 +44,28 @@ export class AdminRolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'لیست نقش‌ها + permissions' })
+  @ApiOperation({
+    summary: 'لیست نقش‌های سیستمی (read-only)',
+    description:
+      'نقش‌ها از enum سیستمی هستند و قابل ایجاد/ویرایش نیستند. برای تخصیص نقش به کاربر از POST /admin/users/:id/roles استفاده کنید.',
+  })
   async findAll() {
     const data = await this.rolesService.findAll();
     return { success: true, data };
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'جزئیات یک نقش سیستمی + کاربران دارای این نقش' })
+  async findOne(@Param('id') id: string) {
+    const role = await this.rolesService.findOne(id);
+    const users = await this.rolesService.getUsersWithRole(role.name);
+    return { success: true, data: { ...role, users } };
+  }
+
   @Post()
-  @ApiOperation({ summary: 'ایجاد نقش سفارشی' })
+  @ApiOperation({
+    summary: 'ایجاد نقش سفارشی (غیرفعال — نقش‌ها سیستمی هستند)',
+  })
   async create(@Body() dto: CreateRoleDto) {
     const data = await this.rolesService.create(dto);
     return { success: true, data };

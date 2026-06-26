@@ -70,6 +70,15 @@ export class AdminSegmentsController {
     return { success: true, data };
   }
 
+  @Post('preview')
+  @ApiOperation({ summary: 'پیش‌نمایش تعداد اعضای سگمنت' })
+  async preview(@Body() dto: { rules?: any[]; logic?: string; conditions?: any }) {
+    const data = await this.segmentsService.preview(
+      dto.conditions ?? { rules: dto.rules, logic: dto.logic },
+    );
+    return { success: true, data };
+  }
+
   @Post()
   @ApiOperation({ summary: 'ایجاد سگمنت جدید' })
   async create(@Body() dto: CreateSegmentDto) {

@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { ticketsApi } from '@/lib/api/tickets';
+import { USE_MOCK } from '@/lib/http';
 
 interface TicketReply {
   message: string;
@@ -51,8 +52,17 @@ export default function TicketDetailPage() {
   useEffect(() => {
     ticketsApi
       .getTicket(id)
-      .then((d) => setTicket(d?.ticket ?? DEMO_TICKET))
-      .catch(() => setTicket(DEMO_TICKET))
+      .then((raw) => {
+        const d = raw as { ticket?: Ticket } | Ticket | null;
+        let next: Ticket | null = null;
+        if (d && typeof d === 'object' && 'ticket' in d) {
+          next = (d as { ticket?: Ticket }).ticket ?? null;
+        } else if (d) {
+          next = d as Ticket;
+        }
+        setTicket(next ?? (USE_MOCK ? DEMO_TICKET : null));
+      })
+      .catch(() => setTicket(USE_MOCK ? DEMO_TICKET : null))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -66,7 +76,16 @@ export default function TicketDetailPage() {
       // Refresh ticket
       ticketsApi
         .getTicket(id)
-        .then((d) => setTicket(d?.ticket ?? ticket))
+        .then((raw) => {
+          const d = raw as { ticket?: Ticket } | Ticket | null;
+          let next: Ticket | null = null;
+          if (d && typeof d === 'object' && 'ticket' in d) {
+            next = (d as { ticket?: Ticket }).ticket ?? null;
+          } else if (d) {
+            next = d as Ticket;
+          }
+          if (next) setTicket(next);
+        })
         .catch(() => {});
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'خطا در ارسال پاسخ';

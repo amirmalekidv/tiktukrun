@@ -1,82 +1,56 @@
-import type { AdminUser, AdminRole } from '@/types'
+import type { AdminUser } from '@/types';
+import {
+  DEFAULT_ROLE_PERMISSIONS,
+  roleHasUiPermission,
+  resolveUiPermission,
+  type Permission,
+} from '@tiktakrun/shared-types';
 
-// =============================================
-// TIK TAK RUN Admin — Permission System
-// =============================================
-
-const ROLE_PERMISSIONS: Record<AdminRole, string[]> = {
-  SUPER_ADMIN: ['*'], // All permissions
-  ADMIN: [
-    'dashboard.view',
-    'customers.view', 'customers.write', 'customers.delete', 'customers.ban',
-    'segments.view', 'segments.write', 'segments.delete',
-    'pipeline.view', 'pipeline.write', 'pipeline.delete',
-    'campaigns.view', 'campaigns.write', 'campaigns.send', 'campaigns.delete',
-    'bookings.view', 'bookings.write', 'bookings.cancel',
-    'analytics.view',
-    'activities.view',
-    'settings.view',
-  ],
-  MANAGER: [
-    'dashboard.view',
-    'customers.view', 'customers.write',
-    'segments.view', 'segments.write',
-    'pipeline.view', 'pipeline.write',
-    'campaigns.view', 'campaigns.write', 'campaigns.send',
-    'bookings.view', 'bookings.write',
-    'analytics.view',
-    'activities.view',
-  ],
-  SUPPORT: [
-    'dashboard.view',
-    'customers.view',
-    'bookings.view', 'bookings.write',
-    'activities.view',
-    'pipeline.view',
-  ],
-  ANALYST: [
-    'dashboard.view',
-    'customers.view',
-    'analytics.view',
-    'activities.view',
-    'segments.view',
-    'campaigns.view',
-  ],
-}
+export type AdminRole = keyof typeof DEFAULT_ROLE_PERMISSIONS;
 
 export function can(user: AdminUser | null, permission: string): boolean {
-  if (!user) return false
-  if (user.roles.includes('SUPER_ADMIN')) return true
-  
-  // Check user-specific permissions first
-  if (user.permissions.includes(permission)) return true
-  if (user.permissions.includes('*')) return true
-  
-  // Check role-based permissions
-  for (const role of user.roles) {
-    const rolePerms = ROLE_PERMISSIONS[role] || []
-    if (rolePerms.includes('*')) return true
-    if (rolePerms.includes(permission)) return true
+  if (!user) return false;
+
+  const roles = user.roles.map((r) => (typeof r === 'string' ? r : r));
+  if (roles.includes('SUPER_ADMIN')) return true;
+
+  if (user.permissions.includes(permission)) return true;
+  if (user.permissions.includes('*')) return true;
+
+  const backendPerms = resolveUiPermission(permission);
+
+  for (const role of roles) {
+    if (roleHasUiPermission(role, permission)) return true;
+    for (const p of backendPerms) {
+      if ((DEFAULT_ROLE_PERMISSIONS[role] ?? []).includes(p)) return true;
+    }
+    const rolePerms = DEFAULT_ROLE_PERMISSIONS[role] ?? [];
+    if ((rolePerms as readonly string[]).includes(permission)) return true;
   }
-  
-  return false
+
+  return false;
 }
 
 export function canAny(user: AdminUser | null, permissions: string[]): boolean {
-  return permissions.some(p => can(user, p))
+  return permissions.some((p) => can(user, p));
 }
 
 export function canAll(user: AdminUser | null, permissions: string[]): boolean {
-  return permissions.every(p => can(user, p))
+  return permissions.every((p) => can(user, p));
 }
 
-export function getRoleLabel(role: AdminRole): string {
-  const map: Record<AdminRole, string> = {
+export function getRoleLabel(role: AdminRole | string): string {
+  const map: Record<string, string> = {
     SUPER_ADMIN: 'مدیر ارشد',
     ADMIN: 'مدیر',
-    MANAGER: 'سرپرست',
+    BRANCH_MANAGER: 'مدیر شعبه',
     SUPPORT: 'پشتیبانی',
-    ANALYST: 'تحلیل‌گر',
-  }
-  return map[role] || role
+    MARKETING: 'بازاریابی',
+    CUSTOMER: 'مشتری',
+  };
+  return map[role] || role;
+}
+
+export function getBackendPermissions(role: AdminRole): readonly Permission[] {
+  return DEFAULT_ROLE_PERMISSIONS[role] ?? [];
 }

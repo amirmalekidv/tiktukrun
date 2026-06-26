@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { SectionHeader } from '@/components/ui';
 import { FiShield, FiSave, FiAlertCircle, FiLock } from 'react-icons/fi';
+import { useAdminSettings } from '@/lib/hooks/useAdminSettings';
 
 interface SecuritySettings {
   twoFactorRequired: boolean;
@@ -39,11 +40,21 @@ const defaults: SecuritySettings = {
   sensitiveActionConfirm: true,
 };
 
-export default function SecuritySettingsPage() {
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(false);
+const FIELD_MAP: Record<string, string> = {
+  maxLoginAttempts: 'security.maxLoginAttempts',
+  lockoutDuration: 'security.lockoutMinutes',
+  jwtExpireHours: 'security.jwtExpiry',
+  otpExpireSeconds: 'security.otpExpiry',
+};
 
-  const { register, handleSubmit, watch, setValue } = useForm<SecuritySettings>({ defaultValues: defaults });
+export default function SecuritySettingsPage() {
+  const { loading, saving, saved, save, values } = useAdminSettings('security', FIELD_MAP, defaults);
+
+  const { register, handleSubmit, watch, setValue, reset } = useForm<SecuritySettings>({ defaultValues: defaults });
+
+  useEffect(() => {
+    if (!loading) reset(values);
+  }, [loading, values, reset]);
 
   const boolFields = {
     twoFactorRequired: watch('twoFactorRequired'),
@@ -56,11 +67,7 @@ export default function SecuritySettingsPage() {
   };
 
   const onSubmit = async (data: SecuritySettings) => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setLoading(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    await save(data);
   };
 
   const Toggle = ({ field, label, desc }: { field: keyof typeof boolFields; label: string; desc: string }) => (

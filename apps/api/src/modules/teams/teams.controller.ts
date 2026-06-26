@@ -22,20 +22,34 @@ import {
   IsNumber,
   IsDateString,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 class CreateTeamDto {
   @IsString()
   name: string;
 
+  @IsOptional()
   @IsString()
-  gameId: string;
+  gameId?: string;
+
+  /** Web client alias — category slug or game slug */
+  @IsOptional()
+  @IsString()
+  gameType?: string;
 
   @IsOptional()
   @IsString()
   branchId?: string;
 
+  @IsOptional()
+  @Transform(({ obj }) => Number(obj.capacity ?? obj.maxMembers))
   @IsNumber()
-  capacity: number;
+  capacity?: number;
+
+  @IsOptional()
+  @Transform(({ obj }) => Number(obj.maxMembers ?? obj.capacity))
+  @IsNumber()
+  maxMembers?: number;
 
   @IsOptional()
   @IsDateString()
@@ -61,6 +75,7 @@ export class TeamsController {
   async findAll(
     @Query('cityId') cityId?: string,
     @Query('gameId') gameId?: string,
+    @Query('status') status?: string,
     @Query('page') page = '1',
     @Query('limit') limit = '20',
   ) {
@@ -69,6 +84,7 @@ export class TeamsController {
       gameId,
       Number(page),
       Number(limit),
+      status,
     );
     return { success: true, ...result };
   }

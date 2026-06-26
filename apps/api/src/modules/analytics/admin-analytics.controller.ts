@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -15,7 +15,11 @@ export class AdminAnalyticsController {
 
   @Get('overview')
   @ApiOperation({ summary: 'داشبورد اصلی KPI' })
-  async getOverview() {
+  async getOverview(@Query('format') format?: string) {
+    if (format === 'formatted') {
+      const data = await this.analyticsService.getOverviewFormatted();
+      return { success: true, data };
+    }
     const data = await this.analyticsService.getOverview();
     return { success: true, data };
   }

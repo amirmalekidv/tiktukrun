@@ -48,6 +48,8 @@ export class InvitesService {
 
     return {
       code: user.inviteCode,
+      usageCount: invitees.length,
+      totalXpEarned: totalRewardXp,
       totalUses: invitees.length,
       totalRewardXp,
       recentUsages: invitees.map((invitee) => ({
@@ -57,6 +59,61 @@ export class InvitesService {
         joinedAt: invitee.createdAt,
       })),
     };
+  }
+
+  async getInvitedUsers(userId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where: { invitedById: userId },
+        select: {
+          id: true,
+          fullName: true,
+          nickname: true,
+          mobile: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.user.count({ where: { invitedById: userId } }),
+    ]);
+
+    return {
+      users: users.map((u) => ({
+        id: u.id,
+        name: u.nickname || u.fullName || u.mobile,
+        joinedAt: u.createdAt,
+        xpEarned: INVITE_REWARD_XP,
+      })),
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async regenerateInviteCode(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, inviteCodeRecord: { select: { id: true } } } as any,
+    }) as any;
+    if (!user) throw new NotFoundException('کاربر یافت نشد');
+
+    const newCode = `TTR${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { inviteCode: newCode },
+      });
+      if (user.inviteCodeRecord?.id) {
+        await tx.inviteCode.update({
+          where: { id: user.inviteCodeRecord.id },
+          data: { code: newCode },
+        });
+      }
+    });
+
+    return { code: newCode, message: 'کد دعوت جدید صادر شد' };
   }
 
   /**

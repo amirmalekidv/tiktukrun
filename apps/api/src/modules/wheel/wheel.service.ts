@@ -177,6 +177,30 @@ export class WheelService {
     return { prize };
   }
 
+  async getSpinHistory(userId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const take = Math.min(limit, 100);
+    const [data, total] = await Promise.all([
+      this.prisma.wheelSpin.findMany({
+        where: { userId },
+        skip,
+        take,
+        orderBy: { awardedAt: 'desc' },
+        include: {
+          prize: { select: { id: true, name: true, type: true, value: true } },
+        },
+      }),
+      this.prisma.wheelSpin.count({ where: { userId } }),
+    ]);
+    return {
+      data,
+      total,
+      page,
+      limit: take,
+      totalPages: Math.ceil(total / take),
+    };
+  }
+
   private weightedRandom(prizes: any[]): any {
     const totalWeight = prizes.reduce((sum, p) => sum + (p.probabilityWeight || 1), 0);
     let random = Math.random() * totalWeight;

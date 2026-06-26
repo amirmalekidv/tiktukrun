@@ -2,7 +2,7 @@
 // TIK TAK RUN Admin — Shared Types
 // =============================================
 
-export type AdminRole = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'SUPPORT' | 'ANALYST'
+export type AdminRole = 'SUPER_ADMIN' | 'ADMIN' | 'BRANCH_MANAGER' | 'SUPPORT' | 'MARKETING' | 'CUSTOMER'
 
 export interface AdminUser {
   id: string

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { NotificationType } from '@tiktakrun/shared-types';
+import { NotificationChannel, NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SegmentEvaluator } from '../segments/segment-evaluator';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -99,7 +99,10 @@ export class CampaignExecutor {
       trackingToken,
     });
 
-    switch (campaign.type) {
+    const type =
+      campaign.type === 'IN_APP' ? 'INAPP' : campaign.type;
+
+    switch (type) {
       case 'SMS':
         if (!user.mobile) {
           this.logger.warn(`Skipping SMS campaign for user ${user.id}: no mobile`);
@@ -112,6 +115,7 @@ export class CampaignExecutor {
         await this.notifications.send({
           userId: user.id,
           type: NotificationType.CAMPAIGN,
+          channel: NotificationChannel.INAPP,
           title: content.subject ?? campaign.name,
           body,
           data: { campaignId: campaign.id, trackingToken },
@@ -122,6 +126,7 @@ export class CampaignExecutor {
         await this.notifications.send({
           userId: user.id,
           type: NotificationType.PUSH_CAMPAIGN,
+          channel: NotificationChannel.INAPP,
           title: content.subject ?? campaign.name,
           body,
           data: { campaignId: campaign.id, trackingToken },
@@ -129,9 +134,7 @@ export class CampaignExecutor {
         break;
 
       case 'EMAIL':
-        // Email service integration (future implementation)
-        this.logger.warn(`Email campaigns require email service integration`);
-        break;
+        throw new Error('EMAIL channel is not implemented (501)');
     }
   }
 

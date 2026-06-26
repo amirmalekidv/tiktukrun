@@ -13,6 +13,7 @@
 // ─── Enums ───────────────────────────────────────────────────
 export * from './enums';
 export * from './auth';
+export * from './permissions';
 
 // ─── Core Models (dependency order) ──────────────────────────
 // gamification باید قبل از user باشد — user از آن re-export می‌کند

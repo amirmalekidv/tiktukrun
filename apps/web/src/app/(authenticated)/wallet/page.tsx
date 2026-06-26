@@ -4,16 +4,22 @@ import Link from 'next/link';
 import WalletCard from '@/components/wallet/WalletCard';
 import TransactionList from '@/components/wallet/TransactionList';
 import { useWallet, useTransactions } from '@/hooks/useWallet';
+import { USE_MOCK } from '@/lib/http';
 
 export default function WalletPage() {
   const { wallet, isLoading } = useWallet();
   const { transactions, isLoading: txLoading } = useTransactions(1);
 
-  // Demo data fallback
+  const wData = wallet as {
+    tomanBalance?: number;
+    diamondsBalance?: number;
+    coinsBalance?: number;
+  } | null;
+
   const w = {
-    tomanBalance: wallet?.tomanBalance ?? 285000,
-    diamondsBalance: wallet?.diamondsBalance ?? 42,
-    coinsBalance: wallet?.coinsBalance ?? 1350,
+    tomanBalance: wData?.tomanBalance ?? (USE_MOCK ? 285000 : 0),
+    diamondsBalance: wData?.diamondsBalance ?? (USE_MOCK ? 42 : 0),
+    coinsBalance: wData?.coinsBalance ?? (USE_MOCK ? 1350 : 0),
   };
 
   const demoTxs = [

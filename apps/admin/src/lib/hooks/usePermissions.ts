@@ -1,18 +1,11 @@
 'use client';
-import { useAuthStore } from '../store/auth';
 
-const PERMISSION_MAP: Record<string, string[]> = {
-  SUPER_ADMIN: ['*'],
-  ADMIN: [
-    'bookings.*', 'games.*', 'branches.*', 'cities.*', 'categories.*',
-    'reviews.*', 'chats.*', 'tickets.*', 'transactions.read', 'payments.read',
-    'reports.*', 'backup.*', 'gamification.*', 'discounts.*', 'monthly.*',
-    'settings.*', 'roles.read', 'staff.read', 'audit.read',
-  ],
-  BRANCH_MANAGER: ['bookings.*', 'games.read', 'reviews.*', 'tickets.*'],
-  SUPPORT: ['tickets.*', 'chats.*', 'bookings.read', 'users.read'],
-  MARKETING: ['discounts.*', 'reports.read', 'gamification.read'],
-};
+import { useAuthStore } from '../store/auth';
+import {
+  DEFAULT_ROLE_PERMISSIONS,
+  roleHasPermission,
+  roleHasUiPermission,
+} from '@tiktakrun/shared-types';
 
 export function usePermissions() {
   const user = useAuthStore((s) => s.user);
@@ -20,18 +13,11 @@ export function usePermissions() {
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
 
-    for (const role of user.roles) {
-      const perms = PERMISSION_MAP[role.name] || role.permissions || [];
-
-      if (perms.includes('*')) return true;
-
-      for (const p of perms) {
-        if (p === permission) return true;
-        if (p.endsWith('.*')) {
-          const prefix = p.slice(0, -2);
-          if (permission.startsWith(prefix)) return true;
-        }
-      }
+    for (const rawRole of user.roles) {
+      const role = typeof rawRole === 'string' ? rawRole : String(rawRole);
+      if (role === 'SUPER_ADMIN') return true;
+      if (roleHasUiPermission(role, permission)) return true;
+      if (roleHasPermission(role, permission as never)) return true;
     }
 
     return false;
@@ -40,5 +26,8 @@ export function usePermissions() {
   const can = (action: string, resource: string) =>
     hasPermission(`${resource}.${action}`) || hasPermission(`${resource}.*`);
 
-  return { hasPermission, can };
+  const rolePermissions = (role: string) =>
+    DEFAULT_ROLE_PERMISSIONS[role] ?? [];
+
+  return { hasPermission, can, rolePermissions };
 }

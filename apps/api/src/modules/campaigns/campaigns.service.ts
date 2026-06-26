@@ -83,6 +83,49 @@ export class CampaignsService {
     });
   }
 
+  async resume(id: string | number) {
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: String(id) },
+    });
+    if (!campaign) throw new NotFoundException('کمپین یافت نشد');
+    if (campaign.status === 'ACTIVE') {
+      throw new BadRequestException('کمپین در حال اجراست');
+    }
+    setImmediate(() =>
+      this.executor.execute(String(id)).catch(console.error),
+    );
+    return { status: 'ACTIVE' };
+  }
+
+  async duplicate(id: string | number) {
+    const orig = await this.prisma.campaign.findUnique({
+      where: { id: String(id) },
+    });
+    if (!orig) throw new NotFoundException('کمپین یافت نشد');
+
+    return this.prisma.campaign.create({
+      data: {
+        name: `${orig.name} (کپی)`,
+        type: orig.type,
+        segmentId: orig.segmentId,
+        content: orig.content as any,
+        scheduledAt: orig.scheduledAt,
+        budget: orig.budget,
+        status: 'DRAFT',
+        createdBy: orig.createdBy,
+      } as any,
+    });
+  }
+
+  async remove(id: string | number) {
+    const cid = String(id);
+    await this.prisma.campaignRecipient.deleteMany({
+      where: { campaignId: cid },
+    });
+    await this.prisma.campaign.delete({ where: { id: cid } });
+    return { deleted: true };
+  }
+
   async testSend(campaignId: string | number, testUserId: string | number) {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: String(campaignId) },

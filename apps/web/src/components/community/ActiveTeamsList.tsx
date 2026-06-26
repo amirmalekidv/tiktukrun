@@ -2,6 +2,7 @@
 import useSWR from 'swr';
 import { motion } from 'framer-motion';
 import { teamsApi } from '@/lib/api/teams';
+import { USE_MOCK } from '@/lib/http';
 import TeamCard from './TeamCard';
 import toast from 'react-hot-toast';
 
@@ -31,7 +32,10 @@ export default function ActiveTeamsList() {
     teamsApi.getActiveTeams().catch(() => null)
   );
 
-  const teams: Team[] = data?.teams ?? DEMO_TEAMS;
+  const payload = data as { teams?: Team[]; data?: Team[] } | Team[] | null | undefined;
+  const teams: Team[] = Array.isArray(payload)
+    ? payload
+    : payload?.teams ?? payload?.data ?? (USE_MOCK ? DEMO_TEAMS : []);
 
   const handleJoin = async (teamId: string) => {
     try {

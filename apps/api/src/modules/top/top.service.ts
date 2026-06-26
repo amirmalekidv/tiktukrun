@@ -98,26 +98,51 @@ export class TopService {
     const cached = await this.cache.get<any[]>(cacheKey);
     if (cached) return cached;
 
-    // stub: teams می‌توانند در فاز بعدی پیاده‌سازی شوند
-    // فعلاً بر اساس totalSpent گروه‌بندی
-    const topSpenders = await this.prisma.userProfile.findMany({
-      take:    limit,
-      orderBy: { totalSpent: 'desc' },
+    const since = this.getPeriodStart(period);
+    const teams = await this.prisma.team.findMany({
       include: {
-        user: { select: { id: true, fullName: true, avatarUrl: true } },
+        members: { select: { userId: true } },
+        captain: { select: { id: true, fullName: true, avatarUrl: true } },
+        game: { select: { id: true, title: true, coverImage: true } },
+        _count: { select: { members: true } },
       },
     });
 
-    const result = topSpenders.map((p, i) => ({
-      rank:       i + 1,
-      userId:     p.userId,
-      name:       p.user?.fullName ?? 'ناشناس',
-      totalSpent: p.totalSpent?.toString() ?? '0',
-      totalBookings: p.totalBookings,
-    }));
+    const bookingWhere: any = { status: 'COMPLETED' };
+    if (since) bookingWhere.createdAt = { gte: since };
 
-    await this.cache.set(cacheKey, result, CACHE_TTL);
-    return result;
+    const bookingCounts = await this.prisma.booking.groupBy({
+      by: ['userId'],
+      where: bookingWhere,
+      _count: { id: true },
+    });
+    const countByUser = new Map(
+      bookingCounts.map((b) => [b.userId, b._count.id]),
+    );
+
+    const ranked = teams
+      .map((team) => {
+        const periodBookings = team.members.reduce(
+          (sum, m) => sum + (countByUser.get(m.userId) ?? 0),
+          0,
+        );
+        return {
+          teamId: team.id,
+          name: team.name,
+          memberCount: team._count.members,
+          capacity: team.capacity,
+          periodBookings,
+          captain: team.captain,
+          game: team.game,
+        };
+      })
+      .filter((t) => t.periodBookings > 0)
+      .sort((a, b) => b.periodBookings - a.periodBookings)
+      .slice(0, limit)
+      .map((t, i) => ({ rank: i + 1, ...t }));
+
+    await this.cache.set(cacheKey, ranked, CACHE_TTL);
+    return ranked;
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────

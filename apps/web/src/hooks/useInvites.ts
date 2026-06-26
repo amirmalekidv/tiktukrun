@@ -13,14 +13,29 @@ export function useInvites() {
     () => invitesApi.getInvitedUsers().catch(() => null)
   );
 
-  const shareLink = data?.code
-    ? `${process.env.NEXT_PUBLIC_APP_URL || ''}/invite/${data.code}`
+  const inviteData = data as {
+    code?: string;
+    usageCount?: number;
+    totalXpEarned?: number;
+    totalUses?: number;
+    totalRewardXp?: number;
+  } | null | undefined;
+  const usersPayload = usersData as { users?: unknown[] } | null | undefined;
+
+  const shareLink = inviteData?.code
+    ? `${process.env.NEXT_PUBLIC_APP_URL || ''}/invite/${inviteData.code}`
     : '';
 
   return {
-    invite: data ?? null,
+    invite: inviteData
+      ? {
+          ...inviteData,
+          usageCount: inviteData.usageCount ?? inviteData.totalUses ?? 0,
+          totalXpEarned: inviteData.totalXpEarned ?? inviteData.totalRewardXp ?? 0,
+        }
+      : null,
     shareLink,
-    invitedUsers: usersData?.users ?? [],
+    invitedUsers: usersPayload?.users ?? [],
     isLoading,
     usersLoading,
     error,

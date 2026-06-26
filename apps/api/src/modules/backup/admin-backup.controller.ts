@@ -4,6 +4,7 @@ import {
   Post,
   Delete,
   Param,
+  Body,
   Res,
   UseGuards,
   HttpCode,
@@ -15,6 +16,15 @@ import { BackupService } from './backup.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { IsString } from 'class-validator';
+
+class RestoreBackupDto {
+  @IsString()
+  filename: string;
+
+  @IsString()
+  confirmToken: string;
+}
 
 @ApiTags('Admin - Backup')
 @ApiBearerAuth()
@@ -57,6 +67,18 @@ export class AdminBackupController {
         }
       }
     });
+  }
+
+  @Post('restore')
+  @ApiOperation({
+    summary: 'بازیابی از پشتیبان (نیاز به confirmToken برابر نام فایل)',
+  })
+  async restoreBackup(@Body() dto: RestoreBackupDto) {
+    const data = await this.backupService.restoreBackup(
+      dto.filename,
+      dto.confirmToken,
+    );
+    return { success: true, data };
   }
 
   @Delete(':filename')

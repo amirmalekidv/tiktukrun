@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useCallback, useRef } from 'react';
 import { joinRoom, leaveRoom, sendMessage, emitTyping } from '@/lib/socket';
+import { chatApi } from '@/lib/api/chat';
 import { useChatStore } from '@/stores/chatStore';
 import type { ChatMessage } from '@/stores/chatStore';
 import toast from 'react-hot-toast';
@@ -47,7 +48,9 @@ export function useChat({ roomType, teamId }: UseChatOptions) {
           // auto clear typing after 3s
           setTimeout(() => setTypingUser(e.userId, e.userName, false), 3000);
         };
-        const onOnlineCount = (count: number) => setOnlineCount(count);
+        const onOnlineCount = (payload: number | { count: number }) => {
+          setOnlineCount(typeof payload === 'number' ? payload : payload.count);
+        };
         const onUserMuted = (e: { user: string; hours: number }) => {
           toast.error(`${e.user} برای ${e.hours} ساعت سکوت شد`);
         };
@@ -65,6 +68,20 @@ export function useChat({ roomType, teamId }: UseChatOptions) {
         socketInstance.on('messageDeleted', onMessageDeleted);
 
         joinRoom(roomType, teamId);
+
+        try {
+          const history = roomType === 'global'
+            ? await chatApi.getGlobalMessages({ limit: 50 })
+            : teamId
+              ? await chatApi.getTeamMessages(teamId, { limit: 50 })
+              : null;
+          const items = (history as { items?: ChatMessage[]; data?: ChatMessage[] })?.items
+            ?? (history as { data?: ChatMessage[] })?.data
+            ?? (Array.isArray(history) ? history : []);
+          if (items.length) setMessages(items as ChatMessage[]);
+        } catch {
+          // history optional if socket delivers chatHistory
+        }
 
         return () => {
           try {

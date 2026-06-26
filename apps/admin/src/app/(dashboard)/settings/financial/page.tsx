@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { SectionHeader } from '@/components/ui';
 import { FiDollarSign, FiSave, FiAlertCircle, FiPercent } from 'react-icons/fi';
+import { useAdminSettings } from '@/lib/hooks/useAdminSettings';
 
 interface FinancialSettings {
   currency: string;
@@ -33,21 +34,46 @@ const defaults: FinancialSettings = {
   invoiceStartNumber: 10000,
 };
 
-export default function FinancialSettingsPage() {
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(false);
+const FIELD_MAP: Record<string, string> = {
+  currency: 'public.currency',
+  minWithdrawal: 'financial.minTopup',
+  maxWithdrawal: 'financial.maxTopup',
+  autoRefundDays: 'financial.refundWindowHours',
+  vatPercent: 'financial.vatPercent',
+  platformFeePercent: 'financial.platformFeePercent',
+};
 
-  const { register, handleSubmit, watch, setValue } = useForm<FinancialSettings>({ defaultValues: defaults });
+const TRANSFORMS = {
+  fromDb: {
+    autoRefundDays: (v: string, d: FinancialSettings) => {
+      const hours = Number(v);
+      return Number.isFinite(hours) ? Math.round(hours / 24) : d.autoRefundDays;
+    },
+  },
+  toDb: {
+    autoRefundDays: (v: unknown) => String(Number(v) * 24),
+  },
+};
+
+export default function FinancialSettingsPage() {
+  const { loading, saving, saved, save, values } = useAdminSettings(
+    'financial',
+    FIELD_MAP,
+    defaults,
+    TRANSFORMS,
+  );
+
+  const { register, handleSubmit, watch, setValue, reset } = useForm<FinancialSettings>({ defaultValues: defaults });
+
+  useEffect(() => {
+    if (!loading) reset(values);
+  }, [loading, values, reset]);
 
   const walletEnabled = watch('walletEnabled');
   const giftCardEnabled = watch('giftCardEnabled');
 
   const onSubmit = async (data: FinancialSettings) => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setLoading(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    await save(data);
   };
 
   return (

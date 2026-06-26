@@ -1,43 +1,46 @@
 /**
  * Auth utilities — token management and user session
  */
+import {
+  AUTH_TOKEN_KEY,
+  REFRESH_TOKEN_KEY,
+  clearAuthTokens,
+  getAuthToken,
+  setAuthTokens,
+} from './http';
 
-const ACCESS_TOKEN_KEY = 'tiktakrun_access_token'
-
-export function getAccessToken(): string | null {
-  if (typeof localStorage === 'undefined') return null
-  return localStorage.getItem(ACCESS_TOKEN_KEY)
-}
+export { AUTH_TOKEN_KEY, getAuthToken as getAccessToken, setAuthTokens, clearAuthTokens };
 
 export function setAccessToken(token: string) {
-  if (typeof localStorage === 'undefined') return
-  localStorage.setItem(ACCESS_TOKEN_KEY, token)
+  setAuthTokens(token);
 }
 
 export function removeAccessToken() {
-  if (typeof localStorage === 'undefined') return
-  localStorage.removeItem(ACCESS_TOKEN_KEY)
+  clearAuthTokens();
 }
 
 export function isAuthenticated(): boolean {
-  return !!getAccessToken()
+  return !!getAuthToken();
 }
 
 export async function setRefreshTokenCookie(refreshToken: string) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  }
   try {
     await fetch('/api-bridge/set-cookie', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
-    })
+    });
   } catch (e) {
-    console.error('Failed to set refresh token cookie', e)
+    console.error('Failed to set refresh token cookie', e);
   }
 }
 
 export function logout() {
-  removeAccessToken()
+  clearAuthTokens();
   if (typeof window !== 'undefined') {
-    window.location.href = '/login'
+    window.location.href = '/login';
   }
 }

@@ -19,6 +19,10 @@ services:
     command: sh -c "pnpm --filter @tiktakrun/api exec prisma db push && pnpm --filter @tiktakrun/api start:dev"
     environment:
       NODE_ENV: development
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-${JWT_SECRET}}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
     volumes:
       - ./apps/api/src:/app/apps/api/src
       - ./packages:/app/packages

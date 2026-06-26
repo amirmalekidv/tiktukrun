@@ -19,7 +19,10 @@ export default function PublicProfilePage() {
     if (!userId) return;
     profileApi
       .getPublicProfile(userId)
-      .then((d) => setProfile(d?.profile ?? null))
+      .then((d: { profile?: unknown } | unknown) => {
+        const payload = d as { profile?: unknown };
+        setProfile(payload?.profile ?? d ?? null);
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [userId]);

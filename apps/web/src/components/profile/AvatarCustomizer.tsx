@@ -36,10 +36,18 @@ export default function AvatarCustomizer({
 
   useEffect(() => {
     profileApi.getAvatarItems()
-      .then((d) => { if (d?.items) setItems(d.items); })
+      .then((raw) => {
+        const d = raw as { items?: AvatarItem[] } | AvatarItem[];
+        const list = Array.isArray(d) ? d : d?.items;
+        if (list) setItems(list);
+      })
       .catch(() => {}); // keep demo empty state on failure
     profileApi.getAvatarConfig()
-      .then((d) => { if (d?.config) setConfig(d.config); })
+      .then((raw) => {
+        const d = raw as { config?: AvatarConfig } | AvatarConfig;
+        const cfg = d && 'config' in d ? d.config : (d as AvatarConfig);
+        if (cfg) setConfig(cfg);
+      })
       .catch(() => {});
   }, []);
 

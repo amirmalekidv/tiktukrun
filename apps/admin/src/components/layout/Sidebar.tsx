@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { cn } from '@/lib/utils'
-import { can } from '@/lib/permissions'
+import { can, getRoleLabel } from '@/lib/permissions'
 import type { AdminUser } from '@/types'
 
 // =============================================
@@ -172,9 +172,7 @@ export function Sidebar() {
             <div className="min-w-0">
               <p className="text-sm font-medium text-slate-200 truncate">{user.name}</p>
               <p className="text-xs text-slate-500">
-                {user.roles.includes('SUPER_ADMIN') ? 'مدیر ارشد' :
-                 user.roles.includes('ADMIN') ? 'مدیر' :
-                 user.roles.includes('MANAGER') ? 'سرپرست' : 'کارشناس'}
+                {getRoleLabel(user.roles[0] ?? 'ADMIN')}
               </p>
             </div>
             <div className="flex-shrink-0">

@@ -12,6 +12,15 @@ import {
 
 const navGroups = [
   {
+    title: 'CRM',
+    items: [
+      { href: '/customers', label: 'مشتریان', icon: User },
+      { href: '/segments', label: 'سگمنت‌ها', icon: Globe },
+      { href: '/pipeline', label: 'پایپ‌لاین', icon: TrendingUp },
+      { href: '/campaigns', label: 'کمپین‌ها', icon: Zap },
+    ],
+  },
+  {
     title: 'عملیاتی',
     items: [
       { href: '/dashboard', label: 'داشبورد', icon: LayoutDashboard },

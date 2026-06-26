@@ -101,4 +101,11 @@ export class TicketsController {
     );
     return { success: true, data };
   }
+
+  @Post('me/:id/close')
+  @ApiOperation({ summary: 'بستن تیکت توسط کاربر' })
+  async close(@Param('id') id: string, @CurrentUser() user: any) {
+    const data = await this.ticketsService.closeByUser(user.id, id);
+    return { success: true, data };
+  }
 }

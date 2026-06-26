@@ -27,21 +27,24 @@ export function useWheel() {
     { refreshInterval: 10000 }
   );
 
-  const prizes: WheelPrize[] = prizesData?.prizes ?? [];
+  const prizesPayload = prizesData as { prizes?: WheelPrize[] } | WheelPrize[] | null | undefined;
+  const prizes: WheelPrize[] = Array.isArray(prizesPayload)
+    ? prizesPayload
+    : prizesPayload?.prizes ?? [];
 
   const spin = useCallback(
     async (paidWith: 'xp' | 'coins' | 'diamonds') => {
       if (isSpinning) return;
 
-      // Check eligibility (with graceful fallback to allow spinning)
-      if (eligibilityData) {
+      const elig = eligibilityData as Record<string, boolean> | null | undefined;
+      if (elig) {
         const keyMap = {
           xp: 'canSpinWithXp',
           coins: 'canSpinWithCoins',
           diamonds: 'canSpinWithDiamonds',
         } as const;
         const key = keyMap[paidWith];
-        if (eligibilityData[key] === false) {
+        if (elig[key] === false) {
           toast.error('منبع کافی ندارید');
           return;
         }
@@ -49,10 +52,13 @@ export function useWheel() {
 
       setIsSpinning(true);
       try {
-        const response = await wheelApi.spin(paidWith);
+        const response = await wheelApi.spin(paidWith) as {
+          prize?: WheelPrize;
+          data?: { prize?: WheelPrize };
+        };
 
-        // Support both { prize } and { data: { prize } } response shapes
-        const prize: WheelPrize = response?.prize ?? response?.data?.prize ?? null;
+        const prize: WheelPrize | null =
+          response?.prize ?? response?.data?.prize ?? null;
 
         if (!prize) {
           throw new Error('نتیجه گردونه دریافت نشد');

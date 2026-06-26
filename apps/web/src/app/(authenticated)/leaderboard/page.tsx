@@ -4,6 +4,7 @@ import Top3Podium, { type LeaderboardEntry } from '@/components/leaderboard/Top3
 import LeaderboardRow from '@/components/leaderboard/LeaderboardRow';
 import PeriodToggle from '@/components/leaderboard/PeriodToggle';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
+import { USE_MOCK } from '@/lib/http';
 
 // Demo data
 const DEMO_ENTRIES: LeaderboardEntry[] = [
@@ -22,7 +23,7 @@ const DEMO_ENTRIES: LeaderboardEntry[] = [
 export default function LeaderboardPage() {
   const { entries, myRank, period, setPeriod, isLoading } = useLeaderboard();
 
-  const displayEntries = entries.length ? entries : DEMO_ENTRIES;
+  const displayEntries = (entries.length ? entries : (USE_MOCK ? DEMO_ENTRIES : [])) as LeaderboardEntry[];
   const top3 = displayEntries.filter((e: any) => e.rank <= 3);
   const rest = displayEntries.filter((e: any) => e.rank > 3);
 

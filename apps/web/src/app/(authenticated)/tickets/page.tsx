@@ -3,13 +3,15 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { ticketsApi } from '@/lib/api/tickets';
+import { USE_MOCK } from '@/lib/http';
 
 const STATUS_COLORS: Record<string, string> = { open: '#dc2626', answered: '#22d3ee', closed: '#6b7280' };
 const DEMO = [{ id: 't1', subject: 'مشکل در پرداخت', category: 'مالی', status: 'open', createdAt: '۱۴۰۳/۰۹/۱۵' }, { id: 't2', subject: 'سوال درباره گردونه', category: 'فنی', status: 'answered', createdAt: '۱۴۰۳/۰۹/۱۰' }];
 
 export default function TicketsPage() {
   const { data, isLoading } = useSWR('tickets', () => ticketsApi.getTickets().catch(() => null));
-  const tickets = data?.tickets ?? DEMO;
+  const payload = data as { tickets?: typeof DEMO; items?: typeof DEMO; data?: typeof DEMO } | null;
+  const tickets = payload?.tickets ?? payload?.items ?? payload?.data ?? (USE_MOCK ? DEMO : []);
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">

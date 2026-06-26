@@ -21,16 +21,15 @@ import { serializeBigInts } from '../../common/utils/bigint';
 import { parsePagination, paginate } from '../../common/utils/pagination.helper';
 import { TransactionType, PaymentStatus, PaymentMethod, CurrencyType } from '@prisma/client';
 
-// ─── Diamond Packages ────────────────────────────────────────────────────────
-const DIAMOND_PACKAGES = [
+// ─── Diamond Packages (defaults; overridden by settings) ─────────────────────
+const DEFAULT_DIAMOND_PACKAGES = [
   { id: 'pkg_50', diamonds: 50, priceToman: 50000, label: '۵۰ الماس' },
   { id: 'pkg_200', diamonds: 200, priceToman: 180000, label: '۲۰۰ الماس' },
   { id: 'pkg_500', diamonds: 500, priceToman: 400000, label: '۵۰۰ الماس' },
   { id: 'pkg_1500', diamonds: 1500, priceToman: 1000000, label: '۱,۵۰۰ الماس' },
 ];
 
-// ─── Coin Packages ────────────────────────────────────────────────────────────
-const COIN_PACKAGES = [
+const DEFAULT_COIN_PACKAGES = [
   { id: 'coin_100', coins: 100, priceToman: 10000, label: '۱۰۰ سکه' },
   { id: 'coin_500', coins: 500, priceToman: 45000, label: '۵۰۰ سکه' },
   { id: 'coin_1000', coins: 1000, priceToman: 80000, label: '۱,۰۰۰ سکه' },
@@ -96,6 +95,15 @@ export class WalletService {
 
   /** شروع شارژ کیف پول (درگاه پرداخت) */
   async chargeWallet(userId: string, dto: ChargeWalletDto) {
+    const minTopup = Number(await this.settings.get('financial.minTopup', '50000'));
+    const maxTopup = Number(await this.settings.get('financial.maxTopup', '50000000'));
+    if (dto.amount < minTopup) {
+      throw new BadRequestException(`حداقل مبلغ شارژ ${minTopup.toLocaleString()} تومان است`);
+    }
+    if (dto.amount > maxTopup) {
+      throw new BadRequestException(`حداکثر مبلغ شارژ ${maxTopup.toLocaleString()} تومان است`);
+    }
+
     const sandboxSetting = await this.settings.get('payments.sandboxMode', 'true');
     const isSandbox = sandboxSetting === 'true'
       || this.configService.get<string>('ZARINPAL_SANDBOX', 'true') === 'true';
@@ -153,7 +161,11 @@ export class WalletService {
 
   /** خرید الماس با موجودی تومانی */
   async purchaseDiamonds(userId: string, dto: PurchaseDiamondsDto) {
-    const pkg = DIAMOND_PACKAGES.find((p) => p.id === dto.packageId);
+    const packages = await this.loadPackages(
+      'wallet.diamondPackages',
+      DEFAULT_DIAMOND_PACKAGES,
+    );
+    const pkg = packages.find((p) => p.id === dto.packageId);
     if (!pkg) throw new BadRequestException('بسته الماس یافت نشد');
 
     const wallet = await this.ensureWallet(userId);
@@ -193,7 +205,11 @@ export class WalletService {
 
   /** خرید سکه با موجودی تومانی */
   async purchaseCoins(userId: string, dto: PurchaseCoinsDto) {
-    const pkg = COIN_PACKAGES.find((p) => p.id === dto.packageId);
+    const packages = await this.loadPackages(
+      'wallet.coinPackages',
+      DEFAULT_COIN_PACKAGES,
+    );
+    const pkg = packages.find((p) => p.id === dto.packageId);
     if (!pkg) throw new BadRequestException('بسته سکه یافت نشد');
 
     const wallet = await this.ensureWallet(userId);
@@ -276,8 +292,27 @@ export class WalletService {
     });
   }
 
-  getDiamondPackages() { return DIAMOND_PACKAGES; }
-  getCoinPackages()    { return COIN_PACKAGES; }
+  private async loadPackages<T>(
+    settingKey: string,
+    fallback: T[],
+  ): Promise<T[]> {
+    try {
+      const raw = await this.settings.get(settingKey, '');
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  async getDiamondPackages() {
+    return this.loadPackages('wallet.diamondPackages', DEFAULT_DIAMOND_PACKAGES);
+  }
+
+  async getCoinPackages() {
+    return this.loadPackages('wallet.coinPackages', DEFAULT_COIN_PACKAGES);
+  }
 
   /** اعمال تراکنش اتمیک (استفاده داخلی) */
   async applyTransaction(

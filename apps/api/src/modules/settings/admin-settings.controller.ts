@@ -55,6 +55,24 @@ export class AdminSettingsController {
     return { success: true, data };
   }
 
+  @Put('bulk')
+  @ApiOperation({ summary: 'به‌روزرسانی گروهی تنظیمات' })
+  async bulkUpdate(
+    @Body() dto: BulkUpdateSettingsDto,
+    @CurrentUser() admin: any,
+  ) {
+    await this.settingsService.bulkSet(dto.settings);
+
+    await this.auditService.log({
+      actorId: admin.id,
+      action: 'settings.bulk_update',
+      entity: 'Setting',
+      after: { keys: dto.settings.map((s) => s.key) },
+    });
+
+    return { success: true, data: { updated: dto.settings.length } };
+  }
+
   @Get(':key')
   @ApiOperation({ summary: 'دریافت یک تنظیم' })
   async findOne(@Param('key') key: string) {
@@ -82,23 +100,5 @@ export class AdminSettingsController {
     });
 
     return { success: true, data: { key, value: dto.value } };
-  }
-
-  @Put('bulk')
-  @ApiOperation({ summary: 'به‌روزرسانی گروهی تنظیمات' })
-  async bulkUpdate(
-    @Body() dto: BulkUpdateSettingsDto,
-    @CurrentUser() admin: any,
-  ) {
-    await this.settingsService.bulkSet(dto.settings);
-
-    await this.auditService.log({
-      actorId: admin.id,
-      action: 'settings.bulk_update',
-      entity: 'Setting',
-      after: { keys: dto.settings.map((s) => s.key) },
-    });
-
-    return { success: true, data: { updated: dto.settings.length } };
   }
 }

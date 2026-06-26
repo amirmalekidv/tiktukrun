@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { SectionHeader } from '@/components/ui';
 import { FiAward, FiSave, FiAlertCircle, FiStar, FiGift } from 'react-icons/fi';
+import { useAdminSettings } from '@/lib/hooks/useAdminSettings';
 
 interface GamificationSettings {
   xpEnabled: boolean;
@@ -57,11 +58,21 @@ const defaults: GamificationSettings = {
   showPublicLeaderboard: false,
 };
 
-export default function GamificationSettingsPage() {
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(false);
+const FIELD_MAP: Record<string, string> = {
+  xpPerBooking: 'gamification.xpPerBooking',
+  xpPerReview: 'gamification.xpPerReview',
+  wheelSpinCostXP: 'gamification.wheelCostCoins',
+  wheelSpinsPerMonth: 'gamification.wheelXpThreshold',
+};
 
-  const { register, handleSubmit, watch, setValue } = useForm<GamificationSettings>({ defaultValues: defaults });
+export default function GamificationSettingsPage() {
+  const { loading, saving, saved, save, values } = useAdminSettings('gamification', FIELD_MAP, defaults);
+
+  const { register, handleSubmit, watch, setValue, reset } = useForm<GamificationSettings>({ defaultValues: defaults });
+
+  useEffect(() => {
+    if (!loading) reset(values);
+  }, [loading, values, reset]);
 
   const bools = {
     xpEnabled: watch('xpEnabled'),
@@ -75,11 +86,7 @@ export default function GamificationSettingsPage() {
   };
 
   const onSubmit = async (data: GamificationSettings) => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setLoading(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    await save(data);
   };
 
   const Toggle = ({ field, label, desc }: { field: keyof typeof bools; label: string; desc?: string }) => (

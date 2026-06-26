@@ -34,8 +34,13 @@ export default function ProfileEditPage() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   useEffect(() => {
-    profileApi.getMe().then((d) => {
-      if (d?.profile) reset(d.profile);
+    profileApi.getMe().then((raw) => {
+      const d = raw as { profile?: FormValues } | FormValues | null;
+      const profile =
+        d && typeof d === 'object' && 'profile' in d
+          ? (d as { profile?: FormValues }).profile
+          : (d as FormValues | null);
+      if (profile) reset(profile);
     }).catch(() => {});
   }, [reset]);
 

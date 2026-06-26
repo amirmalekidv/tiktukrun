@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { SectionHeader } from '@/components/ui';
 import { FiCreditCard, FiSave, FiAlertCircle, FiEye, FiEyeOff } from 'react-icons/fi';
+import { useAdminSettings } from '@/lib/hooks/useAdminSettings';
 
 interface PaymentsSettings {
   zarinpalEnabled: boolean;
@@ -53,12 +54,34 @@ const defaults: PaymentsSettings = {
   maxPaymentRetries: 3,
 };
 
+const FIELD_MAP: Record<string, string> = {
+  defaultGateway: 'payments.gateway',
+  zarinpalSandbox: 'payments.sandboxMode',
+};
+
+const BOOL_TRANSFORMS = {
+  fromDb: {
+    zarinpalSandbox: (v: string) => v === 'true',
+  },
+  toDb: {
+    zarinpalSandbox: (v: unknown) => (v ? 'true' : 'false'),
+  },
+};
+
 export default function PaymentsSettingsPage() {
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { loading, saving, saved, save, values } = useAdminSettings(
+    'payments',
+    FIELD_MAP,
+    defaults,
+    BOOL_TRANSFORMS,
+  );
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
 
-  const { register, handleSubmit, watch, setValue } = useForm<PaymentsSettings>({ defaultValues: defaults });
+  const { register, handleSubmit, watch, setValue, reset } = useForm<PaymentsSettings>({ defaultValues: defaults });
+
+  useEffect(() => {
+    if (!loading) reset(values);
+  }, [loading, values, reset]);
 
   const bools = {
     zarinpalEnabled: watch('zarinpalEnabled'),
@@ -69,11 +92,7 @@ export default function PaymentsSettingsPage() {
   };
 
   const onSubmit = async (data: PaymentsSettings) => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setLoading(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    await save(data);
   };
 
   const Toggle = ({ field, label }: { field: keyof typeof bools; label: string }) => (

@@ -13,6 +13,8 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
  * `User`, but it lives on `UserProfile`. All raw SQL now matches the real
  * @@map names and column types.
  */
+import { mapOverviewToDashboard } from './overview.mapper';
+
 const TTL = 300; // 5 minutes
 
 @Injectable()
@@ -115,13 +117,16 @@ export class AnalyticsService {
         where: { status: 'COMPLETED', createdAt: { gte: thirtyDaysAgo } },
         select: { createdAt: true, totalAmount: true },
       });
-      const trendMap = new Map<string, number>();
+      const trendMap = new Map<string, { revenue: number; bookings: number }>();
       for (const b of trendBookings) {
-        const date = b.createdAt.toISOString().slice(0, 10); // YYYY-MM-DD
-        trendMap.set(date, (trendMap.get(date) ?? 0) + Number(b.totalAmount ?? 0));
+        const date = b.createdAt.toISOString().slice(0, 10);
+        const cur = trendMap.get(date) ?? { revenue: 0, bookings: 0 };
+        cur.revenue += Number(b.totalAmount ?? 0);
+        cur.bookings += 1;
+        trendMap.set(date, cur);
       }
       const revenueTrend = Array.from(trendMap.entries())
-        .map(([date, revenue]) => ({ date, revenue }))
+        .map(([date, v]) => ({ date, revenue: v.revenue, bookings: v.bookings }))
         .sort((a, b) => a.date.localeCompare(b.date));
 
       // Category breakdown last 30 days (group bookings by game→category in JS)
@@ -169,6 +174,14 @@ export class AnalyticsService {
     });
   }
 
+  async getOverviewFormatted() {
+    const [flat, financial] = await Promise.all([
+      this.getOverview(),
+      this.getFinancial(),
+    ]);
+    return mapOverviewToDashboard(flat, financial);
+  }
+
   // ─── Financial KPIs ───────────────────────────────────────────────────────────
 
   async getFinancial() {
@@ -202,11 +215,40 @@ export class AnalyticsService {
       const churnRate =
         totalUsers > 0 ? Math.round((churnedUsers / totalUsers) * 100) : 0;
 
+      const [campaignSpend, reviewAvg] = await Promise.all([
+        this.prisma.campaign.aggregate({
+          _sum: { budget: true, convertedCount: true },
+        }),
+        this.prisma.review.aggregate({
+          where: { isApproved: true },
+          _avg: { rating: true },
+        }),
+      ]);
+
+      const converted = (campaignSpend._sum as any).convertedCount ?? 0;
+      const budget = Number((campaignSpend._sum as any).budget ?? 0);
+      const cac =
+        converted > 0 ? Math.round(budget / converted) : null;
+
+      const avgRating = reviewAvg._avg.rating ?? 0;
+      const nps =
+        avgRating > 0
+          ? Math.round(((avgRating - 3) / 2) * 100)
+          : null;
+
       return {
-        cac: 50000,
+        cac,
+        cacNote:
+          cac == null
+            ? 'CAC requires campaign budget and conversion data'
+            : undefined,
         clv: Math.round(avgLTV),
         churnRate,
-        nps: 67,
+        nps,
+        npsNote:
+          nps == null
+            ? 'NPS proxy from review ratings when surveys unavailable'
+            : 'Proxy NPS derived from approved review star ratings',
         totalRevenue: Number(totalRevenue._sum.totalAmount ?? 0),
         avgOrderValue: 0,
         revenuePerUser: Math.round(avgLTV),

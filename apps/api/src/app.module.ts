@@ -11,6 +11,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { MaintenanceGuard } from './common/guards/maintenance.guard';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -54,6 +55,7 @@ import { WeeklyModule } from './modules/weekly/weekly.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { WheelModule } from './modules/wheel/wheel.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { TeamsModule } from './modules/teams/teams.module';
 // TeamsModule از داخل chat.module یا standalone exposed
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { CustomersModule } from './modules/customers/customers.module';
@@ -66,6 +68,7 @@ import { MonthlyModule } from './modules/monthly/monthly.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { BackupModule } from './modules/backup/backup.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { PublicModule } from './modules/public/public.module';
 
 @Module({
   imports: [
@@ -156,6 +159,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     GamificationModule,
     WheelModule,
     ChatModule,
+    TeamsModule,
     TicketsModule,
     CustomersModule,
     SegmentsModule,
@@ -164,6 +168,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     MonthlyModule,
     BackupModule,
     AnalyticsModule,
+    PublicModule,
   ],
   providers: [
     // ─── Global JwtAuthGuard ────────────────────────────────────────────────
@@ -171,6 +176,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     // چون JwtAuthGuard اعمال نشده بود. الان global اعمال می‌شه و @Public()
     // برای endpoint‌های عمومی respect می‌شه.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: MaintenanceGuard },
   ],
 })
 export class AppModule {}

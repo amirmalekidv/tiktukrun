@@ -28,6 +28,7 @@ import { CurrentUser }  from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard }   from '../../common/guards/roles.guard';
 import { Roles }        from '../../common/decorators/roles.decorator';
+import { resolveBranchScope } from '../../common/helpers/branch-scope.helper';
 
 // ─── User Bookings ───────────────────────────────────────────────────────────
 @UseGuards(JwtAuthGuard)
@@ -95,10 +96,16 @@ export class BookingsAdminController {
   @Get('calendar')
   getCalendar(
     @Query('branchId') branchId: string,
-    @Query('from')     from:     string,
-    @Query('to')       to:       string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.svc.getCalendar(branchId, from, to);
+    const scopedBranch = resolveBranchScope(
+      user.role,
+      user.branchId,
+      branchId,
+    );
+    return this.svc.getCalendar(scopedBranch, from, to);
   }
 
   @Get('export')

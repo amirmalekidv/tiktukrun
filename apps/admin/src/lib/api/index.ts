@@ -208,16 +208,35 @@ export const monthlyApi = {
 
 // ==================== Settings ====================
 export const settingsApi = {
-  getGroup: (group: string) => apiClient.get<ApiResponse<Setting[]>>(`/admin/settings/${group}`),
+  getAll: (group?: string) =>
+    apiClient.get<ApiResponse<Setting[]>>('/admin/settings', {
+      params: group ? { group } : undefined,
+    }),
+  getGroup: (group: string) => settingsApi.getAll(group),
+  getOne: (key: string) =>
+    apiClient.get<ApiResponse<{ key: string; value: string }>>(
+      `/admin/settings/${encodeURIComponent(key)}`,
+    ),
+  updateOne: (key: string, value: string) =>
+    apiClient.put(`/admin/settings/${encodeURIComponent(key)}`, { value }),
+  bulkUpdate: (settings: { key: string; value: string }[]) =>
+    apiClient.put('/admin/settings/bulk', { settings }),
+  /** @deprecated use bulkUpdate with mapped keys */
   updateGroup: (group: string, data: Record<string, unknown>) =>
-    apiClient.put(`/admin/settings/${group}`, data),
+    settingsApi.bulkUpdate(
+      Object.entries(data).map(([key, value]) => ({
+        key: key.includes('.') ? key : `${group}.${key}`,
+        value: String(value),
+      })),
+    ),
 };
 
 // ==================== Roles ====================
 // Backend: AdminRolesController @Controller('admin/roles')
-//   GET /  POST /  PATCH /:id/permissions
+//   GET /  GET /:id  POST / (disabled)  PATCH /:id/permissions (disabled)
 export const rolesApi = {
   getAll: () => apiClient.get<ApiResponse<Role[]>>('/admin/roles'),
+  getById: (id: string) => apiClient.get<ApiResponse<Role & { users?: User[] }>>(`/admin/roles/${id}`),
   create: (d: Partial<Role>) => apiClient.post<ApiResponse<Role>>('/admin/roles', d),
   updatePermissions: (id: string, permissions: string[]) =>
     apiClient.patch(`/admin/roles/${id}/permissions`, { permissions }),

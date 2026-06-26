@@ -1,58 +1,50 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL || '';
-
-function authHeaders(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  const token = localStorage.getItem('auth_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+import { apiFetch } from '../http';
 
 export const ticketsApi = {
-  getTickets: async (page = 1) => {
-    const res = await fetch(`${BASE}/api/v1/tickets?page=${page}`, {
-      headers: authHeaders(),
+  getMine: (params?: { page?: number; limit?: number }) => {
+    const q = new URLSearchParams({
+      page: String(params?.page ?? 1),
+      limit: String(params?.limit ?? 20),
     });
-    if (!res.ok) throw new Error('Failed to fetch tickets');
-    return res.json();
+    return apiFetch(`/tickets/me?${q}`);
   },
-
-  getTicket: async (id: string) => {
-    const res = await fetch(`${BASE}/api/v1/tickets/${id}`, {
-      headers: authHeaders(),
+  getById: (id: string) => apiFetch(`/tickets/me/${id}`),
+  create: (data: { subject: string; body: string; priority?: string }) =>
+    apiFetch('/tickets', { method: 'POST', body: JSON.stringify(data) }),
+  reply: (id: string, text: string) =>
+    apiFetch(`/tickets/me/${id}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    }),
+  close: (id: string) =>
+    apiFetch(`/tickets/me/${id}/close`, { method: 'POST' }),
+  getTicket: (id: string) => apiFetch(`/tickets/me/${id}`),
+  getTickets: (params?: { page?: number; limit?: number }) => {
+    const q = new URLSearchParams({
+      page: String(params?.page ?? 1),
+      limit: String(params?.limit ?? 20),
     });
-    if (!res.ok) throw new Error('Failed to fetch ticket');
-    return res.json();
+    return apiFetch(`/tickets/me?${q}`);
   },
-
-  createTicket: async (data: {
+  createTicket: (data: {
     subject: string;
-    category: string;
-    message: string;
-  }) => {
-    const res = await fetch(`${BASE}/api/v1/tickets`, {
+    body?: string;
+    message?: string;
+    category?: string;
+    priority?: string;
+  }) =>
+    apiFetch('/tickets', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error('Failed to create ticket');
-    return res.json();
-  },
-
-  replyTicket: async (id: string, message: string) => {
-    const res = await fetch(`${BASE}/api/v1/tickets/${id}/reply`, {
+      body: JSON.stringify({
+        subject: data.subject,
+        body: data.body ?? data.message ?? '',
+        priority: data.priority,
+        category: data.category,
+      }),
+    }),
+  replyTicket: (id: string, text: string) =>
+    apiFetch(`/tickets/me/${id}/reply`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({ message }),
-    });
-    if (!res.ok) throw new Error('Failed to reply to ticket');
-    return res.json();
-  },
-
-  closeTicket: async (id: string) => {
-    const res = await fetch(`${BASE}/api/v1/tickets/${id}/close`, {
-      method: 'PATCH',
-      headers: authHeaders(),
-    });
-    if (!res.ok) throw new Error('Failed to close ticket');
-    return res.json();
-  },
+      body: JSON.stringify({ text }),
+    }),
 };

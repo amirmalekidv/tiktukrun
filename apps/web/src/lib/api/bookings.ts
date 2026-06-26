@@ -1,52 +1,33 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL || '';
-
-function authHeaders(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  const token = localStorage.getItem('auth_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+import { apiFetch } from '../http';
 
 export const bookingsApi = {
-  getMyBookings: async (params?: { status?: string; page?: number }) => {
-    const query = new URLSearchParams({
+  getMine: (params?: { page?: number; limit?: number; status?: string }) => {
+    const q = new URLSearchParams({
       page: String(params?.page ?? 1),
+      limit: String(params?.limit ?? 20),
       ...(params?.status ? { status: params.status } : {}),
     });
-    const res = await fetch(`${BASE}/api/v1/bookings/me?${query}`, {
-      headers: authHeaders(),
-    });
-    if (!res.ok) throw new Error('Failed to fetch bookings');
-    return res.json();
+    return apiFetch(`/bookings/me?${q}`);
   },
-
-  getBooking: async (id: string) => {
-    const res = await fetch(`${BASE}/api/v1/bookings/${id}`, {
-      headers: authHeaders(),
-    });
-    if (!res.ok) throw new Error('Failed to fetch booking');
-    return res.json();
-  },
-
-  cancelBooking: async (id: string, reason?: string) => {
-    const res = await fetch(`${BASE}/api/v1/bookings/${id}/cancel`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({ reason }),
-    });
-    if (!res.ok) throw new Error('Failed to cancel booking');
-    return res.json();
-  },
-
-  submitReview: async (
-    id: string,
-    data: { rating: number; comment: string }
-  ) => {
-    const res = await fetch(`${BASE}/api/v1/bookings/${id}/review`, {
+  getById: (id: string) => apiFetch(`/bookings/me/${id}`),
+  cancel: (id: string, reason?: string) =>
+    apiFetch(`/bookings/me/${id}/cancel`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ reason }),
+    }),
+  cancelBooking: (id: string, reason?: string) =>
+    apiFetch(`/bookings/me/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  submitReview: (_bookingId: string, _data: { rating: number; comment: string }) =>
+    Promise.reject(new Error('ثبت نظر از صفحه بازی انجام شود')),
+  getMyBookings: (params?: { page?: number; limit?: number; status?: string }) => {
+    const q = new URLSearchParams({
+      page: String(params?.page ?? 1),
+      limit: String(params?.limit ?? 20),
+      ...(params?.status ? { status: params.status } : {}),
     });
-    if (!res.ok) throw new Error('Failed to submit review');
-    return res.json();
+    return apiFetch(`/bookings/me?${q}`);
   },
 };

@@ -38,7 +38,7 @@ class StaffReplyDto {
 @ApiTags('Admin - Tickets')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN', 'SUPER_ADMIN', 'SUPPORT')
+@Roles('ADMIN', 'SUPER_ADMIN', 'SUPPORT', 'BRANCH_MANAGER')
 @Controller('admin/tickets')
 export class AdminTicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
@@ -49,13 +49,17 @@ export class AdminTicketsController {
     @Query('status') status?: string,
     @Query('priority') priority?: string,
     @Query('assigneeId') assigneeId?: string,
+    @Query('branchId') branchId?: string,
     @Query('page') page = '1',
     @Query('limit') limit = '20',
+    @CurrentUser() user?: any,
   ) {
     const result = await this.ticketsService.findAllAdmin(
-      { status, priority, assigneeId },
+      { status, priority, assigneeId, branchId },
       Number(page),
       Number(limit),
+      user?.role,
+      user?.branchId,
     );
     return { success: true, ...result };
   }

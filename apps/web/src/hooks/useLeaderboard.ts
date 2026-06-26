@@ -21,10 +21,13 @@ export function useLeaderboard() {
     () => leaderboardApi.getMyRank().catch(() => null)
   );
 
+  const lbData = data as { entries?: unknown[]; total?: number } | null | undefined;
+  const rankData = myRankData as { rank?: number } | null | undefined;
+
   return {
-    entries: data?.entries ?? [],
-    myRank: myRankData?.rank ?? null,
-    total: data?.total ?? 0,
+    entries: lbData?.entries ?? [],
+    myRank: rankData?.rank ?? null,
+    total: lbData?.total ?? 0,
     period,
     setPeriod: (p: Period) => { setPeriod(p); setPage(1); },
     page,

@@ -6,8 +6,16 @@ const DEFAULT_SETTINGS: Record<string, { value: string; group: string; descripti
   'public.siteName': { value: 'تیک تاک ران', group: 'general', description: 'نام سایت' },
   'public.theme': { value: 'dark', group: 'general', description: 'تم پیش‌فرض' },
   'public.maintenanceMode': { value: 'false', group: 'general', description: 'حالت تعمیر' },
+  'public.registrationEnabled': { value: 'true', group: 'general', description: 'ثبت‌نام کاربران' },
+  'public.siteSlogan': { value: 'هیجان فرار اتاق‌های فرار', group: 'general' },
   'public.supportPhone': { value: '021-12345678', group: 'general' },
+  'public.supportEmail': { value: 'support@tiktakrun.ir', group: 'general' },
+  'public.address': { value: 'تهران، خیابان ولیعصر', group: 'general' },
+  'public.workingHours': { value: '۹ صبح تا ۱۲ شب', group: 'general' },
+  'public.timezone': { value: 'Asia/Tehran', group: 'general' },
+  'public.language': { value: 'fa', group: 'general' },
   'public.currency': { value: 'تومان', group: 'general' },
+  'booking.maxActivePerUser': { value: '5', group: 'general', description: 'حداکثر رزرو فعال هر کاربر' },
 
   // Financial
   'financial.minTopup': { value: '50000', group: 'financial', description: 'حداقل شارژ کیف پول' },
@@ -59,6 +67,26 @@ const DEFAULT_SETTINGS: Record<string, { value: string; group: string; descripti
   // Payments
   'payments.gateway': { value: 'zarinpal', group: 'payments' },
   'payments.sandboxMode': { value: 'true', group: 'payments' },
+
+  // Wallet packages (JSON arrays)
+  'wallet.diamondPackages': {
+    value: JSON.stringify([
+      { id: 'pkg_50', diamonds: 50, priceToman: 50000, label: '۵۰ الماس' },
+      { id: 'pkg_200', diamonds: 200, priceToman: 180000, label: '۲۰۰ الماس' },
+      { id: 'pkg_500', diamonds: 500, priceToman: 400000, label: '۵۰۰ الماس' },
+      { id: 'pkg_1500', diamonds: 1500, priceToman: 1000000, label: '۱,۵۰۰ الماس' },
+    ]),
+    group: 'financial',
+  },
+  'wallet.coinPackages': {
+    value: JSON.stringify([
+      { id: 'coin_100', coins: 100, priceToman: 10000, label: '۱۰۰ سکه' },
+      { id: 'coin_500', coins: 500, priceToman: 45000, label: '۵۰۰ سکه' },
+      { id: 'coin_1000', coins: 1000, priceToman: 80000, label: '۱,۰۰۰ سکه' },
+      { id: 'coin_5000', coins: 5000, priceToman: 350000, label: '۵,۰۰۰ سکه' },
+    ]),
+    group: 'financial',
+  },
 };
 
 @Injectable()

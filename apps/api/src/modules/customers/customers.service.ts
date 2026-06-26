@@ -226,6 +226,66 @@ export class CustomersService {
     });
   }
 
+  async getCustomerBookings(customerId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.prisma.booking.findMany({
+        where: { userId: customerId },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: { game: { select: { title: true } } },
+      }),
+      this.prisma.booking.count({ where: { userId: customerId } }),
+    ]);
+    return { data: this.serializeBigInt(data), total };
+  }
+
+  async getCustomerTransactions(customerId: string, page = 1, limit = 20) {
+    const wallet = await this.prisma.wallet.findUnique({
+      where: { userId: customerId },
+    });
+    if (!wallet) return { data: [], total: 0 };
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where: { walletId: wallet.id },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.transaction.count({ where: { walletId: wallet.id } }),
+    ]);
+    return { data: this.serializeBigInt(data), total };
+  }
+
+  async getCustomerReviews(customerId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.prisma.review.findMany({
+        where: { userId: customerId },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: { game: { select: { title: true } } },
+      }),
+      this.prisma.review.count({ where: { userId: customerId } }),
+    ]);
+    return { data, total };
+  }
+
+  async getCustomerNotes(customerId: string) {
+    const data = await this.prisma.crmNote.findMany({
+      where: { userId: customerId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: { select: { id: true, fullName: true } },
+      } as any,
+    });
+    return { data };
+  }
+
   async getTopLtv(limit = 10) {
     const users: any[] = await this.prisma.user.findMany({
       where: { deletedAt: null, profile: { isNot: null } } as any,

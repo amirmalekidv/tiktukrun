@@ -25,7 +25,12 @@ export default function SettingsForm({ group, title, description, children, onSa
         data[key] = val;
       });
 
-      await settingsApi.updateGroup(group, data);
+      await settingsApi.bulkUpdate(
+        Object.entries(data).map(([key, value]) => ({
+          key: key.includes('.') ? key : `${group}.${key}`,
+          value: String(value),
+        })),
+      );
       onSave?.(data);
       toast.success('تنظیمات ذخیره شد');
     } catch {

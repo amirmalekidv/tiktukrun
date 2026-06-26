@@ -15,7 +15,12 @@ export default function TeamDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    teamsApi.getTeam(id).then(d => setTeam(d?.team ?? null)).catch(() => {}).finally(() => setLoading(false));
+    teamsApi.getTeam(id).then((raw) => {
+      const d = raw as { team?: unknown } | Record<string, unknown> | null;
+      const teamData =
+        d && typeof d === 'object' && 'team' in d ? (d as { team?: unknown }).team : d;
+      setTeam(teamData ?? null);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 
   const handleLeave = async () => {

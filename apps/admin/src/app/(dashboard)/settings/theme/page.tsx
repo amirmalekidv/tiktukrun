@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { SectionHeader } from '@/components/ui';
 import { FiDroplet, FiSave, FiAlertCircle, FiImage, FiType } from 'react-icons/fi';
+import { useAdminSettings } from '@/lib/hooks/useAdminSettings';
 
 interface ThemeSettings {
   primaryColor: string;
@@ -59,11 +60,35 @@ const COLOR_PRESETS = [
   { name: 'نارنجی', primary: '#ea580c', secondary: '#0c0a09' },
 ];
 
-export default function ThemeSettingsPage() {
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(false);
+const FIELD_MAP: Record<string, string> = {
+  darkMode: 'public.theme',
+  primaryColor: 'theme.primaryColor',
+  secondaryColor: 'theme.secondaryColor',
+  logoUrl: 'theme.logoUrl',
+};
 
-  const { register, handleSubmit, watch, setValue } = useForm<ThemeSettings>({ defaultValues: defaults });
+const THEME_TRANSFORMS = {
+  fromDb: {
+    darkMode: (v: string) => v === 'dark',
+  },
+  toDb: {
+    darkMode: (v: unknown) => (v ? 'dark' : 'light'),
+  },
+};
+
+export default function ThemeSettingsPage() {
+  const { loading, saving, saved, save, values } = useAdminSettings(
+    'general',
+    FIELD_MAP,
+    defaults,
+    THEME_TRANSFORMS,
+  );
+
+  const { register, handleSubmit, watch, setValue, reset } = useForm<ThemeSettings>({ defaultValues: defaults });
+
+  useEffect(() => {
+    if (!loading) reset(values);
+  }, [loading, values, reset]);
 
   const bools = {
     darkMode: watch('darkMode'),
@@ -75,11 +100,7 @@ export default function ThemeSettingsPage() {
   const secondaryColor = watch('secondaryColor');
 
   const onSubmit = async (data: ThemeSettings) => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setLoading(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    await save(data);
   };
 
   const Toggle = ({ field, label, desc }: { field: keyof typeof bools; label: string; desc?: string }) => (

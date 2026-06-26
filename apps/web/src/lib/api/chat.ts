@@ -1,37 +1,23 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL || '';
-
-function authHeaders(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  const token = localStorage.getItem('auth_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+import { apiFetch } from '../http';
 
 export const chatApi = {
-  getGlobalHistory: async (before?: string) => {
-    const query = before ? `?before=${before}` : '';
-    const res = await fetch(`${BASE}/api/v1/chat/global${query}`, {
-      headers: authHeaders(),
+  getGlobalMessages: (params?: { page?: number; limit?: number }) => {
+    const q = new URLSearchParams({
+      page: String(params?.page ?? 1),
+      limit: String(params?.limit ?? 50),
     });
-    if (!res.ok) throw new Error('Failed to fetch chat history');
-    return res.json();
+    return apiFetch(`/chat/rooms/global/messages?${q}`);
   },
-
-  reportMessage: async (messageId: string, reason: string) => {
-    const res = await fetch(`${BASE}/api/v1/chat/report`, {
+  getTeamMessages: (teamId: string, params?: { page?: number; limit?: number }) => {
+    const q = new URLSearchParams({
+      page: String(params?.page ?? 1),
+      limit: String(params?.limit ?? 50),
+    });
+    return apiFetch(`/chat/rooms/team/${teamId}/messages?${q}`);
+  },
+  reportMessage: (messageId: string, reason: string, roomId = 'global') =>
+    apiFetch(`/chat/rooms/${roomId}/messages/${messageId}/report`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({ messageId, reason }),
-    });
-    if (!res.ok) throw new Error('Failed to report message');
-    return res.json();
-  },
-
-  deleteMessage: async (messageId: string) => {
-    const res = await fetch(`${BASE}/api/v1/chat/${messageId}`, {
-      method: 'DELETE',
-      headers: authHeaders(),
-    });
-    if (!res.ok) throw new Error('Failed to delete message');
-    return res.json();
-  },
+      body: JSON.stringify({ reason }),
+    }),
 };

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { SectionHeader } from '@/components/ui';
 import { FiGlobe, FiPhone, FiMail, FiMapPin, FiSave, FiAlertCircle } from 'react-icons/fi';
+import { useAdminSettings } from '@/lib/hooks/useAdminSettings';
 
 const schema = z.object({
   siteName: z.string().min(2, 'نام سایت حداقل ۲ کاراکتر'),
@@ -39,25 +40,54 @@ const defaultValues: FormData = {
   cancelDeadlineHours: 24,
 };
 
-export default function GeneralSettingsPage() {
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(false);
+const FIELD_MAP: Record<keyof FormData, string> = {
+  siteName: 'public.siteName',
+  siteSlogan: 'public.siteSlogan',
+  supportPhone: 'public.supportPhone',
+  supportEmail: 'public.supportEmail',
+  address: 'public.address',
+  workingHours: 'public.workingHours',
+  timezone: 'public.timezone',
+  language: 'public.language',
+  maintenanceMode: 'public.maintenanceMode',
+  registrationEnabled: 'public.registrationEnabled',
+  maxBookingsPerUser: 'booking.maxActivePerUser',
+  cancelDeadlineHours: 'financial.refundWindowHours',
+};
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
+const BOOL_TRANSFORMS = {
+  fromDb: {
+    maintenanceMode: (v: string) => v === 'true',
+    registrationEnabled: (v: string) => v === 'true',
+  },
+  toDb: {
+    maintenanceMode: (v: unknown) => (v ? 'true' : 'false'),
+    registrationEnabled: (v: unknown) => (v ? 'true' : 'false'),
+  },
+};
+
+export default function GeneralSettingsPage() {
+  const { loading, saving, saved, save, values } = useAdminSettings(
+    'general',
+    FIELD_MAP,
+    defaultValues,
+    BOOL_TRANSFORMS,
+  );
+
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues,
   });
+
+  useEffect(() => {
+    if (!loading) reset(values);
+  }, [loading, values, reset]);
 
   const maintenanceMode = watch('maintenanceMode');
   const registrationEnabled = watch('registrationEnabled');
 
   const onSubmit = async (data: FormData) => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    console.log('Settings saved:', data);
-    setLoading(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    await save(data);
   };
 
   return (

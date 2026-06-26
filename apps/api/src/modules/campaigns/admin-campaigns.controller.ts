@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -107,10 +108,37 @@ export class AdminCampaignsController {
     return { success: true, message: 'کمپین آغاز شد' };
   }
 
+  @Post(':id/launch')
+  @ApiOperation({ summary: 'شروع کمپین (alias برای admin client)' })
+  async launch(@Param('id') id: string) {
+    return this.start(id);
+  }
+
   @Post(':id/pause')
   @ApiOperation({ summary: 'توقف کمپین' })
   async pause(@Param('id') id: string) {
     const data = await this.campaignsService.pause(id);
+    return { success: true, data };
+  }
+
+  @Post(':id/resume')
+  @ApiOperation({ summary: 'ادامه کمپین متوقف‌شده' })
+  async resume(@Param('id') id: string) {
+    const data = await this.campaignsService.resume(id);
+    return { success: true, data };
+  }
+
+  @Post(':id/duplicate')
+  @ApiOperation({ summary: 'کپی کمپین' })
+  async duplicate(@Param('id') id: string) {
+    const data = await this.campaignsService.duplicate(id);
+    return { success: true, data };
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'حذف کمپین' })
+  async remove(@Param('id') id: string) {
+    const data = await this.campaignsService.remove(id);
     return { success: true, data };
   }
 

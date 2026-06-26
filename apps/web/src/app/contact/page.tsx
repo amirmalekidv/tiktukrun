@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { apiFetch } from '@/lib/http'
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
@@ -10,10 +11,18 @@ export default function ContactPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    await new Promise((r) => setTimeout(r, 1000))
-    toast.success('پیام شما ارسال شد! به زودی پاسخ می‌دهیم 📧')
-    setForm({ name: '', email: '', subject: '', message: '' })
-    setIsSubmitting(false)
+    try {
+      await apiFetch('/public/contact', {
+        method: 'POST',
+        body: JSON.stringify(form),
+      })
+      toast.success('پیام شما ارسال شد! به زودی پاسخ می‌دهیم 📧')
+      setForm({ name: '', email: '', subject: '', message: '' })
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'خطا در ارسال پیام')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (

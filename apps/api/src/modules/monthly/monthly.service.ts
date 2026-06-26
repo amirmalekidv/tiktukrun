@@ -67,20 +67,34 @@ export class MonthlyService {
       ? { gameId: gameGroups[0].gameId, revenue: Number(gameGroups[0]._sum.totalAmount ?? 0) }
       : null;
 
-    // Top team by completed bookings — تیم‌ها در رزرو مستقیماً نیستند؛
-    // از تیم‌های فعال در آن بازه استفاده می‌کنیم (بیشترین اعضا).
+    // Top team by completed bookings of members in the month
     const teams = await this.prisma.team.findMany({
-      where: { createdAt: { gte: startDate, lt: endDate } },
-      include: { _count: { select: { members: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
+      include: { members: { select: { userId: true } } },
     });
-    const sortedTeams = teams.sort(
-      (a: any, b: any) => (b._count?.members ?? 0) - (a._count?.members ?? 0),
+    const memberBookings = await this.prisma.booking.groupBy({
+      by: ['userId'],
+      where: {
+        status: 'COMPLETED',
+        createdAt: { gte: startDate, lt: endDate },
+      },
+      _count: { id: true },
+    });
+    const countByUser = new Map(
+      memberBookings.map((b) => [b.userId, b._count.id]),
     );
-    const topTeam = sortedTeams[0]
-      ? { teamId: sortedTeams[0].id, bookingCount: sortedTeams[0]._count?.members ?? 0 }
-      : null;
+
+    let topTeam: { teamId: string; bookingCount: number } | null = null;
+    let maxBookings = 0;
+    for (const team of teams) {
+      const bookingCount = team.members.reduce(
+        (sum, m) => sum + (countByUser.get(m.userId) ?? 0),
+        0,
+      );
+      if (bookingCount > maxBookings) {
+        maxBookings = bookingCount;
+        topTeam = { teamId: team.id, bookingCount };
+      }
+    }
 
     // ذخیره به‌صورت رکوردهای جدا برای هر نوع (schema = [year, month, type])
     await this.upsertWinner(year, month, 'TOP_PLAYER', topPlayer?.userId ?? null, null, null, {
