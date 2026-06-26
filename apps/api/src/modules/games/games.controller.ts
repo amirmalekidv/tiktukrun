@@ -21,6 +21,7 @@ import { GamesService }      from './services/games.service';
 import { GamesAdminService } from './services/games-admin.service';
 import { GameQueryDto }      from './dto/game-query.dto';
 import { CreateGameDto, UpdateGameDto, WeeklyDiscountDto } from './dto/create-game.dto';
+import { ReviewsService }    from '../reviews/reviews.service';
 
 import { Public }          from '../../common/decorators/public.decorator';
 import { CurrentUser }     from '../../common/decorators/current-user.decorator';
@@ -43,7 +44,10 @@ const multerStorage = diskStorage({
 // ─── Public Games Controller ──────────────────────────────────────────────────
 @Controller('games')
 export class GamesController {
-  constructor(private readonly svc: GamesService) {}
+  constructor(
+    private readonly svc: GamesService,
+    private readonly reviewsSvc: ReviewsService,
+  ) {}
 
   @Public()
   @Get()
@@ -70,6 +74,16 @@ export class GamesController {
     @Query('date') date: string,
   ) {
     return this.svc.getAvailability(gameId, date);
+  }
+
+  /** Alias for web client: GET /games/:gameId/reviews → reviews module */
+  @Public()
+  @Get(':gameId/reviews')
+  findReviewsForGame(
+    @Param('gameId') gameId: string,
+    @Query() query: Record<string, string>,
+  ) {
+    return this.reviewsSvc.findForGame(gameId, query);
   }
 
   @Public()

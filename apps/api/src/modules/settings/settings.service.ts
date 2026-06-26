@@ -13,6 +13,13 @@ const DEFAULT_SETTINGS: Record<string, { value: string; group: string; descripti
   'financial.minTopup': { value: '50000', group: 'financial', description: 'حداقل شارژ کیف پول' },
   'financial.maxTopup': { value: '50000000', group: 'financial' },
   'financial.refundWindowHours': { value: '24', group: 'financial' },
+  'financial.partialRefundRatio': { value: '0.5', group: 'financial', description: 'نسبت استرداد جزئی پس از پایان مهلت' },
+
+  // Booking policy
+  'booking.minAdvanceMinutes': { value: '30', group: 'financial', description: 'حداقل فاصله رزرو تا شروع slot' },
+  'booking.maxConcurrent': { value: '1', group: 'financial', description: 'حداکثر رزرو همزمان per slot' },
+  'booking.pendingTimeoutMinutes': { value: '60', group: 'financial', description: 'لغو خودکار PENDING بدون پرداخت' },
+  'booking.completionBufferMinutes': { value: '60', group: 'financial', description: 'تکمیل خودکار پس از slot + buffer' },
 
   // Chat
   'chat.rateLimit': { value: '5', group: 'chat', description: 'حداکثر پیام در دقیقه' },
@@ -32,6 +39,8 @@ const DEFAULT_SETTINGS: Record<string, { value: string; group: string; descripti
   'gamification.wheelCostDiamonds': { value: '5', group: 'gamification' },
   'gamification.xpPerBooking': { value: '50', group: 'gamification' },
   'gamification.xpPerReview': { value: '20', group: 'gamification' },
+  'gamification.coinsPerBooking': { value: '20', group: 'gamification' },
+  'gamification.coinsPerReview': { value: '10', group: 'gamification' },
   'gamification.monthly_rewards': {
     value: JSON.stringify({
       topPlayer: { xp: 500, coins: 2000, freeTicket: true },

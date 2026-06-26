@@ -65,7 +65,7 @@ export class ReviewsService {
     });
 
     // اعطای XP و coins
-    await this.rewards.awardReviewCompletion(userId);
+    await this.rewards.awardReviewCompletion(userId, review.id);
 
     this.logger.log(`Review created: bookingId=${bookingId} userId=${userId}`);
     return review;

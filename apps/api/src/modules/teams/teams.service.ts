@@ -1,18 +1,16 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ChatGateway } from '../chat/chat.gateway';
 
 @Injectable()
 export class TeamsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
   ) {}
 
   async findAll(cityId?: string, gameId?: string, page = 1, limit = 20) {
@@ -160,6 +158,18 @@ export class TeamsService {
     await this.prisma.teamMember.delete({
       where: { teamId_userId: { teamId, userId: targetUserId } },
     });
+
+    if (team.status === 'FULL') {
+      const count = await this.prisma.teamMember.count({ where: { teamId } });
+      if (count < team.capacity) {
+        await this.prisma.team.update({
+          where: { id: teamId },
+          data: { status: 'FORMING' },
+        });
+      }
+    }
+
+    this.chatGateway.emitUserKicked(teamId, targetUserId);
 
     return { kicked: true };
   }

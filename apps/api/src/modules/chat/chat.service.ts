@@ -2,6 +2,7 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
@@ -44,6 +45,13 @@ export class ChatService {
       data: { type: 'GLOBAL', name: 'Global' },
     });
     return created.id;
+  }
+
+  async validateMessageLength(text: string): Promise<void> {
+    const maxLen = Number(await this.settings.get('chat.maxMessageLength', '500'));
+    if (text.length > maxLen) {
+      throw new BadRequestException(`پیام نباید بیشتر از ${maxLen} کاراکتر باشد`);
+    }
   }
 
   async getGlobalMessages(page = 1, limit = 50) {
@@ -90,6 +98,10 @@ export class ChatService {
   }
 
   async postGlobalMessage(userId: string, text: string, ip?: string) {
+    const trimmed = text.trim();
+    if (!trimmed) throw new BadRequestException('پیام خالی است');
+    await this.validateMessageLength(trimmed);
+
     // Check if user is muted/banned
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
@@ -117,7 +129,7 @@ export class ChatService {
       data: {
         userId: userId,
         roomId,
-        text,
+        text: trimmed,
         status: 'NORMAL',
       },
       include: {
@@ -270,13 +282,42 @@ export class ChatService {
       /* table may be empty */
     }
 
+    let avgResponseTime = 0;
+    try {
+      const dayAgo = new Date(Date.now() - 24 * 3600_000);
+      const recent = await this.prisma.chatMessage.findMany({
+        where: { createdAt: { gte: dayAgo }, status: { not: 'DELETED' } },
+        select: { roomId: true, userId: true, createdAt: true },
+        orderBy: { createdAt: 'asc' },
+        take: 5000,
+      });
+      const deltas: number[] = [];
+      const lastByRoom = new Map<string, { userId: string; at: Date }>();
+      for (const msg of recent) {
+        const prev = lastByRoom.get(msg.roomId);
+        if (prev && prev.userId !== msg.userId) {
+          deltas.push(
+            (msg.createdAt.getTime() - prev.at.getTime()) / 1000,
+          );
+        }
+        lastByRoom.set(msg.roomId, { userId: msg.userId, at: msg.createdAt });
+      }
+      if (deltas.length > 0) {
+        avgResponseTime = Math.round(
+          deltas.reduce((a, b) => a + b, 0) / deltas.length,
+        );
+      }
+    } catch {
+      /* empty chat */
+    }
+
     return {
       messagesToday,
       reportsToday,
       mutedUsers,
       bannedUsers,
       peakHour,
-      avgResponseTime: 0, // Real implementation requires tracking
+      avgResponseTime,
     };
   }
 }

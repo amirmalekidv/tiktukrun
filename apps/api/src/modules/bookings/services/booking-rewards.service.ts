@@ -1,12 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { TransactionType, CurrencyType } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { SettingsService } from '../../settings/settings.service';
 import { NotificationType } from '@tiktakrun/shared-types';
-
-const XP_PER_BOOKING    = 10;
-const COINS_PER_BOOKING = 20;
-const XP_PER_REVIEW     = 5;
-const COINS_PER_REVIEW  = 10;
 
 @Injectable()
 export class BookingRewardsService {
@@ -15,28 +12,74 @@ export class BookingRewardsService {
   constructor(
     private prisma: PrismaService,
     private notif: NotificationsService,
+    private settings: SettingsService,
   ) {}
 
-  /** افزایش سکه در کیف پول (coins در Wallet نگه‌داری می‌شود نه profile) */
-  private async addCoins(userId: string, coins: number): Promise<void> {
-    await this.prisma.wallet.upsert({
-      where:  { userId },
+  private async getBookingRewards() {
+    const [xp, coins] = await Promise.all([
+      this.settings.get('gamification.xpPerBooking', '50'),
+      this.settings.get('gamification.coinsPerBooking', '20'),
+    ]);
+    return { xp: Number(xp), coins: Number(coins) };
+  }
+
+  private async getReviewRewards() {
+    const [xp, coins] = await Promise.all([
+      this.settings.get('gamification.xpPerReview', '20'),
+      this.settings.get('gamification.coinsPerReview', '10'),
+    ]);
+    return { xp: Number(xp), coins: Number(coins) };
+  }
+
+  private async addCoinsWithAudit(
+    userId: string,
+    coins: number,
+    type: TransactionType,
+    description: string,
+    refType: string,
+    refId: string,
+  ): Promise<void> {
+    const wallet = await this.prisma.wallet.upsert({
+      where: { userId },
       update: { coinsBalance: { increment: coins } },
       create: { userId, coinsBalance: coins },
+      select: { id: true, coinsBalance: true },
+    });
+    await this.prisma.transaction.create({
+      data: {
+        walletId: wallet.id,
+        currency: CurrencyType.COINS,
+        amount: coins,
+        balanceAfter: wallet.coinsBalance,
+        type,
+        description,
+        refType,
+        refId,
+      },
     });
   }
 
   async awardBookingCompletion(bookingId: string, userId: string): Promise<void> {
     const booking = await this.prisma.booking.findUnique({
-      where:   { id: bookingId },
-      include: { game: { select: { id: true, tags: true, categoryId: true, category: { select: { genre: true } } } } },
+      where: { id: bookingId },
+      include: {
+        game: {
+          select: {
+            id: true,
+            tags: true,
+            categoryId: true,
+            category: { select: { genre: true } },
+          },
+        },
+      },
     });
     if (!booking) return;
 
+    const rewards = await this.getBookingRewards();
     const isHorror = booking.game?.category?.genre === 'HORROR';
 
     const profile = await this.prisma.userProfile.findUnique({
-      where:  { userId },
+      where: { userId },
       select: { statsCache: true },
     });
     const stats = (profile?.statsCache as any) ?? {};
@@ -45,13 +88,21 @@ export class BookingRewardsService {
     await this.prisma.userProfile.update({
       where: { userId },
       data: {
-        xp:            { increment: XP_PER_BOOKING },
+        xp: { increment: rewards.xp },
         totalBookings: { increment: 1 },
-        totalSpent:    { increment: Number(booking.totalAmount) },
-        statsCache:    stats,
+        totalSpent: { increment: Number(booking.totalAmount) },
+        statsCache: stats,
       },
     });
-    await this.addCoins(userId, COINS_PER_BOOKING);
+
+    await this.addCoinsWithAudit(
+      userId,
+      rewards.coins,
+      TransactionType.MONTHLY_REWARD,
+      `پاداش تکمیل رزرو ${booking.code ?? bookingId}`,
+      'BOOKING',
+      bookingId,
+    );
 
     this.logger.log(`Rewards awarded to userId=${userId} for bookingId=${bookingId}`);
 
@@ -59,17 +110,25 @@ export class BookingRewardsService {
     await this.checkLevelUp(userId);
   }
 
-  async awardReviewCompletion(userId: string): Promise<void> {
+  async awardReviewCompletion(userId: string, reviewId?: string): Promise<void> {
+    const rewards = await this.getReviewRewards();
     await this.prisma.userProfile.update({
       where: { userId },
-      data:  { xp: { increment: XP_PER_REVIEW } },
+      data: { xp: { increment: rewards.xp } },
     });
-    await this.addCoins(userId, COINS_PER_REVIEW);
+    await this.addCoinsWithAudit(
+      userId,
+      rewards.coins,
+      TransactionType.RATING_REWARD,
+      'پاداش ثبت نظر',
+      'REVIEW',
+      reviewId ?? userId,
+    );
   }
 
   private async checkAndAwardBadges(userId: string): Promise<void> {
     const profile = await this.prisma.userProfile.findUnique({
-      where:  { userId },
+      where: { userId },
       select: { totalBookings: true, totalSpent: true, statsCache: true },
     });
     if (!profile) return;
@@ -77,16 +136,16 @@ export class BookingRewardsService {
     const horrorBookings = ((profile.statsCache as any)?.horrorBookings ?? 0) as number;
 
     const existingBadges = await this.prisma.userBadge.findMany({
-      where:  { userId },
+      where: { userId },
       select: { badge: { select: { code: true } } },
     });
     const ownedCodes = new Set(existingBadges.map((b) => b.badge.code));
 
     const toAward: string[] = [];
-    if (!ownedCodes.has('first-booking') && profile.totalBookings >= 1)  toAward.push('first-booking');
-    if (!ownedCodes.has('loyal')         && profile.totalBookings >= 10) toAward.push('loyal');
-    if (!ownedCodes.has('brave')         && horrorBookings >= 5)         toAward.push('brave');
-    if (!ownedCodes.has('vip-star')      && Number(profile.totalSpent) >= 10_000_000) toAward.push('vip-star');
+    if (!ownedCodes.has('first-booking') && profile.totalBookings >= 1) toAward.push('first-booking');
+    if (!ownedCodes.has('loyal') && profile.totalBookings >= 10) toAward.push('loyal');
+    if (!ownedCodes.has('brave') && horrorBookings >= 5) toAward.push('brave');
+    if (!ownedCodes.has('vip-star') && Number(profile.totalSpent) >= 10_000_000) toAward.push('vip-star');
 
     for (const code of toAward) {
       const badge = await this.prisma.badge.findUnique({ where: { code } });
@@ -98,10 +157,10 @@ export class BookingRewardsService {
 
       await this.notif.send({
         userId,
-        type:  NotificationType.BADGE_EARNED,
+        type: NotificationType.BADGE_EARNED,
         title: `بج "${badge.name}" دریافت کردی! 🏅`,
-        body:  badge.description ?? '',
-        data:  { badgeId: badge.id },
+        body: badge.description ?? '',
+        data: { badgeId: badge.id },
       });
 
       this.logger.log(`Badge ${code} awarded to userId=${userId}`);
@@ -110,7 +169,7 @@ export class BookingRewardsService {
 
   private async checkLevelUp(userId: string): Promise<void> {
     const profile = await this.prisma.userProfile.findUnique({
-      where:  { userId },
+      where: { userId },
       select: { xp: true, levelId: true },
     });
     if (!profile) return;
@@ -122,14 +181,14 @@ export class BookingRewardsService {
 
       await this.prisma.userProfile.update({
         where: { userId },
-        data:  { levelId: newLevel },
+        data: { levelId: newLevel },
       });
       await this.notif.send({
         userId,
-        type:  NotificationType.LEVEL_UP,
+        type: NotificationType.LEVEL_UP,
         title: `🎉 لول ${newLevel} رسیدی!`,
-        body:  `تبریک! به لول ${newLevel} ارتقا یافتی.`,
-        data:  { newLevel },
+        body: `تبریک! به لول ${newLevel} ارتقا یافتی.`,
+        data: { newLevel },
       });
     }
   }

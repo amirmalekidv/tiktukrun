@@ -9,6 +9,6 @@ import { TeamsService } from '../teams/teams.service';
 @Module({
   controllers: [ChatController, AdminChatController, TeamsController],
   providers: [ChatGateway, ChatService, TeamsService],
-  exports: [ChatService, ChatGateway],
+  exports: [ChatService, ChatGateway, TeamsService],
 })
 export class ChatModule {}

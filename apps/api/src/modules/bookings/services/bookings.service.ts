@@ -12,6 +12,8 @@ import { DiscountResolverService } from '../../discounts/services/discount-resol
 import { PaymentsService }         from '../../payments/payments.service';
 import { NotificationsService }    from '../../notifications/notifications.service';
 import { WalletService }           from '../../wallet/wallet.service';
+import { SettingsService }         from '../../settings/settings.service';
+import { TransactionType, CurrencyType } from '@prisma/client';
 import {
   BookingPreviewDto,
   CreateBookingDto,
@@ -23,10 +25,14 @@ import { DateTime }   from 'luxon';
 import { v4 as uuid } from 'uuid';
 import { nanoid }     from 'nanoid';
 
-const TEHRAN_TZ            = 'Asia/Tehran';
-const MIN_ADVANCE_MINUTES  = 30;
-const FULL_REFUND_HOURS    = 24;
-const PARTIAL_REFUND_RATIO = 0.5;
+const TEHRAN_TZ = 'Asia/Tehran';
+
+interface BookingPolicySettings {
+  minAdvanceMinutes: number;
+  refundWindowHours: number;
+  partialRefundRatio: number;
+  maxConcurrent: number;
+}
 
 @Injectable()
 export class BookingsService {
@@ -40,10 +46,39 @@ export class BookingsService {
     private payments:  PaymentsService,
     private notif:     NotificationsService,
     private wallet:    WalletService,
+    private settings:  SettingsService,
   ) {}
+
+  private async getBookingPolicy(): Promise<BookingPolicySettings> {
+    const [minAdvanceMinutes, refundWindowHours, partialRefundRatio, maxConcurrent] =
+      await Promise.all([
+        this.settings.get('booking.minAdvanceMinutes', '30'),
+        this.settings.get('financial.refundWindowHours', '24'),
+        this.settings.get('financial.partialRefundRatio', '0.5'),
+        this.settings.get('booking.maxConcurrent', '1'),
+      ]);
+    return {
+      minAdvanceMinutes: Number(minAdvanceMinutes),
+      refundWindowHours: Number(refundWindowHours),
+      partialRefundRatio: Number(partialRefundRatio),
+      maxConcurrent: Number(maxConcurrent),
+    };
+  }
+
+  private async getRewardPreview() {
+    const [xpPerBooking, coinsPerBooking] = await Promise.all([
+      this.settings.get('gamification.xpPerBooking', '50'),
+      this.settings.get('gamification.coinsPerBooking', '20'),
+    ]);
+    return {
+      xpReward: Number(xpPerBooking),
+      coinReward: Number(coinsPerBooking),
+    };
+  }
 
   // ─── Private helpers ────────────────────────────────────────────────────────
   private async validateSlot(gameId: string, slotDateTime: Date, playersCount: number) {
+    const policy = await this.getBookingPolicy();
     const game = await this.prisma.game.findFirst({
       where: { id: gameId, isActive: true },
     });
@@ -58,12 +93,13 @@ export class BookingsService {
     const now  = DateTime.now().setZone(TEHRAN_TZ);
     const slot = DateTime.fromJSDate(slotDateTime, { zone: TEHRAN_TZ });
     const diff = slot.diff(now, 'minutes').minutes;
-    if (diff < MIN_ADVANCE_MINUTES) {
-      throw new BadRequestException(`رزرو باید حداقل ${MIN_ADVANCE_MINUTES} دقیقه قبل باشد`);
+    if (diff < policy.minAdvanceMinutes) {
+      throw new BadRequestException(
+        `رزرو باید حداقل ${policy.minAdvanceMinutes} دقیقه قبل باشد`,
+      );
     }
 
-    // maxConcurrent = 1 (از Settings بخوان در production)
-    const maxConcurrent = 1;
+    const maxConcurrent = policy.maxConcurrent;
     const slotStart = slot.toJSDate();
     const count = await this.prisma.booking.count({
       where: {
@@ -96,6 +132,8 @@ export class BookingsService {
       new Date(dto.slotDateTime),
     );
 
+    const rewardPreview = await this.getRewardPreview();
+
     return {
       gameId:         dto.gameId,
       slotDateTime:   dto.slotDateTime,
@@ -107,8 +145,8 @@ export class BookingsService {
       appliedCode:    discount.appliedCode,
       appliedAuto:    discount.appliedAuto,
       breakdown:      discount.breakdown.map((b) => ({ ...b, amount: b.amount.toString() })),
-      xpReward:       10,
-      coinReward:     20,
+      xpReward:       rewardPreview.xpReward,
+      coinReward:     rewardPreview.coinReward,
     };
   }
 
@@ -182,7 +220,7 @@ export class BookingsService {
             currency:     'TOMAN',
             amount:       -totalAmount,
             balanceAfter: wallet.tomanBalance,
-            type:         'BOOKING_PAYMENT',
+            type:         TransactionType.BOOKING_PAYMENT,
             description:  `رزرو بازی — کد ${code}`,
             refType:      'BOOKING',
             refId:        booking.id,
@@ -324,14 +362,15 @@ export class BookingsService {
     const now   = DateTime.now().setZone(TEHRAN_TZ);
     const hours = slot.diff(now, 'hours').hours;
 
+    const policy = await this.getBookingPolicy();
+
     let refundAmount: number;
     if (booking.status === 'PENDING') {
-      // PENDING = هنوز پرداخت نشده، استرداد کامل (اگر wallet بوده)
       refundAmount = booking.paymentMethod === 'WALLET' ? Number(booking.totalAmount) : 0;
-    } else if (hours > FULL_REFUND_HOURS) {
+    } else if (hours > policy.refundWindowHours) {
       refundAmount = Number(booking.totalAmount);
     } else {
-      refundAmount = Math.round(Number(booking.totalAmount) * PARTIAL_REFUND_RATIO);
+      refundAmount = Math.round(Number(booking.totalAmount) * policy.partialRefundRatio);
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -340,7 +379,7 @@ export class BookingsService {
         data:  {
           status:       'CANCELLED',
           cancelledAt:  new Date(),
-          cancelReason: `لغو توسط کاربر — ${hours > FULL_REFUND_HOURS ? 'استرداد کامل' : booking.status === 'PENDING' ? 'بدون پرداخت' : 'استرداد ۵۰٪'}`,
+          cancelReason: `لغو توسط کاربر — ${hours > policy.refundWindowHours ? 'استرداد کامل' : booking.status === 'PENDING' ? 'بدون پرداخت' : 'استرداد جزئی'}`,
         },
       });
 
@@ -357,9 +396,9 @@ export class BookingsService {
             currency:     'TOMAN',
             amount:       refundAmount,
             balanceAfter: wallet.tomanBalance,
-            type:         'REFUND',
+            type:         TransactionType.REFUND,
             description:  `استرداد رزرو ${booking.code}`,
-            refType:      'REFUND',
+            refType:      'BOOKING',
             refId:        bookingId,
           },
         });
@@ -374,8 +413,8 @@ export class BookingsService {
       userId,
       type:  NotificationType.BOOKING_CANCELLED,
       title: 'رزرو لغو شد',
-      body:  refundAmount > 0n
-        ? `${refundAmount.toString()} تومان به کیف پول شما برگشت داده شد.`
+      body:  refundAmount > 0
+        ? `${refundAmount} تومان به کیف پول شما برگشت داده شد.`
         : 'رزرو شما لغو شد.',
       data:  { bookingId, refundAmount: refundAmount.toString() },
     }).catch(() => {});

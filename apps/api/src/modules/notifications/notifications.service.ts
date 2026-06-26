@@ -7,6 +7,7 @@
  *   - Added methods used by NotificationsController.
  */
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotificationChannel, NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -24,15 +25,19 @@ export interface SendNotificationDto {
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async send(dto: SendNotificationDto): Promise<void> {
+    const channel = (dto.channel as NotificationChannel) || NotificationChannel.INAPP;
     try {
       await this.prisma.notification.create({
         data: {
           userId: dto.userId,
           type: dto.type as any,
-          channel: (dto.channel as any) || 'INAPP',
+          channel: channel as any,
           title: dto.title,
           body: dto.body,
           link: dto.link ?? null,
@@ -40,6 +45,16 @@ export class NotificationsService {
           isRead: false,
         } as any,
       });
+
+      if (channel === NotificationChannel.INAPP || !dto.channel) {
+        this.eventEmitter.emit('notification.inapp', {
+          userId: dto.userId,
+          type: dto.type,
+          title: dto.title,
+          body: dto.body,
+          data: dto.data ?? {},
+        });
+      }
     } catch (err: any) {
       this.logger.error(`Failed to send notification: ${err?.message}`);
     }

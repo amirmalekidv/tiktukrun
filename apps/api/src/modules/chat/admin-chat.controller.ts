@@ -127,7 +127,7 @@ export class AdminChatController {
       dto.hours,
       dto.reason,
     );
-    this.chatGateway.emitUserMuted(userId, user.mutedUntil);
+    this.chatGateway.emitUserMuted(userId, user.mutedUntil!, dto.hours);
     return { success: true };
   }
 

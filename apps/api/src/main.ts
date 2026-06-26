@@ -19,6 +19,7 @@ import { ValidationPipe, Logger, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 import helmet from 'helmet';
 // [QA Fix 2026-05-25] استفاده از require برای CommonJS modules تا با swc transform
 // (که `import *` را به ‏`{ default: ... }` تبدیل می‌کند) سازگار باشد.
@@ -120,7 +121,11 @@ async function bootstrap() {
   });
 
   // ─── Socket.io Adapter ────────────────────────────────────────────────────
-  app.useWebSocketAdapter(new IoAdapter(app));
+  const redisAdapter = new RedisIoAdapter(app);
+  await redisAdapter.connectToRedis();
+  app.useWebSocketAdapter(
+    process.env.REDIS_URL ? redisAdapter : new IoAdapter(app),
+  );
 
   // ─── Swagger Documentation ────────────────────────────────────────────────
   const swaggerConfig = new DocumentBuilder()

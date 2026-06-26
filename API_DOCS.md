@@ -262,35 +262,81 @@ GET    /api/v1/admin/analytics/overview
 
 ## 🔌 WebSocket Events
 
-### اتصال
+### Namespace: `/chat`
+
+اتصال با JWT در `auth.token`:
 
 ```javascript
-const socket = io('wss://api.tiktakrun.ir', {
+const socket = io('https://api.tiktakrun.ir/chat', {
   auth: { token: '<accessToken>' },
   transports: ['websocket'],
 });
 ```
 
-### Events (سرور → کلاینت)
+### Client → Server
+
+| Event | Payload | توضیح |
+|-------|---------|--------|
+| `joinRoom` | `{ roomType: 'global' \| 'GLOBAL' \| 'team' \| 'TEAM', teamId? }` | عضویت در اتاق (case-insensitive) |
+| `leaveRoom` | `{ roomType, teamId? }` | خروج از اتاق |
+| `message` | `{ roomType, teamId?, text }` | ارسال پیام (حداکثر طول: `chat.maxMessageLength`) |
+| `typing` | `{ roomType, teamId? }` | نشانگر تایپ |
+| `report` | `{ messageId, reason? }` | گزارش پیام |
+
+### Server → Client
+
+| Event | Payload | توضیح |
+|-------|---------|--------|
+| `joinedRoom` | `{ room, roomType }` | تأیید join |
+| `chatHistory` | `ChatMessageDto[]` | تاریخچه اخیر پس از join |
+| `onlineCount` | `{ count }` | تعداد آنلاین در اتاق |
+| `newMessage` | `ChatMessageDto` | پیام جدید |
+| `userOnline` | `{ userId, userName, userAvatar }` | کاربر آنلاین شد |
+| `userOffline` | `{ userId }` | کاربر آفلاین شد |
+| `typing` | `{ userId, userName }` | کاربر در حال تایپ |
+| `userKicked` | `{ userId, teamId }` | اخراج از تیم |
+| `userMuted` | `{ userId, until, user, hours }` | محدودیت موقت |
+| `messageHidden` | `{ messageId }` | پیام مخفی (moderation) |
+| `messageDeleted` | `{ messageId }` | پیام حذف شد |
+| `notification` | `{ type, title, body, data }` | اعلان in-app روی socket چت |
+| `error` | `{ message }` | خطای سمت سرور |
+
+### `ChatMessageDto` (shared-types)
+
+```typescript
+{
+  id, roomId, userId,
+  userName, userAvatar,
+  text, status, reportsCount, createdAt, levelId?
+}
+```
+
+### Admin real-time (optional)
+
+Admin dashboard از **polling** برای KPI/فعالیت استفاده می‌کند. رویدادهای `activity`, `bookings:new`, `tickets:new` روی socket root فعلاً emit نمی‌شوند — Phase 9 admin wiring یا `AdminGateway` آینده.
+
+### Horizontal scaling
+
+وقتی `REDIS_URL` تنظیم باشد، Socket.io از `@socket.io/redis-adapter` برای multi-instance استفاده می‌کند.
+
+---
+
+## 🔌 Legacy WebSocket table (deprecated)
+
+<details>
+<summary>جدول قدیمی — فقط برای مرجع</summary>
 
 | Event | Payload | توضیح |
 |-------|---------|--------|
 | `notification` | `{type, title, body, data}` | اعلان جدید |
-| `chat:message` | `{roomId, message, sender}` | پیام جدید چت |
-| `chat:typing` | `{roomId, userId, isTyping}` | تایپ |
+| `chat:message` | `{roomId, message, sender}` | **جایگزین: `newMessage`** |
+| `chat:typing` | `{roomId, userId, isTyping}` | **جایگزین: `typing`** |
 | `booking:status` | `{bookingId, status}` | تغییر وضعیت رزرو |
 | `wallet:update` | `{balance, change}` | تغییر موجودی |
 | `level:up` | `{newLevel, rewards}` | level up |
 | `badge:earned` | `{badge}` | بج جدید |
 
-### Events (کلاینت → سرور)
-
-| Event | Payload | توضیح |
-|-------|---------|--------|
-| `chat:join` | `{roomId}` | join چت |
-| `chat:leave` | `{roomId}` | leave |
-| `chat:send` | `{roomId, text}` | ارسال پیام |
-| `chat:typing` | `{roomId, isTyping}` | typing indicator |
+</details>
 
 ---
 

@@ -100,16 +100,16 @@
 
 | # | Priority | Task | Description |
 |---|----------|------|-------------|
-| **3.1** | 🔴 | Normalize chat gateway protocol | `chat.gateway.ts`: accept `roomType` case-insensitively (`global`/`GLOBAL`, `team`/`TEAM`). Document canonical contract in `API_DOCS.md`. |
-| **3.2** | 🔴 | Normalize outbound message payload | Gateway emits Prisma shape `{ user: { fullName, avatarUrl } }`; clients expect `{ userId, userName, userAvatar }`. Emit a stable DTO from gateway (create `ChatMessageDto` in shared-types). |
-| **3.3** | 🔴 | Emit chat history on room join | Web `useChat` listens for `chatHistory`; gateway never emits it. On `joinRoom`, load recent messages via `ChatService` and emit `chatHistory` + `onlineCount` for the room. |
-| **3.4** | 🟠 | Fix presence field names | Gateway uses `userData?.name`; user model has `fullName`. Fix `userOnline` / `userOffline` payloads. |
-| **3.5** | 🟠 | Wire team kick to WebSocket | `TeamsService.kick()` does not call `ChatGateway.emitUserKicked()`. Inject gateway (or use EventEmitter) so kicked users leave team room and receive event. |
-| **3.6** | 🟠 | Enforce `chat.maxMessageLength` | Setting exists in DB defaults but gateway/service may not enforce it server-side. Validate in `ChatService.sendMessage` and gateway. |
-| **3.7** | 🟡 | Implement `avgResponseTime` in chat stats | `chat.service.ts` returns stub `0` for admin stats; compute from message timestamps if required by admin UI. |
-| **3.8** | 🟡 | Admin real-time gateway (optional) | Admin listens for `activity`, `bookings:new`, `tickets:new` — **no backend emitter**. Either add `AdminGateway` namespace with events from audit/booking/ticket services, or document polling-only admin UX and remove dead socket clients. |
-| **3.9** | 🟡 | Notification push over socket (optional) | Web `useNotifications` listens on chat socket for `notification` events. Emit from `NotificationsService.create()` when type is in-app, or remove client listener. |
-| **3.10** | 🟢 | Redis Socket.io adapter for multi-instance | For horizontal scaling, configure `@socket.io/redis-adapter` using existing Redis connection. |
+| **3.1** | 🔴 | `[done]` Normalize chat gateway protocol | `chat.gateway.ts`: accept `roomType` case-insensitively (`global`/`GLOBAL`, `team`/`TEAM`). Document canonical contract in `API_DOCS.md`. |
+| **3.2** | 🔴 | `[done]` Normalize outbound message payload | Gateway emits Prisma shape `{ user: { fullName, avatarUrl } }`; clients expect `{ userId, userName, userAvatar }`. Emit a stable DTO from gateway (create `ChatMessageDto` in shared-types). |
+| **3.3** | 🔴 | `[done]` Emit chat history on room join | Web `useChat` listens for `chatHistory`; gateway never emits it. On `joinRoom`, load recent messages via `ChatService` and emit `chatHistory` + `onlineCount` for the room. |
+| **3.4** | 🟠 | `[done]` Fix presence field names | Gateway uses `userData?.name`; user model has `fullName`. Fix `userOnline` / `userOffline` payloads. |
+| **3.5** | 🟠 | `[done]` Wire team kick to WebSocket | `TeamsService.kick()` does not call `ChatGateway.emitUserKicked()`. Inject gateway (or use EventEmitter) so kicked users leave team room and receive event. |
+| **3.6** | 🟠 | `[done]` Enforce `chat.maxMessageLength` | Setting exists in DB defaults but gateway/service may not enforce it server-side. Validate in `ChatService.sendMessage` and gateway. |
+| **3.7** | 🟡 | `[done]` Implement `avgResponseTime` in chat stats | `chat.service.ts` returns stub `0` for admin stats; compute from message timestamps if required by admin UI. |
+| **3.8** | 🟡 | `[done]` Admin real-time gateway (optional) | Admin listens for `activity`, `bookings:new`, `tickets:new` — **no backend emitter**. Either add `AdminGateway` namespace with events from audit/booking/ticket services, or document polling-only admin UX and remove dead socket clients. |
+| **3.9** | 🟡 | `[done]` Notification push over socket (optional) | Web `useNotifications` listens on chat socket for `notification` events. Emit from `NotificationsService.create()` when type is in-app, or remove client listener. |
+| **3.10** | 🟢 | `[done]` Redis Socket.io adapter for multi-instance | For horizontal scaling, configure `@socket.io/redis-adapter` using existing Redis connection. |
 
 **Depends on:** 2.1 (optional for SMS alerts), 0.1  
 **Blocks:** Phase 9.4 (web community/chat)
@@ -122,13 +122,13 @@
 
 | # | Priority | Task | Description |
 |---|----------|------|-------------|
-| **4.1** | 🔴 | Drive booking rules from settings | Replace hardcoded `maxConcurrent = 1`, refund windows, and timeout values in `bookings.service.ts` with `SettingsService` (`financial.refundWindowHours`, new keys if needed). Match `PROJECT_MODULES_AND_POLICIES.md`. |
-| **4.2** | 🟠 | Fix wallet transaction types on booking pay/refund | After stub removal (1.2), ensure debits/credits use correct `WalletTxType` and leave auditable trail per policy. |
-| **4.3** | 🟠 | Booking payment flow e2e test | Add real DB e2e: preview → create → pay (wallet) → confirm → complete → rewards. Current `bookings.e2e-spec.ts` is mostly mocked unit tests — rename or split. |
-| **4.4** | 🟠 | Review eligibility enforcement | Verify `reviews.service.ts` only allows reviews on `COMPLETED` bookings for the correct user; align with admin moderation (`PENDING`/`APPROVED`). |
-| **4.5** | 🟡 | Admin booking CSV export pagination | `bookings-admin.service.ts` export limited to 100 rows; implement cursor/page export for production reports. |
-| **4.6** | 🟡 | Drive gamification rewards from settings | `booking-rewards.service.ts` should read `gamification.xpPerBooking`, coin/diamond grants from settings — not duplicated constants. |
-| **4.7** | 🟢 | Public review routes alignment | Backend has `GET /reviews/game/:gameId`; web `api.ts` calls `GET /games/:gameId/reviews`. Add alias route or document canonical path (frontend task 9.2). |
+| **4.1** | 🔴 | `[done]` Drive booking rules from settings | Replace hardcoded `maxConcurrent = 1`, refund windows, and timeout values in `bookings.service.ts` with `SettingsService` (`financial.refundWindowHours`, new keys if needed). Match `PROJECT_MODULES_AND_POLICIES.md`. |
+| **4.2** | 🟠 | `[done]` Fix wallet transaction types on booking pay/refund | After stub removal (1.2), ensure debits/credits use correct `WalletTxType` and leave auditable trail per policy. |
+| **4.3** | 🟠 | `[done]` Booking payment flow e2e test | Add real DB e2e: preview → create → pay (wallet) → confirm → complete → rewards. Current `bookings.e2e-spec.ts` is mostly mocked unit tests — rename or split. |
+| **4.4** | 🟠 | `[done]` Review eligibility enforcement | Verify `reviews.service.ts` only allows reviews on `COMPLETED` bookings for the correct user; align with admin moderation (`PENDING`/`APPROVED`). |
+| **4.5** | 🟡 | `[done]` Admin booking CSV export pagination | `bookings-admin.service.ts` export limited to 100 rows; implement cursor/page export for production reports. |
+| **4.6** | 🟡 | `[done]` Drive gamification rewards from settings | `booking-rewards.service.ts` should read `gamification.xpPerBooking`, coin/diamond grants from settings — not duplicated constants. |
+| **4.7** | 🟢 | `[done]` Public review routes alignment | Backend has `GET /reviews/game/:gameId`; web `api.ts` calls `GET /games/:gameId/reviews`. Add alias route or document canonical path (frontend task 9.2). |
 
 **Depends on:** 1.2, 1.3, 2.3  
 **Blocks:** Phase 9.3
@@ -370,6 +370,8 @@ These are noted in QA/DELIVERY docs but not required for initial completion:
 Before marking the project **complete**, verify:
 
 - [x] All Phase 0–2 tasks done (foundation + stubs + SMS/payments)
+- [x] Phase 3 chat socket protocol aligned (gateway + API docs)
+- [x] Phase 4 booking/wallet/review policy driven from settings
 - [ ] Chat socket tested with real JWT from web login
 - [ ] Wallet charge + booking payment tested with ZarinPal sandbox
 - [ ] Admin settings save and load from MongoDB

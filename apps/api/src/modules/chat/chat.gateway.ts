@@ -8,15 +8,25 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ChatService } from './chat.service';
 import { SettingsService } from '../settings/settings.service';
+import {
+  normalizeRoomType,
+  socketRoomName,
+  toChatMessageDto,
+} from './chat-message.mapper';
 
 interface AuthSocket extends Socket {
   userId?: string;
-  userData?: any;
+  userData?: {
+    id: string;
+    fullName: string;
+    avatarUrl: string | null;
+  };
 }
 
 @WebSocketGateway({
@@ -31,7 +41,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private readonly logger = new Logger(ChatGateway.name);
-  private readonly connectedUsers = new Map<string, string>(); // socketId → userId
+  /** socketId → userId */
+  private readonly connectedUsers = new Map<string, string>();
+  /** room name → set of userIds currently in room */
+  private readonly roomPresence = new Map<string, Set<string>>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -73,29 +86,37 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleDisconnect(client: AuthSocket) {
-    if (client.userId) {
-      this.connectedUsers.delete(client.id);
-      // Emit offline to all joined rooms
-      client.rooms.forEach((room) => {
-        this.server.to(room).emit('userOffline', { userId: client.userId });
-      });
-      this.logger.log(`User ${client.userId} disconnected from chat`);
-    }
+    if (!client.userId) return;
+
+    this.connectedUsers.delete(client.id);
+    client.rooms.forEach((room) => {
+      if (!room.startsWith('room:')) return;
+      this.removeFromRoomPresence(room, client.userId!);
+      this.server.to(room).emit('userOffline', { userId: client.userId });
+      this.emitOnlineCount(room);
+    });
+    this.logger.log(`User ${client.userId} disconnected from chat`);
   }
 
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: AuthSocket,
-    @MessageBody() data: { roomType: 'GLOBAL' | 'TEAM'; teamId?: string },
+    @MessageBody() data: { roomType: string; teamId?: string },
   ) {
-    const room =
-      data.roomType === 'GLOBAL' ? 'room:global' : `room:team:${data.teamId}`;
+    const roomType = normalizeRoomType(data.roomType);
+    if (!roomType) {
+      client.emit('error', { message: 'نوع اتاق نامعتبر است' });
+      return;
+    }
 
-    if (data.roomType === 'TEAM' && data.teamId) {
-      // Verify membership
+    if (roomType === 'TEAM') {
+      if (!data.teamId) {
+        client.emit('error', { message: 'teamId لازم است' });
+        return;
+      }
       const member = await this.prisma.teamMember.findUnique({
         where: {
-          teamId_userId: { teamId: data.teamId, userId: client.userId },
+          teamId_userId: { teamId: data.teamId, userId: client.userId! },
         },
       });
       if (!member) {
@@ -104,36 +125,72 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
 
+    const room = socketRoomName(roomType, data.teamId);
     client.join(room);
+    this.addToRoomPresence(room, client.userId!);
+
     this.server.to(room).emit('userOnline', {
       userId: client.userId,
-      name: client.userData?.name,
-      avatar: client.userData?.avatar,
+      userName: client.userData?.fullName,
+      userAvatar: client.userData?.avatarUrl,
     });
 
-    client.emit('joinedRoom', { room, roomType: data.roomType });
+    const history =
+      roomType === 'GLOBAL'
+        ? await this.chatService.getGlobalMessages(1, 50)
+        : await this.chatService.getTeamMessages(data.teamId!, client.userId!, 1, 50);
+
+    client.emit('joinedRoom', { room, roomType });
+    client.emit(
+      'chatHistory',
+      history.map((m) => toChatMessageDto(m)),
+    );
+    client.emit('onlineCount', { count: this.getRoomOnlineCount(room) });
+    this.emitOnlineCount(room);
   }
 
   @SubscribeMessage('leaveRoom')
   async handleLeaveRoom(
     @ConnectedSocket() client: AuthSocket,
-    @MessageBody() data: { roomType: 'GLOBAL' | 'TEAM'; teamId?: string },
+    @MessageBody() data: { roomType: string; teamId?: string },
   ) {
-    const room =
-      data.roomType === 'GLOBAL' ? 'room:global' : `room:team:${data.teamId}`;
+    const roomType = normalizeRoomType(data.roomType);
+    if (!roomType || !client.userId) return;
+
+    const room = socketRoomName(roomType, data.teamId);
     client.leave(room);
+    this.removeFromRoomPresence(room, client.userId);
     this.server.to(room).emit('userOffline', { userId: client.userId });
+    this.emitOnlineCount(room);
   }
 
   @SubscribeMessage('message')
   async handleMessage(
     @ConnectedSocket() client: AuthSocket,
     @MessageBody()
-    data: { roomType: 'GLOBAL' | 'TEAM'; teamId?: string; text: string },
+    data: { roomType: string; teamId?: string; text: string },
   ) {
     if (!client.userId) return;
 
-    // Server-side ban check
+    const roomType = normalizeRoomType(data.roomType);
+    if (!roomType) {
+      client.emit('error', { message: 'نوع اتاق نامعتبر است' });
+      return;
+    }
+
+    const text = (data.text ?? '').trim();
+    if (!text) {
+      client.emit('error', { message: 'پیام خالی است' });
+      return;
+    }
+
+    try {
+      await this.chatService.validateMessageLength(text);
+    } catch (err: any) {
+      client.emit('error', { message: err.message ?? 'پیام نامعتبر است' });
+      return;
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: client.userId },
       select: { isBanned: true, isMuted: true, mutedUntil: true },
@@ -142,21 +199,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('error', { message: 'حساب شما مسدود شده' });
       return;
     }
-    if (user?.isMuted && user.mutedUntil > new Date()) {
+    if (user?.isMuted && user.mutedUntil && user.mutedUntil > new Date()) {
       client.emit('error', { message: 'شما موقتاً محدود شده‌اید' });
       return;
     }
 
-    // Resolve room id (room-based MongoDB schema)
-    const roomId = await this.chatService.resolveRoomId(
-      data.roomType,
-      data.teamId,
-    );
+    const roomId = await this.chatService.resolveRoomId(roomType, data.teamId);
 
-    // Rate limit check
-    const rateLimit = Number(
-      await this.settings.get('chat.rateLimit', '5'),
-    );
+    const rateLimit = Number(await this.settings.get('chat.rateLimit', '5'));
     const oneMinAgo = new Date(Date.now() - 60_000);
     const recentCount = await this.prisma.chatMessage.count({
       where: {
@@ -170,12 +220,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // Create message
     const message = await this.prisma.chatMessage.create({
       data: {
         userId: client.userId,
         roomId,
-        text: data.text,
+        text,
         status: 'NORMAL',
       },
       include: {
@@ -190,22 +239,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       },
     });
 
-    const room =
-      data.roomType === 'GLOBAL' ? 'room:global' : `room:team:${data.teamId}`;
-
-    this.server.to(room).emit('newMessage', message);
+    const room = socketRoomName(roomType, data.teamId);
+    this.server.to(room).emit('newMessage', toChatMessageDto(message));
   }
 
   @SubscribeMessage('typing')
   async handleTyping(
     @ConnectedSocket() client: AuthSocket,
-    @MessageBody() data: { roomType: 'GLOBAL' | 'TEAM'; teamId?: string },
+    @MessageBody() data: { roomType: string; teamId?: string },
   ) {
-    const room =
-      data.roomType === 'GLOBAL' ? 'room:global' : `room:team:${data.teamId}`;
+    const roomType = normalizeRoomType(data.roomType);
+    if (!roomType) return;
+
+    const room = socketRoomName(roomType, data.teamId);
     client.to(room).emit('typing', {
       userId: client.userId,
-      name: client.userData?.name,
+      userName: client.userData?.fullName,
     });
   }
 
@@ -223,28 +272,82 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('reportAck', { success: true, ...result });
   }
 
-  // Server-side emit helpers (called by admin actions)
+  @OnEvent('notification.inapp')
+  handleInAppNotification(payload: {
+    userId: string;
+    type: string;
+    title: string;
+    body: string;
+    data?: Record<string, unknown>;
+  }) {
+    for (const [socketId, uid] of this.connectedUsers) {
+      if (uid === payload.userId) {
+        this.server.to(socketId).emit('notification', {
+          type: payload.type,
+          title: payload.title,
+          body: payload.body,
+          data: payload.data ?? {},
+        });
+      }
+    }
+  }
+
   emitMessageHidden(roomType: string, teamId: string | null, messageId: string) {
-    const room = roomType === 'GLOBAL' ? 'room:global' : `room:team:${teamId}`;
+    const room =
+      roomType === 'GLOBAL' ? 'room:global' : `room:team:${teamId}`;
     this.server.to(room).emit('messageHidden', { messageId });
   }
 
   emitMessageDeleted(roomType: string, teamId: string | null, messageId: string) {
-    const room = roomType === 'GLOBAL' ? 'room:global' : `room:team:${teamId}`;
+    const room =
+      roomType === 'GLOBAL' ? 'room:global' : `room:team:${teamId}`;
     this.server.to(room).emit('messageDeleted', { messageId });
   }
 
-  emitUserMuted(userId: string, until: Date) {
-    // Find socket by userId and emit
+  emitUserMuted(userId: string, until: Date, hours?: number) {
     for (const [socketId, uid] of this.connectedUsers) {
       if (uid === userId) {
-        this.server.to(socketId).emit('userMuted', { userId, until });
+        this.server.to(socketId).emit('userMuted', {
+          userId,
+          until: until.toISOString(),
+          user: userId,
+          hours: hours ?? Math.ceil((until.getTime() - Date.now()) / 3600_000),
+        });
       }
     }
   }
 
   emitUserKicked(teamId: string, userId: string) {
     const room = `room:team:${teamId}`;
-    this.server.to(room).emit('userKicked', { userId });
+    this.server.to(room).emit('userKicked', { userId, teamId });
+
+    for (const [socketId, uid] of this.connectedUsers) {
+      if (uid === userId) {
+        const client = this.server.sockets.sockets.get(socketId);
+        client?.leave(room);
+        client?.emit('userKicked', { userId, teamId });
+      }
+    }
+    this.removeFromRoomPresence(room, userId);
+    this.emitOnlineCount(room);
+  }
+
+  private addToRoomPresence(room: string, userId: string) {
+    if (!this.roomPresence.has(room)) {
+      this.roomPresence.set(room, new Set());
+    }
+    this.roomPresence.get(room)!.add(userId);
+  }
+
+  private removeFromRoomPresence(room: string, userId: string) {
+    this.roomPresence.get(room)?.delete(userId);
+  }
+
+  private getRoomOnlineCount(room: string): number {
+    return this.roomPresence.get(room)?.size ?? 0;
+  }
+
+  private emitOnlineCount(room: string) {
+    this.server.to(room).emit('onlineCount', { count: this.getRoomOnlineCount(room) });
   }
 }

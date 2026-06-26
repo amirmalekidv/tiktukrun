@@ -38,6 +38,7 @@ export * from './models/setting';
 // ─── API DTOs ────────────────────────────────────────────────
 export * from './api/requests';
 export * from './api/responses';
+export * from './api/chat.dto';
 
 // ─── Utilities ───────────────────────────────────────────────
 export * from './utils/pagination';

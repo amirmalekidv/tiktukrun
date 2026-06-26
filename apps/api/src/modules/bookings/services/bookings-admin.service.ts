@@ -273,10 +273,22 @@ export class BookingsAdminService {
   }
 
   async exportExcel(query: BookingQueryDto, userRole: UserRole, branchId?: string) {
-    // در production از exceljs استفاده می‌شود
-    // stub: CSV export — limit=100 به دلیل @Max(100) در DTO؛ در production pagination استفاده می‌شود
-    const result = await this.findAll({ ...query, limit: 100, page: 1 }, userRole, branchId);
-    const rows   = (result as any).data as any[];
+    const pageSize = 100;
+    let page = 1;
+    const rows: any[] = [];
+
+    while (true) {
+      const result = await this.findAll(
+        { ...query, limit: pageSize, page },
+        userRole,
+        branchId,
+      );
+      const batch = (result as any).data as any[];
+      rows.push(...batch);
+      const totalPages = (result as any).pagination?.totalPages ?? 1;
+      if (page >= totalPages || batch.length === 0) break;
+      page += 1;
+    }
 
     const headers = ['code', 'user', 'game', 'status', 'totalAmount', 'slotDateTime'];
     const csv = [
