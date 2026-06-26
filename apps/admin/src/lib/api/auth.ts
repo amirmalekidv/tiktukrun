@@ -22,7 +22,14 @@ export const authApi = {
   sendOtp: (mobile: string) =>
     USE_MOCK
       ? mockApi.sendOtp(mobile)
-      : authHttp.post('/auth/otp/request', { mobile }).then((r) => unwrap(r)),
+      : authHttp.post('/auth/otp/request', { mobile }).then((r) => {
+          const body = r.data as { success?: boolean; message?: string; data?: unknown }
+          return {
+            success: body.success ?? true,
+            message: body.message,
+            data: body.data,
+          }
+        }),
 
   verifyOtp: (mobile: string, code: string) =>
     USE_MOCK

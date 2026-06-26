@@ -50,8 +50,8 @@ export class CreateGameDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(10)
   fearLevel?: number;
 
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(5)
-  difficulty?: number;
+  @IsOptional() @IsString()
+  difficulty?: string;
 
   @IsOptional() @IsEnum(GameTierEnum)
   tier?: GameTierEnum;
@@ -62,6 +62,10 @@ export class CreateGameDto {
   @Type(() => Number) @IsInt() @Min(1)
   maxPlayers: number;
 
+  @Transform(({ obj, value }) => {
+    const raw = value ?? obj?.duration;
+    return raw !== undefined && raw !== '' ? Number(raw) : undefined;
+  })
   @Type(() => Number) @IsInt() @Min(15)
   durationMinutes: number;
 
@@ -69,13 +73,25 @@ export class CreateGameDto {
   pricePerPerson: number;
 
   @IsOptional() @IsArray() @IsString({ each: true })
-  @Transform(({ value }) => typeof value === 'string' ? value.split(',') : value)
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value !== 'string' || !value.trim()) return [];
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      /* comma-separated fallback */
+    }
+    return value.split(',').map((s) => s.trim()).filter(Boolean);
+  })
   tags?: string[];
 
   @IsOptional() @IsBoolean()
+  @Transform(({ value }) => value === true || value === 'true')
   isFeatured?: boolean;
 
   @IsOptional() @IsBoolean()
+  @Transform(({ value }) => value === true || value === 'true')
   isActive?: boolean;
 
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(50)

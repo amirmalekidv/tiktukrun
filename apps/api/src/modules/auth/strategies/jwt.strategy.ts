@@ -37,11 +37,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     // Verify session is still valid
     // [QA Fix 2026-05-25] Session schema uses revokedAt (not isRevoked)
+    // MongoDB: optional fields omitted on create don't match `revokedAt: null`
     const session = await this.prisma.session.findFirst({
       where: {
         id: sessionId,
         userId,
-        revokedAt: null,
+        revokedAt: { isSet: false },
         expiresAt: { gt: new Date() },
       },
     });

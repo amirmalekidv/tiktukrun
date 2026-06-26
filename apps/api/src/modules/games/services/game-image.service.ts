@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import * as path  from 'path';
 import * as fs    from 'fs';
-import * as sharp from 'sharp';
+import sharp from 'sharp';
 
 const UPLOAD_BASE = path.resolve(process.cwd(), 'storage/uploads/games');
 
@@ -29,7 +29,7 @@ export class GameImageService {
     const filename = `cover-${Date.now()}.webp`;
     const outPath  = path.join(dir, filename);
 
-    await (sharp as any)(file.path)
+    await sharp(file.path)
       .resize(1280, 720, { fit: 'cover' })
       .webp({ quality: 85 })
       .toFile(outPath);
@@ -53,12 +53,12 @@ export class GameImageService {
     const mainFile  = `gallery-${ts}-${index}.webp`;
     const thumbFile = `thumb-${ts}-${index}.webp`;
 
-    await (sharp as any)(file.path)
+    await sharp(file.path)
       .resize(1280, 720, { fit: 'cover' })
       .webp({ quality: 85 })
       .toFile(path.join(dir, mainFile));
 
-    await (sharp as any)(file.path)
+    await sharp(file.path)
       .resize(400, 225, { fit: 'cover' })
       .webp({ quality: 80 })
       .toFile(path.join(dir, thumbFile));

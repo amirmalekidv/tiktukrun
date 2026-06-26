@@ -199,32 +199,40 @@ async function seedGames(catMap: Record<string, string>, branchIds: string[]) {
 
 // ─── Admin user ────────────────────────────────────────────────────────────────
 async function seedAdmin() {
-  const mobile = '09120000000';
-  const passwordHash = await bcrypt.hash('Admin@12345', 10);
+  const mobile = process.env.SEED_SUPERADMIN_MOBILE || '09120000001';
+  const password = process.env.SEED_SUPERADMIN_PASSWORD || 'Admin@123456';
+  const email = process.env.SEED_SUPERADMIN_EMAIL || 'admin@tiktakrun.local';
+  const nickname = process.env.SEED_SUPERADMIN_NICKNAME || 'superadmin';
+  const passwordHash = await bcrypt.hash(password, 10);
 
-  const admin = await prisma.user.upsert({
-    where: { mobile },
-    update: { fullName: 'مدیر سیستم', passwordHash },
-    create: {
-      mobile,
-      fullName: 'مدیر سیستم',
-      inviteCode: 'ADMIN001',
-      passwordHash,
-      profile: { create: { levelId: 1 } },
-      wallet: { create: { tomanBalance: 0, coinsBalance: 1000, diamondsBalance: 100 } },
-    },
-  });
+  const existing = await prisma.user.findUnique({ where: { mobile } });
+  const admin = existing
+    ? await prisma.user.update({
+        where: { mobile },
+        data: { fullName: 'مدیر سیستم', passwordHash, email: existing.email ?? email, nickname: existing.nickname ?? nickname },
+      })
+    : await prisma.user.create({
+        data: {
+          mobile,
+          email,
+          nickname,
+          fullName: 'مدیر سیستم',
+          inviteCode: 'ADMIN001',
+          passwordHash,
+          profile: { create: { levelId: 1 } },
+          wallet: { create: { tomanBalance: 0, coinsBalance: 1000, diamondsBalance: 100 } },
+        },
+      });
 
-  // نقش ADMIN
   const existingRole = await prisma.userRoleAssignment.findFirst({
-    where: { userId: admin.id, role: 'ADMIN' as any },
+    where: { userId: admin.id, role: 'SUPER_ADMIN' as any },
   });
   if (!existingRole) {
     await prisma.userRoleAssignment.create({
-      data: { userId: admin.id, role: 'ADMIN' as any },
+      data: { userId: admin.id, role: 'SUPER_ADMIN' as any },
     });
   }
-  console.log('  ✅ کاربر ادمین (موبایل: 09120000000 / رمز: Admin@12345)');
+  console.log(`  ✅ کاربر ادمین (موبایل: ${mobile} / رمز: ${password})`);
 }
 
 // ─── Wheel prizes ────────────────────────────────────────────────────────────

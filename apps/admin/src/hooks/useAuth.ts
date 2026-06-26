@@ -1,4 +1,5 @@
 'use client'
+import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/lib/api/auth'
 import { can, getRoleLabel } from '@/lib/permissions'
@@ -21,6 +22,27 @@ function isAuthResponse(data: unknown): data is AuthResponse {
   )
 }
 
+function getAuthErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err)) {
+    const body = err.response?.data as {
+      error?: { message?: string }
+      message?: string | string[]
+    } | undefined
+    const msg = body?.error?.message ?? body?.message
+    if (typeof msg === 'string') return msg
+    if (Array.isArray(msg) && msg[0]) return msg[0]
+    if (!err.response) {
+      return 'سرور در دسترس نیست. MongoDB و API را بررسی کنید'
+    }
+  }
+  return fallback
+}
+
+function getAdminRoles(user: AdminUser & { roleAssignments?: { role: AdminRole }[] }): AdminRole[] {
+  if (Array.isArray(user.roles) && user.roles.length > 0) return user.roles
+  return (user.roleAssignments ?? []).map((r) => r.role)
+}
+
 // Module-level constant — not recreated on every render
 const ADMIN_ROLES: AdminRole[] = ['SUPER_ADMIN', 'ADMIN', 'BRANCH_MANAGER', 'SUPPORT', 'MARKETING']
 
@@ -31,11 +53,14 @@ export function useAuth() {
     setLoading(true)
     try {
       const res = await authApi.sendOtp(mobile)
-      if (res.success) {
+      const success = res && typeof res === 'object' && 'success' in res
+        ? Boolean((res as { success?: boolean }).success)
+        : true
+      if (success) {
         toast.success('کد تأیید ارسال شد')
         return true
       }
-      toast.error(res.message || 'خطا در ارسال کد')
+      toast.error((res as { message?: string }).message || 'خطا در ارسال کد')
       return false
     } catch {
       toast.error('خطا در ارسال کد')
@@ -54,7 +79,7 @@ export function useAuth() {
         : (payload as { data?: AuthResponse }).data
       if (data && isAuthResponse(data)) {
         const { user: u, accessToken, refreshToken } = data
-        if (!u.roles.some((r: AdminRole) => ADMIN_ROLES.includes(r))) {
+        if (!getAdminRoles(u).some((r) => ADMIN_ROLES.includes(r))) {
           toast.error('شما دسترسی به پنل مدیریت ندارید')
           return false
         }
@@ -64,8 +89,8 @@ export function useAuth() {
       }
       toast.error('کد وارد شده صحیح نیست')
       return false
-    } catch {
-      toast.error('خطا در تأیید کد')
+    } catch (err) {
+      toast.error(getAuthErrorMessage(err, 'خطا در تأیید کد'))
       return false
     } finally {
       setLoading(false)
@@ -81,7 +106,7 @@ export function useAuth() {
         : (payload as { data?: AuthResponse }).data
       if (data && isAuthResponse(data)) {
         const { user: u, accessToken, refreshToken } = data
-        if (!u.roles.some((r: AdminRole) => ADMIN_ROLES.includes(r))) {
+        if (!getAdminRoles(u).some((r) => ADMIN_ROLES.includes(r))) {
           toast.error('شما دسترسی به پنل مدیریت ندارید')
           return false
         }
@@ -91,8 +116,8 @@ export function useAuth() {
       }
       toast.error('رمز عبور اشتباه است')
       return false
-    } catch {
-      toast.error('خطا در ورود')
+    } catch (err) {
+      toast.error(getAuthErrorMessage(err, 'خطا در ورود'))
       return false
     } finally {
       setLoading(false)

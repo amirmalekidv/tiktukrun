@@ -1,16 +1,32 @@
 'use client';
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useDropzone } from 'react-dropzone';
+import axios from 'axios';
 import { Toggle } from '@/components/ui';
-import { gamesApi } from '@/lib/api';
+import { gamesApi, categoriesApi, branchesApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { Upload, X, Loader2, Plus } from 'lucide-react';
-import type { Game } from '@/lib/types';
+import type { Game, Category, Branch } from '@/lib/types';
 import { FEAR_EMOJIS, fearLabel } from '@/lib/utils/format';
+
+function unwrapList<T>(res: { data?: { data?: T } | T }): T {
+  const body = res.data as { data?: T } | T;
+  return (body && typeof body === 'object' && 'data' in body ? body.data : body) as T;
+}
+
+function getApiErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err)) {
+    const body = err.response?.data as { error?: { message?: string }; message?: string | string[] };
+    const msg = body?.error?.message ?? body?.message;
+    if (typeof msg === 'string') return msg;
+    if (Array.isArray(msg) && msg[0]) return msg[0];
+  }
+  return fallback;
+}
 
 const schema = z.object({
   title: z.string().min(2, 'عنوان حداقل ۲ کاراکتر باشد'),
@@ -45,9 +61,29 @@ interface GameFormProps {
 export default function GameForm({ game, onSuccess }: GameFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [optionsLoading, setOptionsLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [coverPreview, setCoverPreview] = useState<string | null>(game?.coverImage || null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [tagInput, setTagInput] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [catRes, branchRes] = await Promise.all([
+          categoriesApi.getAll(),
+          branchesApi.getAll(),
+        ]);
+        setCategories(unwrapList<Category[]>(catRes) ?? []);
+        setBranches(unwrapList<Branch[]>(branchRes) ?? []);
+      } catch {
+        toast.error('خطا در بارگذاری دسته‌بندی‌ها و شعب');
+      } finally {
+        setOptionsLoading(false);
+      }
+    })();
+  }, []);
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -113,13 +149,31 @@ export default function GameForm({ game, onSuccess }: GameFormProps) {
     setLoading(true);
     try {
       const fd = new FormData();
-      Object.entries(data).forEach(([k, v]) => {
-        if (v !== undefined && v !== null) {
-          if (Array.isArray(v)) fd.append(k, JSON.stringify(v));
-          else fd.append(k, String(v));
-        }
-      });
-      if (coverFile) fd.append('coverImage', coverFile);
+      fd.append('title', data.title);
+      if (data.subtitle) fd.append('subtitle', data.subtitle);
+      if (data.slug) fd.append('slug', data.slug);
+      fd.append('categoryId', data.categoryId);
+      fd.append('branchId', data.branchId);
+      if (data.description) fd.append('description', data.description);
+      if (data.scenario) fd.append('scenario', data.scenario);
+      fd.append('fearLevel', String(data.fearLevel));
+      fd.append('difficulty', data.difficulty);
+      fd.append('tier', data.tier);
+      fd.append('minPlayers', String(data.minPlayers));
+      fd.append('maxPlayers', String(data.maxPlayers));
+      fd.append('durationMinutes', String(data.duration));
+      fd.append('pricePerPerson', data.pricePerPerson);
+      if (data.weeklyDiscountPercent !== undefined) {
+        fd.append('weeklyDiscountPercent', String(data.weeklyDiscountPercent));
+      }
+      if (data.siteRank !== undefined && !Number.isNaN(data.siteRank)) {
+        fd.append('siteRank', String(data.siteRank));
+      }
+      if (data.tags.length > 0) fd.append('tags', JSON.stringify(data.tags));
+      fd.append('isActive', String(data.isActive));
+      fd.append('isFeatured', String(data.isFeatured));
+      if (data.teaserUrl) fd.append('teaserUrl', data.teaserUrl);
+      if (coverFile) fd.append('cover', coverFile);
 
       if (game) {
         await gamesApi.update(game.id, fd);
@@ -130,8 +184,8 @@ export default function GameForm({ game, onSuccess }: GameFormProps) {
       }
       onSuccess?.();
       router.push('/games');
-    } catch {
-      toast.error('خطا در ذخیره بازی');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'خطا در ذخیره بازی'));
     } finally {
       setLoading(false);
     }
@@ -166,24 +220,22 @@ export default function GameForm({ game, onSuccess }: GameFormProps) {
 
           <div>
             <label className="label-field">دسته‌بندی *</label>
-            <select {...register('categoryId')} className="select-field">
-              <option value="">انتخاب...</option>
-              <option value="cat1">اتاق فرار</option>
-              <option value="cat2">لیزرتگ</option>
-              <option value="cat3">VR</option>
-              <option value="cat4">پینت‌بال</option>
-              <option value="cat5">بردگیم</option>
+            <select {...register('categoryId')} className="select-field" disabled={optionsLoading}>
+              <option value="">{optionsLoading ? 'در حال بارگذاری...' : 'انتخاب...'}</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
             </select>
             {errors.categoryId && <p className="text-red-400 text-xs mt-1">{errors.categoryId.message}</p>}
           </div>
 
           <div>
             <label className="label-field">شعبه *</label>
-            <select {...register('branchId')} className="select-field">
-              <option value="">انتخاب...</option>
-              <option value="br1">شعبه تهران</option>
-              <option value="br2">شعبه مشهد</option>
-              <option value="br3">شعبه اصفهان</option>
+            <select {...register('branchId')} className="select-field" disabled={optionsLoading}>
+              <option value="">{optionsLoading ? 'در حال بارگذاری...' : 'انتخاب...'}</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>{branch.name}</option>
+              ))}
             </select>
             {errors.branchId && <p className="text-red-400 text-xs mt-1">{errors.branchId.message}</p>}
           </div>

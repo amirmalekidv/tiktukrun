@@ -4,6 +4,12 @@
  */
 import axios, { AxiosError } from 'axios'
 import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, getApiV1, getApiRoot } from './http'
+import {
+  buildGamesQueryParams,
+  normalizeGame,
+  normalizeGameList,
+  parsePaginatedGames,
+} from './games'
 import type {
   Game,
   City,
@@ -71,17 +77,36 @@ httpClient.interceptors.response.use(
         }
       }
     }
-    const msg = (error.response?.data as any)?.message || error.message
+    const msg = getApiErrorMessage(error)
     throw new Error(msg)
   }
 )
+
+function getApiErrorMessage(error: AxiosError): string {
+  const data = error.response?.data as Record<string, unknown> | undefined
+  if (!data) return error.message
+
+  const nested = data.error as { message?: string } | undefined
+  if (nested?.message) return nested.message
+
+  const top = data.message
+  if (typeof top === 'string') return top
+  if (Array.isArray(top) && typeof top[0] === 'string') return top[0]
+
+  return error.message
+}
 
 export { httpClient }
 
 // ==================== AUTH ====================
 export async function requestOtp(mobile: string, inviteCode?: string): Promise<OtpRequestResponse> {
   const { data } = await httpClient.post('/auth/otp/request', { mobile, inviteCode })
-  return data.data ?? data
+  const payload = data.data ?? data
+  return {
+    success: data.success ?? true,
+    message: data.message ?? 'کد تأیید ارسال شد',
+    expiresIn: payload.expiresIn ?? payload.expiresInSeconds ?? 120,
+  }
 }
 
 export async function verifyOtp(mobile: string, code: string): Promise<OtpVerifyResponse> {
@@ -107,23 +132,26 @@ export async function getCities(): Promise<City[]> {
 
 // ==================== GAMES ====================
 export async function getGames(filter: GamesFilter = {}): Promise<PaginatedResponse<Game>> {
-  const { data } = await httpClient.get('/games', { params: filter })
-  return data
+  const { data } = await httpClient.get('/games', { params: buildGamesQueryParams(filter) })
+  return parsePaginatedGames(data)
 }
 
 export async function getGameBySlug(slug: string): Promise<Game | null> {
   const { data } = await httpClient.get(`/games/${slug}`)
-  return data.data
+  const raw = data.data ?? data
+  return raw ? normalizeGame(raw as Record<string, unknown>) : null
 }
 
 export async function getFeaturedGames(): Promise<Game[]> {
-  const { data } = await httpClient.get('/games/featured/hero')
-  return data.data ?? data
+  const { data } = await httpClient.get('/games', {
+    params: { featured: true, limit: 9, sortBy: 'popular' },
+  })
+  return normalizeGameList(data.data ?? data)
 }
 
 export async function getGamesBySection(section: string): Promise<Game[]> {
   const { data } = await httpClient.get(`/games/by-section/${section}`)
-  return data.data ?? data
+  return normalizeGameList(data.data ?? data)
 }
 
 // ==================== AVAILABILITY ====================

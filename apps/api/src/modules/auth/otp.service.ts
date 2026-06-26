@@ -15,11 +15,22 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { SmsService } from '../sms/sms.service';
 import { SettingsService } from '../settings/settings.service';
-import { generateOtpCode, hashString, compareHash } from '../../common/utils/crypto';
+import { generateOtpCode, hashString, compareHash, OTP_CODE_LENGTH } from '../../common/utils/crypto';
 
 const DEFAULT_OTP_TTL_SECONDS = 120;
 const DEFAULT_RATE_LIMIT_COUNT = 3;
 const DEFAULT_MAX_ATTEMPTS = 5;
+
+/** MongoDB + Prisma: unset optional fields are not matched by `verifiedAt: null`. */
+function unverifiedOtpWhere(mobile: string) {
+  return {
+    mobile,
+    OR: [
+      { verifiedAt: { equals: null } },
+      { verifiedAt: { isSet: false } },
+    ],
+  };
+}
 
 @Injectable()
 export class OtpService {
@@ -78,12 +89,12 @@ export class OtpService {
       }
     }
 
-    const code = generateOtpCode(5);
+    const code = generateOtpCode(OTP_CODE_LENGTH);
     const codeHash = await hashString(code);
     const expiresAt = new Date(Date.now() + otpTtl * 1000);
 
     await this.prisma.otpRequest.updateMany({
-      where: { mobile, verifiedAt: null },
+      where: unverifiedOtpWhere(mobile),
       data: { verifiedAt: new Date() },
     });
 
@@ -120,8 +131,7 @@ export class OtpService {
 
     const otpRequest = await this.prisma.otpRequest.findFirst({
       where: {
-        mobile,
-        verifiedAt: null,
+        ...unverifiedOtpWhere(mobile),
         expiresAt: { gt: new Date() },
       },
       orderBy: { createdAt: 'desc' },

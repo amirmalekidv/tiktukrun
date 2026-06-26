@@ -22,10 +22,15 @@ const DIFFICULTY_BY_NUM = [
   'VERY_HARD',
   'LEGENDARY',
 ] as const;
+const DIFFICULTY_ALIASES: Record<string, string> = {
+  EXPERT: 'VERY_HARD',
+};
+
 function mapDifficulty(value: number | string | undefined): any {
   if (value === undefined || value === null) return 'MEDIUM';
   if (typeof value === 'string') {
     const upper = value.toUpperCase();
+    if (DIFFICULTY_ALIASES[upper]) return DIFFICULTY_ALIASES[upper];
     if (DIFFICULTY_BY_NUM.includes(upper as any)) return upper;
     return 'MEDIUM';
   }

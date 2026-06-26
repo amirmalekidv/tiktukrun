@@ -40,7 +40,7 @@ export default function LoginPage() {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!otp || otp.length < 4) return
+    if (!otp || otp.length < 6) return
     const ok = await verifyOtp(mobile, otp)
     if (ok) router.push('/dashboard')
   }
@@ -158,8 +158,8 @@ export default function LoginPage() {
                   <input
                     type="text"
                     value={otp}
-                    onChange={e => setOtp(e.target.value)}
-                    placeholder="کد ۵ رقمی"
+                    onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="کد ۶ رقمی"
                     dir="ltr"
                     className="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-3 text-center text-2xl tracking-[0.5em] text-slate-100 placeholder:text-slate-600"
                     maxLength={6}
@@ -186,7 +186,7 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  disabled={isLoading || otp.length < 4}
+                  disabled={isLoading || otp.length < 6}
                   className="w-full py-3 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
@@ -259,10 +259,12 @@ export default function LoginPage() {
         {/* Demo hint */}
         <div className="mt-6 p-3 rounded-lg text-xs text-slate-500 border border-slate-700/30" style={{ background: 'rgba(15,23,42,0.5)' }}>
           <i className="fas fa-circle-info ml-1 text-sky-500" />
-          <span>حالت دمو: کد OTP = </span>
-          <span dir="ltr" className="font-mono text-sky-400">12345</span>
-          <span> | رمز عبور = </span>
-          <span dir="ltr" className="font-mono text-sky-400">admin123</span>
+          <span>حساب پیش‌فرض: موبایل </span>
+          <span dir="ltr" className="font-mono text-sky-400">09120000001</span>
+          <span> | رمز </span>
+          <span dir="ltr" className="font-mono text-sky-400">Admin@123456</span>
+          <span> | OTP دمو </span>
+          <span dir="ltr" className="font-mono text-sky-400">123456</span>
         </div>
       </div>
 

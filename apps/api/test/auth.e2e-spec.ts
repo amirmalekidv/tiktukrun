@@ -70,7 +70,7 @@ describe('Auth (e2e)', () => {
   it('POST /api/v1/auth/otp/verify — should fail with wrong code', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/v1/auth/otp/verify')
-      .send({ mobile: testMobile, code: '00000' })
+      .send({ mobile: testMobile, code: '000000' })
       .expect(400);
 
     expect(res.body.success).toBe(false);

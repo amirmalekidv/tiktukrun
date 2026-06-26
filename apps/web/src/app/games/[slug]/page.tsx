@@ -16,6 +16,7 @@ import BookingWidget from '@/components/booking/BookingWidget'
 import TierBadge from '@/components/games/TierBadge'
 import LikeButton from '@/components/games/LikeButton'
 import GameComments from '@/components/games/GameComments'
+import { GAME_COVER_PLACEHOLDER } from '@/lib/games'
 
 export default function GameDetailPage({ params }: { params: { slug: string } }) {
   const { slug } = params
@@ -37,7 +38,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
     notFound()
   }
 
-  const allImages = game.images.length > 0 ? game.images : [{ id: '0', url: game.coverImage || 'https://picsum.photos/seed/game/800/500', alt: game.title, isPrimary: true }]
+  const allImages = game.images.length > 0 ? game.images : [{ id: '0', url: game.coverImage || GAME_COVER_PLACEHOLDER, alt: game.title, isPrimary: true }]
 
   return (
     <div className="min-h-screen pt-24 pb-20">
@@ -58,7 +59,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
             <section className="dark-card rounded-2xl overflow-hidden">
               <div className="relative aspect-video overflow-hidden">
                 <Image
-                  src={allImages[activeImageIdx]?.url || game.coverImage || 'https://picsum.photos/seed/game/800/500'}
+                  src={allImages[activeImageIdx]?.url || game.coverImage || GAME_COVER_PLACEHOLDER}
                   alt={game.title}
                   fill
                   className="object-cover"

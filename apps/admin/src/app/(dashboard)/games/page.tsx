@@ -5,19 +5,13 @@ import { Plus, Search, Grid, List, Star, Edit, Trash2, ToggleLeft, Bookmark, Ref
 import { SectionHeader, StatsCard, FilterBar, Toggle, ConfirmDialog, Pagination, EmptyState } from '@/components/ui';
 import { formatToman, persianNum, FEAR_EMOJIS, fearLabel } from '@/lib/utils/format';
 import { gamesApi } from '@/lib/api';
+import { readPaginatedList } from '@/lib/api/pagination';
 import toast from 'react-hot-toast';
 import type { Game } from '@/lib/types';
 import { GAME_TIER_FA, GAME_TIER_STYLE } from '@/lib/types';
 import { Gamepad2, TrendingUp, BookOpen } from 'lucide-react';
 
 type ViewMode = 'table' | 'grid';
-
-// خواندن داده از پاسخ بک‌اند (ResponseInterceptor → { success, data: {...} })
-function unwrap<T = any>(res: any): T {
-  const d = res?.data;
-  if (d && typeof d === 'object' && 'data' in d) return d.data as T;
-  return d as T;
-}
 
 export default function GamesPage() {
   const [view, setView] = useState<ViewMode>('table');
@@ -38,9 +32,9 @@ export default function GamesPage() {
       const params: Record<string, unknown> = { page, limit };
       if (activeFilter) params.isActive = activeFilter === 'active' ? 'true' : 'false';
       const res = await gamesApi.getAll(params);
-      const payload = unwrap<{ data: Game[]; total: number }>(res);
-      setGames(payload?.data ?? []);
-      setTotal(payload?.total ?? 0);
+      const { items, total: count } = readPaginatedList<Game>(res);
+      setGames(items);
+      setTotal(count);
     } catch {
       toast.error('خطا در بارگذاری بازی‌ها');
       setGames([]);

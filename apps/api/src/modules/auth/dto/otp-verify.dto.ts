@@ -15,13 +15,13 @@ export class OtpVerifyDto {
   mobile: string;
 
   @ApiProperty({
-    description: 'کد یکبار مصرف ۵ رقمی',
-    example: '12345',
+    description: 'کد یکبار مصرف ۶ رقمی',
+    example: '123456',
   })
   @IsString()
   @IsNotEmpty({ message: 'کد تأیید الزامی است' })
   @Transform(({ value }) => toEnglishDigits(value))
-  @Matches(/^\d{5}$/, { message: 'کد تأیید باید ۵ رقم باشد' })
+  @Matches(/^\d{6}$/, { message: 'کد تأیید باید ۶ رقم باشد' })
   code: string;
 
   @ApiPropertyOptional({

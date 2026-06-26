@@ -21,10 +21,12 @@ export async function compareHash(plain: string, hash: string): Promise<boolean>
   return bcrypt.compare(plain, hash);
 }
 
+export const OTP_CODE_LENGTH = 6;
+
 /**
  * Generate a random numeric OTP code
  */
-export function generateOtpCode(length: number = 5): string {
+export function generateOtpCode(length: number = OTP_CODE_LENGTH): string {
   const min = Math.pow(10, length - 1);
   const max = Math.pow(10, length) - 1;
   return String(Math.floor(min + Math.random() * (max - min + 1)));

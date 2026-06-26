@@ -92,7 +92,7 @@ export class GamesService {
     // Game model در schema فعلی این فیلدها رو نداره
     switch (sortBy) {
       case GameSortBy.NEWEST:     return { createdAt: 'desc' };
-      case GameSortBy.RATING:     return { userRankCached: { sort: 'desc', nulls: 'last' } };
+      case GameSortBy.RATING:     return { siteRank: 'desc' };
       case GameSortBy.PRICE_ASC:  return { pricePerPerson: 'asc' };
       case GameSortBy.PRICE_DESC: return { pricePerPerson: 'desc' };
       case GameSortBy.POPULAR:

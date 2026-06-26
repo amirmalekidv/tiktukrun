@@ -4,6 +4,7 @@ import useSWR from 'swr'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getGamesBySection } from '@/lib/api'
+import { GAME_COVER_PLACEHOLDER } from '@/lib/games'
 import { formatToman } from '@/lib/utils'
 import FearMeter from '@/components/ui/FearMeter'
 
@@ -43,7 +44,7 @@ export default function WeeklyDiscountSection() {
 
                     <div className="relative h-32 overflow-hidden">
                       <Image
-                        src={game.coverImage || game.images[0]?.url || 'https://picsum.photos/seed/game/800/500'}
+                        src={game.coverImage || game.images[0]?.url || GAME_COVER_PLACEHOLDER}
                         alt={game.title}
                         fill
                         className="object-cover group-hover:scale-110 transition duration-500"

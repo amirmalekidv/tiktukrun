@@ -8,6 +8,7 @@ import { formatToman, toPersianDigits } from '@/lib/utils'
 import FearMeter from '@/components/ui/FearMeter'
 import StarRating from '@/components/ui/StarRating'
 import TierBadge from '@/components/games/TierBadge'
+import { GAME_COVER_PLACEHOLDER } from '@/lib/games'
 
 interface GameCardProps {
   game: Game
@@ -15,7 +16,7 @@ interface GameCardProps {
 }
 
 export default function GameCard({ game, variant = 'default' }: GameCardProps) {
-  const coverImage = game.coverImage || game.images[0]?.url || 'https://picsum.photos/seed/default/800/500'
+  const coverImage = game.coverImage || game.images[0]?.url || GAME_COVER_PLACEHOLDER
 
   if (variant === 'horizontal') {
     return (

@@ -163,7 +163,7 @@ export const mockApi = {
   async verifyOtp(mobile: string, otp: string) {
     await sleep(MOCK_DELAY)
     // Admin check: only specific mobiles
-    if (otp === '12345') {
+    if (otp === '123456') {
       return {
         success: true,
         data: {

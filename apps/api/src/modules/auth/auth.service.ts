@@ -301,7 +301,7 @@ export class AuthService {
 
     return {
       ...tokens,
-      user: this.sanitizeUser(user),
+      user: this.formatAdminUser(user),
     };
   }
 
@@ -370,6 +370,25 @@ export class AuthService {
   private sanitizeUser(user: any) {
     const { passwordHash, ...sanitized } = user;
     return sanitized;
+  }
+
+  /** Shape user for admin panel clients (roles, permissions, display name). */
+  private formatAdminUser(user: any) {
+    const roles = (user.roleAssignments ?? []).map((r: { role: string }) => r.role);
+    const { passwordHash, roleAssignments, ...rest } = user;
+    return {
+      id: rest.id,
+      name: rest.fullName ?? '',
+      email: rest.email ?? '',
+      mobile: rest.mobile,
+      avatar: rest.avatarUrl ?? undefined,
+      roles,
+      permissions: this.getPermissions(roles),
+      createdAt:
+        rest.createdAt instanceof Date ? rest.createdAt.toISOString() : rest.createdAt,
+      lastLoginAt:
+        rest.lastLoginAt instanceof Date ? rest.lastLoginAt.toISOString() : rest.lastLoginAt,
+    };
   }
 
   private getPermissions(roles: any[]): string[] {
