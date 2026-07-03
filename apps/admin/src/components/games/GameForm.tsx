@@ -58,6 +58,11 @@ interface GameFormProps {
   onSuccess?: () => void;
 }
 
+function mergeById<T extends { id: string }>(items: T[], extra?: T | null): T[] {
+  if (!extra?.id) return items;
+  return items.some((item) => item.id === extra.id) ? items : [extra, ...items];
+}
+
 function buildDefaultValues(game?: Game): FormData {
   return {
     title: game?.title || '',
@@ -100,15 +105,17 @@ export default function GameForm({ game, onSuccess }: GameFormProps) {
           categoriesApi.getAll(),
           branchesApi.getAll(),
         ]);
-        setCategories(unwrapList<Category[]>(catRes) ?? []);
-        setBranches(unwrapList<Branch[]>(branchRes) ?? []);
+        setCategories(mergeById(unwrapList<Category[]>(catRes) ?? [], game?.category));
+        setBranches(mergeById(unwrapList<Branch[]>(branchRes) ?? [], game?.branch));
       } catch {
+        setCategories(game?.category ? [game.category] : []);
+        setBranches(game?.branch ? [game.branch] : []);
         toast.error('خطا در بارگذاری دسته‌بندی‌ها و شعب');
       } finally {
         setOptionsLoading(false);
       }
     })();
-  }, []);
+  }, [game?.branch?.id, game?.category?.id]);
 
   const { register, handleSubmit, watch, setValue, reset, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -132,11 +139,22 @@ export default function GameForm({ game, onSuccess }: GameFormProps) {
     onDrop: (files) => {
       const file = files[0];
       if (file) {
+        setCoverPreview((prev) => {
+          if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(file);
+        });
         setCoverFile(file);
-        setCoverPreview(URL.createObjectURL(file));
       }
     },
   });
+
+  useEffect(() => {
+    return () => {
+      if (coverPreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(coverPreview);
+      }
+    };
+  }, [coverPreview]);
 
   const addTag = () => {
     const tag = tagInput.trim();

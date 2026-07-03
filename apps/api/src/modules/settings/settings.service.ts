@@ -37,7 +37,7 @@ const DEFAULT_SETTINGS: Record<string, { value: string; group: string; descripti
 
   // Security
   'security.jwtExpiry': { value: '7d', group: 'security' },
-  'security.otpExpiry': { value: '120', group: 'security', description: 'ثانیه' },
+  'security.otpExpiry': { value: '1200', group: 'security', description: 'ثانیه' },
   'security.maxLoginAttempts': { value: '5', group: 'security' },
   'security.lockoutMinutes': { value: '15', group: 'security' },
 

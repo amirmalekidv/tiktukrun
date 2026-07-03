@@ -1,6 +1,16 @@
 import { IsOptional, IsBoolean, IsString, IsArray, IsEnum, IsInt, Min, Max } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
+
+const USER_ROLE = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  ADMIN: 'ADMIN',
+  BRANCH_MANAGER: 'BRANCH_MANAGER',
+  SUPPORT: 'SUPPORT',
+  MARKETING: 'MARKETING',
+  CUSTOMER: 'CUSTOMER',
+} as const;
+
+type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];
 
 export class AdminUpdateUserDto {
   @ApiPropertyOptional({ description: 'وضعیت بن' })
@@ -18,10 +28,10 @@ export class AdminUpdateUserDto {
   @IsBoolean()
   isMuted?: boolean;
 
-  @ApiPropertyOptional({ description: 'نقش‌های کاربر', type: [String], enum: UserRole })
+  @ApiPropertyOptional({ description: 'نقش‌های کاربر', type: [String], enum: USER_ROLE })
   @IsOptional()
   @IsArray()
-  @IsEnum(UserRole, { each: true })
+  @IsEnum(USER_ROLE, { each: true })
   roles?: UserRole[];
 
   @ApiPropertyOptional({ description: 'سطح دستی', minimum: 1, maximum: 100 })

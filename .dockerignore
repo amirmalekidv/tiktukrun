@@ -8,4 +8,8 @@ storage/backups
 *.md
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
+!**/.env.example
+!**/.env.local.example

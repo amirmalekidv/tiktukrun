@@ -10,18 +10,25 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit(): Promise<void> {
-    this.client = new Redis({
-      host: this.configService.get<string>('REDIS_HOST', 'localhost'),
-      port: this.configService.get<number>('REDIS_PORT', 6379),
-      password: this.configService.get<string>('REDIS_PASSWORD', '') || undefined,
-      retryStrategy: (times) => {
-        if (times > 3) {
-          this.logger.warn('Redis connection failed after 3 retries, using in-memory fallback');
-          return null;
-        }
-        return Math.min(times * 200, 2000);
-      },
-    });
+    const retryStrategy = (times: number) => {
+      if (times > 3) {
+        this.logger.warn('Redis connection failed after 3 retries, using in-memory fallback');
+        return null;
+      }
+      return Math.min(times * 200, 2000);
+    };
+
+    const redisUrl = this.configService.get<string>('REDIS_URL');
+
+    this.client = redisUrl
+      ? new Redis(redisUrl, { retryStrategy })
+      : new Redis({
+          host: this.configService.get<string>('REDIS_HOST', 'localhost'),
+          port: this.configService.get<number>('REDIS_PORT', 6379),
+          password:
+            this.configService.get<string>('REDIS_PASSWORD', '') || undefined,
+          retryStrategy,
+        });
 
     this.client.on('connect', () => {
       this.logger.log('✅ Redis connected');

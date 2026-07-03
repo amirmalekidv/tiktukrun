@@ -129,7 +129,7 @@ No `/home/tiktakrun/tiktakrun` or similar path exists yet.
 
 1. Set `DEPLOY_MODE=shared` in server `.env`.
 2. Compose loads `docker-compose.shared.yml`, which **disables bundled nginx** (no port 80/443 conflict).
-3. API / web / admin bind to `127.0.0.1:4000`, `3000`, `3001` (default in `docker-compose.yml`).
+3. API / web / admin bind to `127.0.0.1:4000`, `3000`, `3001` by default in `docker-compose.yml`, and can be overridden via `API_PORT`, `WEB_PORT`, `ADMIN_PORT` in `.env` if one of those host ports is already occupied.
 4. Add server blocks to **modiranet-nginx** using `infra/nginx/host/tiktakrun.conf.example`.
 5. Obtain SSL certs via certbot on the host (or extend existing cert management).
 
@@ -191,7 +191,7 @@ mongo → mongo-init → api ← redis
 On this server (`DEPLOY_MODE=shared`), public traffic flows:
 
 ```
-Internet → modiranet-nginx (80/443) → 127.0.0.1:3000 / 3001 / 4000 → tiktakrun containers
+Internet → modiranet-nginx (80/443) → 127.0.0.1:WEB_PORT / ADMIN_PORT / API_PORT → tiktakrun containers
 ```
 
 
@@ -370,9 +370,9 @@ docker compose exec api pnpm seed   # first time only
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.shared.yml ps
-curl -s http://127.0.0.1:4000/health
-curl -sI http://127.0.0.1:3000
-curl -sI http://127.0.0.1:3001
+curl -s http://127.0.0.1:${API_PORT:-4000}/health
+curl -sI http://127.0.0.1:${WEB_PORT:-3000}
+curl -sI http://127.0.0.1:${ADMIN_PORT:-3001}
 ```
 
 > **Build time:** allow 15–30+ minutes on first build. Subsequent updates via `update.sh` rebuild only api/web/admin.
@@ -384,7 +384,7 @@ curl -sI http://127.0.0.1:3001
 **On this server — integrate with modiranet-nginx (shared mode):**
 
 1. Copy/adapt `infra/nginx/host/tiktakrun.conf.example` into modiranet nginx config.
-2. Point upstreams to `127.0.0.1:3000` (web), `3001` (admin), `4000` (api).
+2. Point upstreams to the loopback ports configured in `.env` (`WEB_PORT`, `ADMIN_PORT`, `API_PORT`; defaults `3000`, `3001`, `4000`).
 3. Set uploads alias to `/home/root/webapp/tiktakrun/storage/uploads/`.
 4. Reload modiranet nginx: `docker exec modiranet-nginx nginx -s reload`
 5. Run certbot on host for `tiktakrun.ir`, `admin.tiktakrun.ir`, `api.tiktakrun.ir`.

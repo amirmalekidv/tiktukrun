@@ -22,6 +22,9 @@ RUN corepack enable && corepack prepare pnpm@9.10.0 --activate
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN rm -f .env.local .env.production .env.production.local apps/admin/.env.local apps/admin/.env.production apps/admin/.env.production.local apps/web/.env.local apps/web/.env.production apps/web/.env.production.local
+RUN mkdir -p apps/admin/public
+RUN pnpm install --frozen-lockfile --prefer-offline || pnpm install
 
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SOCKET_URL

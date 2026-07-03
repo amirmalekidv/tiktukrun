@@ -52,10 +52,11 @@ COPY --from=deploy --chown=nestjs:nodejs /prod/api/node_modules ./node_modules
 COPY --from=deploy --chown=nestjs:nodejs /prod/api/package.json ./package.json
 COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/apps/api/prisma ./prisma
+RUN prisma generate --schema=./prisma/schema.prisma
 
 USER nestjs
 
 EXPOSE 4000
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["sh", "-c", "prisma db push --skip-generate && node dist/apps/api/src/main"]
+CMD ["sh", "-c", "prisma db push --skip-generate && node dist/main.js"]

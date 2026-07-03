@@ -18,6 +18,15 @@ cd "$PROJECT_ROOT"
 source "$SCRIPT_DIR/lib/compose.sh"
 deploy_compose_init
 
+cleanup_on_error() {
+    local exit_code="$1"
+    if [ "$exit_code" -ne 0 ]; then
+        echo "🧯 Deployment failed — stopping partial tiktakrun stack..."
+        dc down >/dev/null 2>&1 || true
+    fi
+}
+trap 'cleanup_on_error $?' EXIT
+
 echo "╔══════════════════════════════════════════════════════════╗"
 echo "║       TIK TAK RUN — Production Deployment              ║"
 echo "╚══════════════════════════════════════════════════════════╝"
@@ -31,6 +40,10 @@ if [ ! -f .env ]; then
     echo "❌ .env file missing. Copy .env.example to .env and configure it."
     exit 1
 fi
+
+echo "📁 Preparing writable storage..."
+mkdir -p storage/uploads storage/backups
+chown -R 1001:1001 storage
 
 if docker ps --format '{{.Names}}' | grep -q tiktakrun-mongo; then
     echo "⚠️  Stack already running — use infra/scripts/update.sh for updates"
@@ -75,3 +88,4 @@ echo "║  📚 API:     https://api.${PROD_DOMAIN:-tiktakrun.ir}    ║"
 echo "║                                                          ║"
 echo "║  Next updates: bash infra/scripts/update.sh              ║"
 echo "╚══════════════════════════════════════════════════════════╝"
+trap - EXIT

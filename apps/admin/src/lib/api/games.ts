@@ -27,6 +27,38 @@ function normalizeDifficulty(value: unknown): Game['difficulty'] {
   }
 }
 
+function normalizeCategory(raw: any): Game['category'] {
+  if (!raw) return undefined;
+  return {
+    ...raw,
+    id: String(raw?.id ?? ''),
+    name: String(raw?.name ?? ''),
+    slug: String(raw?.slug ?? ''),
+    isActive: raw?.isActive ?? true,
+  };
+}
+
+function normalizeBranch(raw: any): Game['branch'] {
+  if (!raw) return undefined;
+  return {
+    ...raw,
+    id: String(raw?.id ?? ''),
+    name: String(raw?.name ?? ''),
+    cityId: String(raw?.cityId ?? raw?.city?.id ?? ''),
+    address: String(raw?.address ?? ''),
+    isActive: raw?.isActive ?? true,
+    city: raw?.city
+      ? {
+          ...raw.city,
+          id: String(raw.city?.id ?? ''),
+          name: String(raw.city?.name ?? ''),
+          slug: String(raw.city?.slug ?? ''),
+          isActive: raw.city?.isActive ?? true,
+        }
+      : undefined,
+  };
+}
+
 function normalizeGame(raw: any): Game {
   const images = Array.isArray(raw?.images)
     ? raw.images.map((img: any, index: number) => ({
@@ -43,6 +75,37 @@ function normalizeGame(raw: any): Game {
     title: String(raw?.title ?? ''),
     slug: String(raw?.slug ?? ''),
     subtitle: raw?.subtitle ?? undefined,
+    categoryId: String(raw?.categoryId ?? raw?.category?.id ?? ''),
+    category: normalizeCategory(raw?.category) ?? (
+      raw?.categoryName
+        ? {
+            id: String(raw?.categoryId ?? ''),
+            name: String(raw.categoryName),
+            slug: String(raw?.categorySlug ?? ''),
+            isActive: true,
+          }
+        : undefined
+    ),
+    branchId: String(raw?.branchId ?? raw?.branch?.id ?? ''),
+    branch: normalizeBranch(raw?.branch) ?? (
+      raw?.branchName
+        ? {
+            id: String(raw?.branchId ?? ''),
+            name: String(raw.branchName),
+            cityId: String(raw?.cityId ?? raw?.branch?.cityId ?? ''),
+            address: String(raw?.branchAddress ?? ''),
+            isActive: true,
+            city: raw?.cityName
+              ? {
+                  id: String(raw?.cityId ?? ''),
+                  name: String(raw.cityName),
+                  slug: String(raw?.citySlug ?? ''),
+                  isActive: true,
+                }
+              : undefined,
+          }
+        : undefined
+    ),
     description: raw?.description ?? undefined,
     scenario: raw?.scenario ?? undefined,
     fearLevel: Number(raw?.fearLevel ?? 0),
@@ -116,9 +179,7 @@ export const gamesApi = {
   },
 
   create: async (data: FormData) => {
-    const res = await apiClient.post<ApiResponse<Game>>('/admin/games', data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const res = await apiClient.post<ApiResponse<Game>>('/admin/games', data);
     if (res.data && typeof res.data === 'object') {
       normalizeSingleGamePayload(res.data as any);
     }
@@ -126,9 +187,7 @@ export const gamesApi = {
   },
 
   update: async (id: string, data: FormData) => {
-    const res = await apiClient.patch<ApiResponse<Game>>(`/admin/games/${id}`, data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const res = await apiClient.patch<ApiResponse<Game>>(`/admin/games/${id}`, data);
     if (res.data && typeof res.data === 'object') {
       normalizeSingleGamePayload(res.data as any);
     }
@@ -150,9 +209,7 @@ export const gamesApi = {
     const fd = new FormData();
     const list = Array.isArray(files) ? files : [files];
     list.forEach((f) => fd.append('images', f));
-    return apiClient.post(`/admin/games/${id}/images`, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return apiClient.post(`/admin/games/${id}/images`, fd);
   },
 
   // backend: @Delete(':id/images/:imageId')

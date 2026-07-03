@@ -184,21 +184,16 @@ export class AuthService {
       throw new UnauthorizedException('توکن نامعتبر. نشست باطل شد');
     }
 
-    // Rotate: revoke old session
-    await this.prisma.session.update({
-      where: { id: session.id },
-      data: { revokedAt: new Date() },
-    });
-
-    // Create new tokens
     const user = session.user;
     const roles = user.roleAssignments.map((roleAssignment) => roleAssignment.role as unknown as Role);
-    const tokens = await this.createTokens(
+    const tokens = await this.rotateSessionTokens(
+      session.id,
       user.id,
       user.mobile,
       roles,
       session.ua ?? undefined,
-      ipAddress,
+      ipAddress ?? session.ip ?? undefined,
+      session.expiresAt,
     );
 
     return tokens;
@@ -315,8 +310,7 @@ export class AuthService {
     deviceInfo?: string,
     ipAddress?: string,
   ) {
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30);
+    const expiresAt = this.buildSessionExpiry();
 
     // Create session placeholder first to get ID
     // [QA Fix 2026-05-25] schema fields: ip, ua (not deviceInfo/ipAddress)
@@ -330,11 +324,46 @@ export class AuthService {
       },
     });
 
+    return this.issueTokensForSession(session.id, userId, mobile, roles, {
+      deviceInfo,
+      ipAddress,
+      expiresAt,
+    });
+  }
+
+  private async rotateSessionTokens(
+    sessionId: string,
+    userId: string,
+    mobile: string,
+    roles: Role[],
+    deviceInfo?: string,
+    ipAddress?: string,
+    expiresAt?: Date,
+  ) {
+    const nextExpiry = expiresAt ?? this.buildSessionExpiry();
+    return this.issueTokensForSession(sessionId, userId, mobile, roles, {
+      deviceInfo,
+      ipAddress,
+      expiresAt: nextExpiry,
+    });
+  }
+
+  private async issueTokensForSession(
+    sessionId: string,
+    userId: string,
+    mobile: string,
+    roles: Role[],
+    options: {
+      deviceInfo?: string;
+      ipAddress?: string;
+      expiresAt: Date;
+    },
+  ) {
     const accessPayload: JwtPayload = {
       sub: userId,
       mobile,
       roles: roles as any,
-      sessionId: session.id,
+      sessionId,
       type: 'access',
     };
 
@@ -342,7 +371,7 @@ export class AuthService {
       sub: userId,
       mobile,
       roles: roles as any,
-      sessionId: session.id,
+      sessionId,
       type: 'refresh',
     };
 
@@ -357,14 +386,24 @@ export class AuthService {
       }),
     ]);
 
-    // Store hash of refresh token
     const refreshTokenHash = await hashString(refreshToken);
     await this.prisma.session.update({
-      where: { id: session.id },
-      data: { refreshTokenHash },
+      where: { id: sessionId },
+      data: {
+        refreshTokenHash,
+        expiresAt: options.expiresAt,
+        ua: options.deviceInfo,
+        ip: options.ipAddress,
+      },
     });
 
     return { accessToken, refreshToken };
+  }
+
+  private buildSessionExpiry() {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+    return expiresAt;
   }
 
   private sanitizeUser(user: any) {

@@ -165,9 +165,9 @@ export function normalizeProfilePayload(raw: unknown, statsRaw?: unknown): Profi
   const name =
     toText(record.fullName) ??
     toText(record.name) ??
-    toText(record.nickname);
-
-  if (!name) return null;
+    toText(record.nickname) ??
+    toText(record.mobile) ??
+    'کاربر TIK TAK RUN';
 
   const level = toNumber(stats?.currentLevel ?? record.level ?? profile?.levelId, 1) || 1;
   const currentXp = toNumber(stats?.currentXp ?? record.currentXp ?? profile?.xp, 0);

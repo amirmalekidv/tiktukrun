@@ -2,21 +2,23 @@
 # Host nginx snippet for modiranet-nginx (shared VPS)
 # ═══════════════════════════════════════════════════════════════════════════
 # Copy into modiranet nginx conf.d, then reload nginx + obtain SSL certs.
-# Requires DEPLOY_MODE=shared and tiktakrun stack on 127.0.0.1:3000/3001/4000
+# Requires DEPLOY_MODE=shared and tiktakrun stack on 127.0.0.1:3010/3011/4010
+# by default. If you override API_PORT / WEB_PORT / ADMIN_PORT in `.env`,
+# update the upstream targets below to match.
 # ═══════════════════════════════════════════════════════════════════════════
 
 upstream tiktakrun_web {
-    server 127.0.0.1:3000;
+    server 127.0.0.1:3010;
     keepalive 16;
 }
 
 upstream tiktakrun_admin {
-    server 127.0.0.1:3001;
+    server 127.0.0.1:3011;
     keepalive 8;
 }
 
 upstream tiktakrun_api {
-    server 127.0.0.1:4000;
+    server 127.0.0.1:4010;
     keepalive 16;
 }
 

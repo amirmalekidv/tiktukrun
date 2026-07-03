@@ -39,7 +39,7 @@ describe('Auth (e2e)', () => {
       .expect(200);
 
     expect(res.body.success).toBe(true);
-    expect(res.body.data.expiresInSeconds).toBe(120);
+    expect(res.body.data.expiresInSeconds).toBe(1200);
   });
 
   it('POST /api/v1/auth/otp/request — should reject invalid mobile', async () => {

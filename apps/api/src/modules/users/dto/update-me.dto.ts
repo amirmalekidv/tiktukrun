@@ -3,7 +3,15 @@ import {
   MaxLength, MinLength, Matches,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Gender } from '@prisma/client';
+
+const GENDER = {
+  MALE: 'MALE',
+  FEMALE: 'FEMALE',
+  OTHER: 'OTHER',
+  PREFER_NOT_TO_SAY: 'PREFER_NOT_TO_SAY',
+} as const;
+
+type Gender = (typeof GENDER)[keyof typeof GENDER];
 
 export class UpdateMeDto {
   @ApiPropertyOptional({ description: 'نام و نام خانوادگی', example: 'علی محمدی' })
@@ -48,9 +56,9 @@ export class UpdateMeDto {
   @IsDateString()
   birthDate?: string;
 
-  @ApiPropertyOptional({ enum: Gender })
+  @ApiPropertyOptional({ enum: GENDER })
   @IsOptional()
-  @IsEnum(Gender)
+  @IsEnum(GENDER)
   gender?: Gender;
 
   @ApiPropertyOptional({ description: 'شناسه شهر' })
