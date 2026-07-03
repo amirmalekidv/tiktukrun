@@ -14,17 +14,28 @@ export class TeamsService {
   ) {}
 
   async findAll(
+    userId?: string,
     cityId?: string,
     gameId?: string,
     page = 1,
     limit = 20,
     status?: string,
+    mine = false,
   ) {
     const where: any = {};
-    if (status) where.status = status;
-    else where.status = 'FORMING';
+    if (status) {
+      where.status = status;
+    } else if (!mine) {
+      where.status = 'FORMING';
+    }
     if (cityId) where.branch = { cityId };
     if (gameId) where.gameId = gameId;
+    if (mine && userId) {
+      where.OR = [
+        { captainId: userId },
+        { members: { some: { userId } } },
+      ];
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.team.findMany({
@@ -36,13 +47,34 @@ export class TeamsService {
           game: { select: { id: true, title: true, coverImage: true } },
           branch: { select: { id: true, name: true, city: true } },
           _count: { select: { members: true } },
+          members: userId
+            ? {
+                where: { userId },
+                select: { userId: true, role: true },
+                take: 1,
+              }
+            : false,
         },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.team.count({ where }),
     ]);
 
-    return { data, total };
+    return {
+      data: data.map((team) => {
+        const isCurrentUserOwner = !!userId && team.captainId === userId;
+        const isCurrentUserMember =
+          isCurrentUserOwner ||
+          (!!userId && Array.isArray(team.members) && team.members.length > 0);
+
+        return {
+          ...team,
+          isCurrentUserOwner,
+          isCurrentUserMember,
+        };
+      }),
+      total,
+    };
   }
 
   async findOne(id: string) {
@@ -114,6 +146,9 @@ export class TeamsService {
       include: { _count: { select: { members: true } } },
     });
     if (!team) throw new NotFoundException('تیم یافت نشد');
+    if (team.captainId === userId) {
+      return { joined: true, alreadyMember: true, isCaptain: true };
+    }
     if (team.status !== 'FORMING') {
       throw new BadRequestException('این تیم دیگر عضو نمی‌پذیرد');
     }

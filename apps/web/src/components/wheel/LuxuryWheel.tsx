@@ -1,5 +1,6 @@
 'use client';
 import { useMemo } from 'react';
+import { formatPrizeValue, getPrizeDisplay } from '@/lib/wheel-adapter';
 import {
   buildSlicePath,
   getTextPosition,
@@ -14,15 +15,9 @@ interface WheelSliceProps {
   prize: WheelPrize;
 }
 
-const PRIZE_ICONS: Record<string, string> = {
-  xp: '⚡',
-  coins: '🪙',
-  diamonds: '💎',
-  item: '🎁',
-  nothing: '💀',
-};
-
 function WheelSlice({ index, total, prize }: WheelSliceProps) {
+  const display = getPrizeDisplay(prize.type);
+  const sliceValue = formatPrizeValue(prize);
   const path = buildSlicePath(index, total, 140, 150, 150);
   const textPos = getTextPosition(index, total, 95, 150, 150);
   const colors = getSliceColors(index);
@@ -56,7 +51,7 @@ function WheelSlice({ index, total, prize }: WheelSliceProps) {
           fontFamily="Cinzel, serif"
           fontWeight="bold"
         >
-          {PRIZE_ICONS[prize.type] ?? '?'}
+          {display.emoji}
         </text>
         <text
           x="0"
@@ -66,7 +61,7 @@ function WheelSlice({ index, total, prize }: WheelSliceProps) {
           fontSize="7"
           fontFamily="Cinzel, serif"
         >
-          {prize.value > 0 ? `+${prize.value}` : prize.label.slice(0, 8)}
+          {sliceValue || prize.label.slice(0, 8)}
         </text>
       </g>
 

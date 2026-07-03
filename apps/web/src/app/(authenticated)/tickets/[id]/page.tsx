@@ -3,23 +3,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { ticketsApi } from '@/lib/api/tickets';
+import { ticketsApi, type UserTicketDetail } from '@/lib/api/tickets';
 import { USE_MOCK } from '@/lib/http';
-
-interface TicketReply {
-  message: string;
-  isAdmin: boolean;
-  createdAt: string;
-}
-
-interface Ticket {
-  id?: string;
-  subject: string;
-  category: string;
-  status: 'open' | 'answered' | 'closed';
-  message: string;
-  replies: TicketReply[];
-}
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   open: { label: 'باز', color: '#dc2626' },
@@ -27,13 +12,19 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   closed: { label: 'بسته شده', color: '#6b7280' },
 };
 
-const DEMO_TICKET: Ticket = {
+const DEMO_TICKET: UserTicketDetail = {
+  id: 't1',
+  code: 'TKT-100001',
   subject: 'مشکل در پرداخت',
-  category: 'مالی',
   status: 'open',
-  message: 'سلام، موجودی کیف پولم بعد از پرداخت اضافه نشد. لطفاً بررسی کنید.',
+  statusLabel: 'باز',
+  body: 'سلام، موجودی کیف پولم بعد از پرداخت اضافه نشد. لطفاً بررسی کنید.',
+  createdAt: new Date(0).toISOString(),
+  updatedAt: new Date(0).toISOString(),
+  lastReplyAt: null,
   replies: [
     {
+      id: 'm1',
       message: 'با سلام، درخواست شما دریافت شد. در حال بررسی هستیم.',
       isAdmin: true,
       createdAt: '۱۴۰۳/۰۹/۲۰',
@@ -44,7 +35,7 @@ const DEMO_TICKET: Ticket = {
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [ticket, setTicket] = useState<UserTicketDetail | null>(null);
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -52,16 +43,7 @@ export default function TicketDetailPage() {
   useEffect(() => {
     ticketsApi
       .getTicket(id)
-      .then((raw) => {
-        const d = raw as { ticket?: Ticket } | Ticket | null;
-        let next: Ticket | null = null;
-        if (d && typeof d === 'object' && 'ticket' in d) {
-          next = (d as { ticket?: Ticket }).ticket ?? null;
-        } else if (d) {
-          next = d as Ticket;
-        }
-        setTicket(next ?? (USE_MOCK ? DEMO_TICKET : null));
-      })
+      .then((next) => setTicket(next ?? (USE_MOCK ? DEMO_TICKET : null)))
       .catch(() => setTicket(USE_MOCK ? DEMO_TICKET : null))
       .finally(() => setLoading(false));
   }, [id]);
@@ -76,14 +58,7 @@ export default function TicketDetailPage() {
       // Refresh ticket
       ticketsApi
         .getTicket(id)
-        .then((raw) => {
-          const d = raw as { ticket?: Ticket } | Ticket | null;
-          let next: Ticket | null = null;
-          if (d && typeof d === 'object' && 'ticket' in d) {
-            next = (d as { ticket?: Ticket }).ticket ?? null;
-          } else if (d) {
-            next = d as Ticket;
-          }
+        .then((next) => {
           if (next) setTicket(next);
         })
         .catch(() => {});
@@ -127,9 +102,9 @@ export default function TicketDetailPage() {
               className="text-xs font-vazir px-2 py-0.5 rounded-full"
               style={{ color: statusCfg.color, background: statusCfg.color + '20' }}
             >
-              {statusCfg.label}
+              {t.statusLabel || statusCfg.label}
             </span>
-            <span className="text-xs text-gray-600 font-vazir">{t.category}</span>
+            <span className="text-xs text-gray-600 font-vazir">{t.code}</span>
           </div>
         </div>
       </div>
@@ -139,13 +114,13 @@ export default function TicketDetailPage() {
         {/* Original message */}
         <div className="p-4 bg-red-950/20 rounded-xl border border-red-900/20 text-sm text-gray-300 font-vazir leading-relaxed">
           <p className="text-xs text-gray-600 mb-2">🙋 شما</p>
-          {t.message}
+          {t.body}
         </div>
 
         {/* Reply thread */}
-        {(t.replies ?? []).map((r, i) => (
+        {(t.replies ?? []).map((r) => (
           <div
-            key={i}
+            key={r.id}
             className={`p-4 rounded-xl text-sm font-vazir ${
               r.isAdmin
                 ? 'bg-blue-950/20 border border-blue-900/20'

@@ -55,11 +55,14 @@ function BookingDetailContent() {
   const b = booking as {
     id: string;
     status: string;
+    code?: string;
     gameName?: string;
     game?: { title?: string };
     scheduledAt?: string;
+    slotDateTime?: string;
     totalAmount?: number;
   };
+  const scheduledAt = b.scheduledAt ?? b.slotDateTime;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-lg mx-auto space-y-6">
@@ -78,7 +81,7 @@ function BookingDetailContent() {
           <div className="text-gray-500 col-span-2">
             زمان:
             <span className="text-gray-300 mr-2">
-              {b.scheduledAt ? new Date(b.scheduledAt).toLocaleString('fa-IR') : '—'}
+              {scheduledAt ? new Date(scheduledAt).toLocaleString('fa-IR') : '—'}
             </span>
           </div>
           <div className="text-gray-500">
@@ -88,8 +91,8 @@ function BookingDetailContent() {
             </span>
           </div>
           <div className="text-gray-500">
-            شناسه:
-            <span className="text-gray-600 mr-2 text-xs">{b.id}</span>
+            کد رزرو:
+            <span className="text-gray-600 mr-2 text-xs">{b.code ?? b.id}</span>
           </div>
         </div>
         {(b.status === 'PENDING' || b.status === 'CONFIRMED') && (

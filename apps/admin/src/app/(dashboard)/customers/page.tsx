@@ -6,7 +6,6 @@ import { CustomersTable } from '@/components/customers/CustomersTable'
 import { CustomerFilterBar } from '@/components/customers/CustomerFilterBar'
 import { SkeletonTable } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { BanUserModal } from '@/components/customers/BanUserModal'
 import { toPersianNum } from '@/lib/utils'
 import { customersApi } from '@/lib/api/customers'
@@ -16,9 +15,10 @@ import type { Customer, CustomerFilterParams } from '@/types'
 function CustomersPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const searchQuery = searchParams.get('search') || ''
   
   const [filters, setFilters] = useState({
-    search: searchParams.get('search') || '',
+    search: searchQuery,
     tier: '',
     status: '',
     city: '',
@@ -30,6 +30,13 @@ function CustomersPageInner() {
   const { data: res, isLoading, mutate } = useCustomers({ ...filters, page, limit: 20 } as CustomerFilterParams)
   const customers = res?.data || []
   const meta = res?.meta
+  const totalPages = meta?.totalPages ?? 1
+
+  useEffect(() => {
+    setFilters(prev => (prev.search === searchQuery ? prev : { ...prev, search: searchQuery }))
+    setPage(1)
+    setSelectedIds([])
+  }, [searchQuery])
 
   const handleSelectAll = (checked: boolean) => {
     setSelectedIds(checked ? customers.map((c: Customer) => c.id) : [])
@@ -114,10 +121,10 @@ function CustomersPageInner() {
       </div>
 
       {/* Pagination */}
-      {meta && meta.totalPages > 1 && (
+      {meta && totalPages > 1 && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-500">
-            صفحه {toPersianNum(page)} از {toPersianNum(meta.totalPages)}
+            صفحه {toPersianNum(page)} از {toPersianNum(totalPages)}
           </span>
           <div className="flex items-center gap-1">
             <button
@@ -127,8 +134,8 @@ function CustomersPageInner() {
             >
               <i className="fas fa-chevron-right text-xs" />
             </button>
-            {Array.from({ length: Math.min(5, meta.totalPages) }, (_, i) => {
-              const p = Math.max(1, Math.min(page - 2, meta.totalPages - 4)) + i
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const p = Math.max(1, Math.min(page - 2, totalPages - 4)) + i
               return (
                 <button
                   key={p}
@@ -142,8 +149,8 @@ function CustomersPageInner() {
               )
             })}
             <button
-              onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
-              disabled={page === meta.totalPages}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
               className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <i className="fas fa-chevron-left text-xs" />

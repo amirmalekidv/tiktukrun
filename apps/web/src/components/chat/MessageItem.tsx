@@ -61,6 +61,7 @@ export default function MessageItem({ message, isMe }: MessageItemProps) {
         {/* Report button (only for others) */}
         {!isMe && (
           <button
+            type="button"
             onClick={() => setShowReport(true)}
             className="text-[10px] text-gray-700 hover:text-red-600 transition-colors mt-1 opacity-0 group-hover:opacity-100"
           >

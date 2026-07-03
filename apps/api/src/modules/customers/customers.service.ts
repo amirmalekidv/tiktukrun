@@ -27,25 +27,57 @@ export class CustomersService {
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
     const where: any = { deletedAt: null };
+    const and: any[] = [];
+    const query = String(filter.q ?? '').trim();
 
-    if (filter.q) {
-      where.OR = [
-        { fullName: { contains: filter.q, mode: 'insensitive' } },
-        { mobile: { contains: filter.q } },
-        { email: { contains: filter.q, mode: 'insensitive' } },
-        { nickname: { contains: filter.q, mode: 'insensitive' } },
-      ];
+    if (query) {
+      and.push({
+        OR: [
+          { fullName: { contains: query, mode: 'insensitive' } },
+          { mobile: { contains: query } },
+          { email: { contains: query, mode: 'insensitive' } },
+          { nickname: { contains: query, mode: 'insensitive' } },
+        ],
+      });
     }
 
     if (filter.segmentId) {
-      where.userSegments = { some: { segmentId: filter.segmentId } };
+      and.push({ userSegments: { some: { segmentId: filter.segmentId } } });
     }
 
     if (filter.ltvMin || filter.ltvMax) {
-      where.profile = where.profile ?? {};
-      where.profile.totalSpent = {};
-      if (filter.ltvMin) where.profile.totalSpent.gte = BigInt(filter.ltvMin);
-      if (filter.ltvMax) where.profile.totalSpent.lte = BigInt(filter.ltvMax);
+      const totalSpent: Record<string, number> = {};
+      if (filter.ltvMin) totalSpent.gte = Number(filter.ltvMin);
+      if (filter.ltvMax) totalSpent.lte = Number(filter.ltvMax);
+      and.push({ profile: { is: { totalSpent } } });
+    }
+
+    if (filter.status) {
+      const statusWhere = this.buildStatusWhere(String(filter.status));
+      if (statusWhere) and.push(statusWhere);
+    }
+
+    if (filter.tier) {
+      const tierWhere = this.buildTierWhere(String(filter.tier));
+      if (tierWhere) and.push(tierWhere);
+    }
+
+    if (filter.city) {
+      and.push({
+        profile: {
+          is: {
+            city: {
+              is: {
+                name: { contains: String(filter.city).trim(), mode: 'insensitive' },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    if (and.length > 0) {
+      where.AND = and;
     }
 
     // Ordering — fields are on User unless they live on UserProfile
@@ -67,8 +99,18 @@ export class CustomersService {
         take,
         orderBy,
         include: {
-          profile: { include: { level: { select: { id: true, name: true } } } },
-          _count: { select: { bookings: true } },
+          profile: {
+            include: {
+              level: { select: { id: true, name: true, requiredXp: true } },
+              city: { select: { id: true, name: true } },
+            },
+          },
+          wallet: true,
+          invitedBy: { select: { id: true, fullName: true, mobile: true } },
+          userSegments: {
+            include: { segment: { select: { id: true, name: true } } },
+          } as any,
+          _count: { select: { bookings: true, invitees: true } },
         } as any,
       }),
       this.prisma.user.count({ where }),
@@ -83,13 +125,15 @@ export class CustomersService {
     const user: any = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        profile: { include: { level: true } },
+        profile: { include: { level: true, city: true } },
         wallet: true,
         bookings: {
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: { game: { select: { title: true } } },
         },
+        invitedBy: { select: { id: true, fullName: true, mobile: true } },
+        _count: { select: { bookings: true, invitees: true } },
         userBadges: { include: { badge: true } } as any,
         userSegments: { include: { segment: true } } as any,
         crmNotesAboutMe: { orderBy: { createdAt: 'desc' } } as any,
@@ -125,14 +169,12 @@ export class CustomersService {
 
   private formatCustomer(user: any) {
     const profile = user.profile ?? {};
+    const level = profile.level ?? {};
+    const wallet = user.wallet ?? {};
     const ltv = Number(profile.totalSpent ?? 0);
-    const bookings = user._count?.bookings ?? profile.totalBookings ?? 0;
-
-    let status: string;
-    if (ltv >= 10_000_000) status = 'PLATINUM';
-    else if (ltv >= 1_000_000) status = 'VIP';
-    else if (ltv === 0 && bookings === 0) status = 'NEW';
-    else status = 'ACTIVE';
+    const totalBookings = Number(user._count?.bookings ?? profile.totalBookings ?? 0);
+    const levelRequiredXp = Math.max(Number(level.requiredXp ?? 1000), 1);
+    const xp = Number(profile.xp ?? 0);
 
     return {
       id: user.id,
@@ -141,15 +183,37 @@ export class CustomersService {
       phone: user.mobile,
       email: user.email,
       avatar: user.avatarUrl,
-      status,
-      level: profile?.level?.id ?? profile.levelId ?? 1,
-      levelName: profile?.level?.name,
-      xp: Number(profile.xp ?? 0),
+      tier: this.getCustomerTier(user),
+      status: this.getCustomerStatus(user),
+      level: level.id ?? profile.levelId ?? 1,
+      levelName: level.name,
+      xp,
+      xpForNextLevel: Math.max(levelRequiredXp - Math.min(xp, levelRequiredXp), 0),
       ltv,
-      bookings,
+      bookings: totalBookings,
+      totalBookings,
+      avgRating: Number(profile.averageRating ?? 0),
+      city: profile.city?.name,
+      tags: Array.isArray(user.userSegments)
+        ? user.userSegments
+            .map((entry: any) => entry?.segment?.name)
+            .filter(Boolean)
+        : [],
+      segment: Array.isArray(user.userSegments)
+        ? user.userSegments
+            .map((entry: any) => entry?.segment?.name)
+            .filter(Boolean)
+        : [],
+      walletBalance: Number(wallet.tomanBalance ?? 0),
+      coins: Number(wallet.coinsBalance ?? 0),
+      referredBy: user.invitedBy
+        ? user.invitedBy.fullName ?? user.invitedBy.mobile
+        : undefined,
+      totalReferrals: Number(user._count?.invitees ?? 0),
       isActive: user.isActive,
       isBanned: user.isBanned,
-      lastActiveAt: user.lastLoginAt,
+      lastActiveAt: user.lastLoginAt ?? user.createdAt,
+      registeredAt: user.createdAt,
       createdAt: user.createdAt,
     };
   }
@@ -292,17 +356,98 @@ export class CustomersService {
       orderBy: { profile: { totalSpent: 'desc' } } as any,
       take: Number(limit),
       include: {
-        profile: { include: { level: { select: { id: true, name: true } } } },
+        profile: {
+          include: {
+            level: { select: { id: true, name: true, requiredXp: true } },
+            city: { select: { id: true, name: true } },
+          },
+        },
+        wallet: true,
+        invitedBy: { select: { id: true, fullName: true, mobile: true } },
+        userSegments: {
+          include: { segment: { select: { id: true, name: true } } },
+        } as any,
+        _count: { select: { bookings: true, invitees: true } },
       } as any,
     });
-    return users.map((u: any) => ({
-      id: u.id,
-      name: u.fullName ?? u.nickname ?? u.mobile,
-      phone: u.mobile,
-      ltv: Number(u.profile?.totalSpent ?? 0),
-      level: u.profile?.level?.id ?? u.profile?.levelId,
-      levelName: u.profile?.level?.name,
-    }));
+    return users.map((u: any) => this.formatCustomer(u));
+  }
+
+  private buildStatusWhere(status: string) {
+    switch (status) {
+      case 'ACTIVE':
+        return { isActive: true, isBanned: false };
+      case 'INACTIVE':
+        return { isActive: false, isBanned: false };
+      case 'BANNED':
+        return { isBanned: true };
+      case 'SUSPENDED':
+        return { isMuted: true };
+      default:
+        return null;
+    }
+  }
+
+  private buildTierWhere(tier: string) {
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600_000);
+
+    switch (tier) {
+      case 'PLATINUM':
+        return { profile: { is: { totalSpent: { gte: 30_000_000 } } } };
+      case 'VIP':
+        return {
+          profile: { is: { totalSpent: { gte: 10_000_000, lt: 30_000_000 } } },
+        };
+      case 'GOLD':
+        return {
+          profile: { is: { totalSpent: { gte: 5_000_000, lt: 10_000_000 } } },
+        };
+      case 'SILVER':
+        return {
+          profile: { is: { totalSpent: { gte: 1_000_000, lt: 5_000_000 } } },
+        };
+      case 'BRONZE':
+        return {
+          AND: [
+            { profile: { is: { totalSpent: { gt: 0, lt: 1_000_000 } } } },
+            { bookings: { some: {} } },
+          ],
+        };
+      case 'AT_RISK':
+        return {
+          AND: [{ bookings: { some: {} } }, { lastLoginAt: { lt: ninetyDaysAgo } }],
+        };
+      case 'NEWCOMER':
+        return {
+          AND: [
+            { bookings: { none: {} } },
+            { profile: { is: { totalSpent: 0 } } },
+          ],
+        };
+      default:
+        return null;
+    }
+  }
+
+  private getCustomerStatus(user: any) {
+    if (user.isBanned) return 'BANNED';
+    if (!user.isActive) return 'INACTIVE';
+    return 'ACTIVE';
+  }
+
+  private getCustomerTier(user: any) {
+    const totalSpent = Number(user?.profile?.totalSpent ?? 0);
+    const totalBookings = Number(user?._count?.bookings ?? user?.profile?.totalBookings ?? 0);
+    const lastLoginAt = user?.lastLoginAt ? new Date(user.lastLoginAt) : null;
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600_000);
+
+    if (totalBookings > 0 && lastLoginAt && lastLoginAt < ninetyDaysAgo) return 'AT_RISK';
+    if (totalSpent >= 30_000_000) return 'PLATINUM';
+    if (totalSpent >= 10_000_000) return 'VIP';
+    if (totalSpent >= 5_000_000) return 'GOLD';
+    if (totalSpent >= 1_000_000) return 'SILVER';
+    if (totalSpent > 0 || totalBookings > 0) return 'BRONZE';
+    return 'NEWCOMER';
   }
 
   private serializeBigInt(obj: any): any {

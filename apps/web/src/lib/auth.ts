@@ -6,10 +6,17 @@ import {
   REFRESH_TOKEN_KEY,
   clearAuthTokens,
   getAuthToken,
+  refreshAccessToken,
   setAuthTokens,
 } from './http';
 
-export { AUTH_TOKEN_KEY, getAuthToken as getAccessToken, setAuthTokens, clearAuthTokens };
+export {
+  AUTH_TOKEN_KEY,
+  getAuthToken as getAccessToken,
+  setAuthTokens,
+  clearAuthTokens,
+  refreshAccessToken,
+};
 
 export function setAccessToken(token: string) {
   setAuthTokens(token);

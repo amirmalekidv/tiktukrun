@@ -8,6 +8,7 @@ import StatsGrid from '@/components/profile/StatsGrid';
 import BadgesList from '@/components/profile/BadgesList';
 import LevelTierBanner from '@/components/profile/LevelTierBanner';
 import { profileApi } from '@/lib/api/profile';
+import { normalizePublicProfilePayload } from '@/lib/profile-adapter';
 
 export default function PublicProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -19,9 +20,8 @@ export default function PublicProfilePage() {
     if (!userId) return;
     profileApi
       .getPublicProfile(userId)
-      .then((d: { profile?: unknown } | unknown) => {
-        const payload = d as { profile?: unknown };
-        setProfile(payload?.profile ?? d ?? null);
+      .then((raw) => {
+        setProfile(normalizePublicProfilePayload(raw));
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -67,7 +67,8 @@ export default function PublicProfilePage() {
         <div className="lg:col-span-2 space-y-4">
           <XpProgressBar
             currentXp={profile.currentXp ?? 0}
-            nextLevelXp={profile.nextLevelXp ?? 1000}
+            levelStartXp={profile.levelStartXp ?? 0}
+            levelEndXp={profile.levelEndXp ?? 100}
             level={profile.level ?? 1}
           />
           <StatsGrid

@@ -4,7 +4,7 @@ import useSWR from 'swr'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getGamesBySection } from '@/lib/api'
-import { GAME_COVER_PLACEHOLDER } from '@/lib/games'
+import { GAME_COVER_PLACEHOLDER, shouldBypassImageOptimization } from '@/lib/games'
 import { formatToman } from '@/lib/utils'
 import FearMeter from '@/components/ui/FearMeter'
 
@@ -27,12 +27,14 @@ export default function WeeklyDiscountSection() {
           ? Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="dark-card rounded-xl h-48 skeleton" />
             ))
-          : games.map((game, idx) => {
+            : games.map((game, idx) => {
               // Use deterministic discount based on game index to avoid hydration mismatch
               const DISCOUNTS = [15, 20, 25, 10, 30, 18, 22, 12, 28]
               const discount = DISCOUNTS[idx % DISCOUNTS.length]
               const originalPrice = Number(game.basePrice) || 0
               const discountedPrice = Math.round(originalPrice * (1 - discount / 100))
+              const coverImage = game.coverImage || game.images[0]?.url || GAME_COVER_PLACEHOLDER
+              const unoptimized = shouldBypassImageOptimization(coverImage)
 
               return (
                 <Link key={game.id} href={`/games/${game.slug}`}>
@@ -44,9 +46,10 @@ export default function WeeklyDiscountSection() {
 
                     <div className="relative h-32 overflow-hidden">
                       <Image
-                        src={game.coverImage || game.images[0]?.url || GAME_COVER_PLACEHOLDER}
+                        src={coverImage}
                         alt={game.title}
                         fill
+                        unoptimized={unoptimized}
                         className="object-cover group-hover:scale-110 transition duration-500"
                         sizes="(max-width: 768px) 100vw, 33vw"
                       />

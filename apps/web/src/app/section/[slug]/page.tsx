@@ -1,10 +1,18 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import { getGamesBySection } from '@/lib/api'
 import GameCard from '@/components/home/GameCard'
 import { GameCardSkeleton } from '@/components/ui/LoadingSkeleton'
 import { toPersianDigits } from '@/lib/utils'
+
+const SECTION_REDIRECTS: Record<string, string> = {
+  stories: '/stories',
+  leaderboard: '/leaderboard',
+  wheel: '/wheel',
+}
 
 const SECTION_META: Record<string, { title: string; desc: string; icon: string }> = {
   'weekly-discount': { title: 'تخفیف‌های هفتگی', desc: 'بهترین تخفیف‌های این هفته', icon: 'fas fa-bolt' },
@@ -19,12 +27,19 @@ const SECTION_META: Record<string, { title: string; desc: string; icon: string }
   tehran: { title: 'در تهران', desc: 'بهترین سرگرمی‌های تهران', icon: 'fas fa-city' },
   karaj: { title: 'در کرج', desc: 'سرگرمی‌های کرج', icon: 'fas fa-map-marker-alt' },
   featured: { title: 'برترین‌ها', desc: 'بهترین تجربه‌های قلمرو', icon: 'fas fa-star' },
-  stories: { title: 'داستان‌ها', desc: 'داستان شجاعان قلمرو', icon: 'fas fa-book' },
-  leaderboard: { title: 'جدول شجاعان', desc: 'قهرمانان قلمرو', icon: 'fas fa-trophy' },
 }
 
 export default function SectionPage({ params }: { params: { slug: string } }) {
   const { slug } = params
+  const router = useRouter()
+  const redirectTo = SECTION_REDIRECTS[slug]
+
+  useEffect(() => {
+    if (redirectTo) router.replace(redirectTo)
+  }, [redirectTo, router])
+
+  if (redirectTo) return null
+
   const meta = SECTION_META[slug] || { title: slug, desc: 'بازی‌ها', icon: 'fas fa-gamepad' }
 
   const { data: games = [], isLoading } = useSWR(`section-page-${slug}`, () => getGamesBySection(slug))

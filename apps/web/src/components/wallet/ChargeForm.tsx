@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { walletApi } from '@/lib/api/wallet';
+import { useAuthStore } from '@/store/auth.store';
 
 const PRESET_AMOUNTS = [50000, 100000, 200000, 500000, 1000000];
 
@@ -13,6 +14,7 @@ interface ChargeFormProps {
 export default function ChargeForm({ onSuccess }: ChargeFormProps) {
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { user, setUser } = useAuthStore();
 
   const handleCharge = async () => {
     // Strip commas, Persian/Arabic-Indic digits, then parse
@@ -27,11 +29,15 @@ export default function ChargeForm({ onSuccess }: ChargeFormProps) {
 
     setIsLoading(true);
     try {
-      const { paymentUrl } = await walletApi.chargeWallet(numAmount);
+      const { paymentUrl, message, walletBalance } = await walletApi.chargeWallet(numAmount);
       if (paymentUrl) {
         window.location.href = paymentUrl;
       } else {
-        toast.error('خطا در اتصال به درگاه پرداخت');
+        if (typeof walletBalance === 'number' && user) {
+          setUser({ ...user, walletBalance });
+        }
+        toast.success(message || 'شارژ کیف پول با موفقیت انجام شد');
+        onSuccess?.();
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'خطا در شارژ کیف پول';

@@ -1,7 +1,17 @@
+export type WheelPrizeType =
+  | 'xp'
+  | 'coins'
+  | 'diamonds'
+  | 'discount'
+  | 'ticket'
+  | 'toman'
+  | 'item'
+  | 'nothing';
+
 export interface WheelPrize {
   id: string;
   label: string;
-  type: 'xp' | 'coins' | 'diamonds' | 'item' | 'nothing';
+  type: WheelPrizeType;
   value: number;
   weight: number; // probability weight (sum of all = 100)
   color?: string;

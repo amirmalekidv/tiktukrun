@@ -76,6 +76,16 @@ export class BookingsService {
     };
   }
 
+  private async sendBookingConfirmedNotification(userId: string, bookingId: string, code: string) {
+    await this.notif.send({
+      userId,
+      type:  NotificationType.BOOKING_CONFIRMED,
+      title: 'رزرو تأیید شد ✅',
+      body:  `رزرو شما با کد ${code} تأیید شد.`,
+      data:  { bookingId },
+    }).catch(() => {});
+  }
+
   // ─── Private helpers ────────────────────────────────────────────────────────
   private async validateSlot(gameId: string, slotDateTime: Date, playersCount: number) {
     const policy = await this.getBookingPolicy();
@@ -166,6 +176,9 @@ export class BookingsService {
     const basePrice      = basePriceNum;
     const discountAmount = Number(discount.discountAmount);
     const totalAmount    = Number(discount.finalPrice);
+    const isMockGatewayPayment =
+      dto.paymentMethod === PaymentMethod.ZARINPAL
+      && await this.payments.isMockMode();
 
     // Unique booking code (8 chars)
     const code = nanoid(8).toUpperCase();
@@ -251,18 +264,107 @@ export class BookingsService {
           }
         }
 
-        return { booking, payment };
-      }).then(async ({ booking }) => {
+        return { booking, walletBalance: wallet.tomanBalance };
+      }).then(async ({ booking, walletBalance }) => {
         // اطلاع‌رسانی خارج از transaction
-        await this.notif.send({
-          userId,
-          type:  NotificationType.BOOKING_CONFIRMED,
-          title: 'رزرو تأیید شد ✅',
-          body:  `رزرو شما با کد ${code} تأیید شد.`,
-          data:  { bookingId: booking.id },
-        }).catch(() => {});
+        await this.sendBookingConfirmedNotification(userId, booking.id, code);
 
-        return { success: true, data: { bookingId: booking.id, code, status: 'CONFIRMED' } };
+        return {
+          success: true,
+          data: {
+            bookingId: booking.id,
+            code,
+            status: 'CONFIRMED',
+            message: 'پرداخت با کیف پول با موفقیت انجام شد.',
+            walletBalance,
+            booking: {
+              id: booking.id,
+              code,
+              status: 'CONFIRMED',
+              slotDateTime: booking.slotDateTime.toISOString(),
+            },
+          },
+        };
+      });
+    }
+
+    if (isMockGatewayPayment) {
+      return this.prisma.$transaction(async (tx) => {
+        const gatewayAuthority = `MOCK_${uuid()}`;
+        const gatewayRefId = `MOCK_REF_${Date.now()}`;
+
+        const booking = await tx.booking.create({
+          data: {
+            userId,
+            gameId:          dto.gameId,
+            branchId:        game.branchId,
+            slotDateTime:    slotDt,
+            playersCount:    dto.playersCount,
+            basePrice,
+            discountApplied: discountAmount,
+            totalAmount,
+            paymentMethod:   dto.paymentMethod,
+            code,
+            note:            dto.note,
+            status:          'CONFIRMED',
+          },
+        });
+
+        await tx.payment.create({
+          data: {
+            userId,
+            bookingId:        booking.id,
+            amount:           totalAmount,
+            status:           'SUCCESS',
+            method:           'ZARINPAL',
+            gateway:          'zarinpal',
+            gatewayAuthority,
+            gatewayRefId,
+            paidAt:           new Date(),
+          },
+        });
+
+        if (dto.discountCode && discount.appliedCode) {
+          const dcRecord = await tx.discountCode.findFirst({
+            where:  { code: dto.discountCode },
+            select: { id: true },
+          });
+          if (dcRecord) {
+            await tx.discountCode.update({
+              where: { id: dcRecord.id },
+              data:  { usedCount: { increment: 1 } },
+            });
+            await tx.booking.update({ where: { id: booking.id }, data: { discountCodeId: dcRecord.id } });
+            await tx.discountUsage.create({
+              data: {
+                codeId:      dcRecord.id,
+                userId,
+                bookingId:   booking.id,
+                savedAmount: discountAmount,
+              },
+            });
+          }
+        }
+
+        return booking;
+      }).then(async (booking) => {
+        await this.sendBookingConfirmedNotification(userId, booking.id, code);
+
+        return {
+          success: true,
+          data: {
+            bookingId: booking.id,
+            code,
+            status: 'CONFIRMED',
+            message: 'پرداخت آزمایشی با موفقیت انجام شد.',
+            booking: {
+              id: booking.id,
+              code,
+              status: 'CONFIRMED',
+              slotDateTime: booking.slotDateTime.toISOString(),
+            },
+          },
+        };
       });
     }
 
@@ -310,6 +412,12 @@ export class BookingsService {
         code,
         status:     'PENDING',
         paymentUrl: initiateResult.paymentUrl,
+        booking: {
+          id: booking.id,
+          code,
+          status: 'PENDING',
+          slotDateTime: booking.slotDateTime.toISOString(),
+        },
       },
     };
   }

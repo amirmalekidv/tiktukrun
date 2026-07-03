@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import useSWR from 'swr'
 import { getLeaderboard } from '@/lib/api'
 import { toPersianDigits } from '@/lib/utils'
@@ -17,7 +18,7 @@ const rankColors = ['text-yellow-400', 'text-gray-300', 'text-amber-600']
 const rankIcons = ['👑', '🥈', '🥉']
 
 export default function TopPlayersSection() {
-  const [period, setPeriod] = useState<Period>('WEEKLY')
+  const [period, setPeriod] = useState<Period>('ALL_TIME')
   const { data: leaderboard = [], isLoading } = useSWR(`leaderboard-${period}`, () => getLeaderboard(period))
 
   return (
@@ -111,10 +112,10 @@ export default function TopPlayersSection() {
 
         {/* Footer */}
         <div className="border-t border-red-950/40 p-4 text-center">
-          <a href="/section/leaderboard" className="text-red-400 hover:text-red-300 text-sm transition-colors">
+          <Link href="/leaderboard" className="text-red-400 hover:text-red-300 text-sm transition-colors">
             مشاهده جدول کامل
             <i className="fas fa-chevron-left mr-2 text-xs" />
-          </a>
+          </Link>
         </div>
       </div>
     </section>

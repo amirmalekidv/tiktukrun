@@ -26,12 +26,21 @@ export class ProfileController {
     return this.badgeService.getUserBadges(userId);
   }
 
+  @Get('leaderboard/me')
+  @ApiOperation({ summary: 'رتبه کاربر فعلی در جدول شجاعان' })
+  @ApiQuery({ name: 'type', enum: ['xp', 'bookings', 'spent'], required: false })
+  @ApiQuery({ name: 'period', enum: ['week', 'month', 'all'], required: false })
+  async getMyLeaderboardRank(@CurrentUser('id') userId: string, @Query() query: any) {
+    return this.profileService.getMyLeaderboardRank(userId, query);
+  }
+
   @Get('leaderboard')
   @Public()
   @ApiOperation({ summary: 'جدول رتبه‌بندی (عمومی)' })
   @ApiQuery({ name: 'type', enum: ['xp', 'bookings', 'spent'], required: false })
   @ApiQuery({ name: 'period', enum: ['week', 'month', 'all'], required: false })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'page', required: false, type: Number })
   async getLeaderboard(@Query() query: any) {
     return this.profileService.getLeaderboard(query);
   }

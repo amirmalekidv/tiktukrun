@@ -50,6 +50,8 @@ async function bootstrap() {
     helmet({
       contentSecurityPolicy: false, // disabled — Swagger UI conflicts
       crossOriginEmbedderPolicy: false,
+      // Admin and web apps load uploaded media from the API origin/port.
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
   app.use(compression());
@@ -115,7 +117,8 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseInterceptor(), new LoggingInterceptor());
 
   // ─── Static files (uploads) ───────────────────────────────────────────────
-  app.useStaticAssets(join(process.cwd(), '..', '..', 'storage', 'uploads'), {
+  // Keep the public uploads mount aligned with where services write files.
+  app.useStaticAssets(join(process.cwd(), 'storage', 'uploads'), {
     prefix: '/uploads/',
     maxAge: '30d',
   });

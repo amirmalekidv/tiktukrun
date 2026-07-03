@@ -68,23 +68,45 @@ export class AdminCustomersController {
   @ApiOperation({ summary: 'لیست مشتریان با فیلتر پیشرفته' })
   async findAll(
     @Query('q') q?: string,
+    @Query('search') search?: string,
     @Query('status') status?: string,
+    @Query('tier') tier?: string,
+    @Query('city') city?: string,
     @Query('segmentId') segmentId?: string,
+    @Query('segment') segment?: string,
     @Query('ltvMin') ltvMin?: string,
+    @Query('minLtv') minLtv?: string,
     @Query('ltvMax') ltvMax?: string,
+    @Query('maxLtv') maxLtv?: string,
     @Query('sortBy') sortBy?: string,
     @Query('page') page = '1',
     @Query('limit') limit = '20',
   ) {
     const result = await this.customersService.findAll(
-      { q, status, segmentId, ltvMin, ltvMax, sortBy },
+      {
+        q: q ?? search,
+        status,
+        tier,
+        city,
+        segmentId: segmentId ?? segment,
+        ltvMin: ltvMin ?? minLtv,
+        ltvMax: ltvMax ?? maxLtv,
+        sortBy,
+      },
       Number(page),
       Number(limit),
     );
+    const currentPage = Number(page);
+    const currentLimit = Number(limit);
     return {
       success: true,
       ...result,
-      meta: { page: Number(page), limit: Number(limit), total: result.total },
+      meta: {
+        page: currentPage,
+        limit: currentLimit,
+        total: result.total,
+        totalPages: Math.max(1, Math.ceil(result.total / Math.max(currentLimit, 1))),
+      },
     };
   }
 

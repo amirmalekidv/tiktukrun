@@ -1,7 +1,9 @@
 'use client';
 import { useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { joinRoom, leaveRoom, sendMessage, emitTyping } from '@/lib/socket';
 import { chatApi } from '@/lib/api/chat';
+import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/stores/chatStore';
 import type { ChatMessage } from '@/stores/chatStore';
 import toast from 'react-hot-toast';
@@ -12,6 +14,10 @@ interface UseChatOptions {
 }
 
 export function useChat({ roomType, teamId }: UseChatOptions) {
+  const router = useRouter();
+  const currentUserId = useAuthStore((state) =>
+    state.user?.id ? String(state.user.id) : null
+  );
   const {
     messages,
     typingUsers,
@@ -22,6 +28,8 @@ export function useChat({ roomType, teamId }: UseChatOptions) {
     setOnlineCount,
     setConnected,
     setMessages,
+    clearTypingUsers,
+    resetRoom,
   } = useChatStore();
 
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -29,33 +37,121 @@ export function useChat({ roomType, teamId }: UseChatOptions) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    resetRoom();
+
     let socketInstance: ReturnType<typeof import('@/lib/socket').getSocket> | null = null;
+    let cancelled = false;
+    let cleanup = () => {};
+
+    const normalizeMessage = (raw: Partial<ChatMessage> & {
+      id?: string;
+      userId?: string;
+      userName?: string;
+      userAvatar?: string | null;
+      text?: string;
+      createdAt?: string;
+    }): ChatMessage => ({
+      id: String(raw.id ?? ''),
+      userId: String(raw.userId ?? ''),
+      userName: raw.userName ?? 'کاربر',
+      userAvatar: raw.userAvatar ?? undefined,
+      text: raw.text ?? '',
+      createdAt: raw.createdAt ?? new Date().toISOString(),
+      roomType,
+      teamId,
+      isMuted: raw.isMuted,
+      isReported: raw.isReported,
+    });
+
+    const handleTeamAccessError = (message: string) => {
+      if (roomType !== 'team') return false;
+      if (!message.includes('عضو این تیم نیستید')) return false;
+
+      toast.error(message);
+      router.replace('/community');
+      return true;
+    };
 
     // Dynamically import to avoid SSR issues
     const setup = async () => {
       try {
-        const { getSocket } = await import('@/lib/socket');
-        socketInstance = getSocket();
+        try {
+          const history = roomType === 'global'
+            ? await chatApi.getGlobalMessages({ limit: 50 })
+            : teamId
+              ? await chatApi.getTeamMessages(teamId, { limit: 50 })
+              : null;
+          const items = (history as { items?: ChatMessage[]; data?: ChatMessage[] })?.items
+            ?? (history as { data?: ChatMessage[] })?.data
+            ?? (Array.isArray(history) ? history : []);
+          if (!cancelled) {
+            setMessages((items as ChatMessage[]).map((item) => normalizeMessage(item)));
+          }
+        } catch (error) {
+          if (error instanceof Error) {
+            handleTeamAccessError(error.message);
+          }
+          // history optional if socket delivers chatHistory
+        }
 
+        const { getSocket } = await import('@/lib/socket');
+        if (cancelled) return;
+
+        socketInstance = getSocket();
         setConnected(socketInstance.connected);
 
-        const onConnect = () => setConnected(true);
-        const onDisconnect = () => setConnected(false);
-        const onChatHistory = (msgs: ChatMessage[]) => setMessages(msgs);
-        const onNewMessage = (msg: ChatMessage) => addMessage(msg);
+        const joinCurrentRoom = () => {
+          joinRoom(roomType, teamId);
+        };
+        const onConnect = () => {
+          setConnected(true);
+          joinCurrentRoom();
+        };
+        const onDisconnect = () => {
+          setConnected(false);
+          setOnlineCount(0);
+          clearTypingUsers();
+        };
+        const onChatHistory = (msgs: ChatMessage[]) =>
+          setMessages(msgs.map((msg) => normalizeMessage(msg)));
+        const onNewMessage = (msg: ChatMessage) => addMessage(normalizeMessage(msg));
         const onTyping = (e: { userId: string; userName: string }) => {
+          if (currentUserId && e.userId === currentUserId) return;
           setTypingUser(e.userId, e.userName, true);
-          // auto clear typing after 3s
           setTimeout(() => setTypingUser(e.userId, e.userName, false), 3000);
         };
         const onOnlineCount = (payload: number | { count: number }) => {
           setOnlineCount(typeof payload === 'number' ? payload : payload.count);
         };
-        const onUserMuted = (e: { user: string; hours: number }) => {
-          toast.error(`${e.user} برای ${e.hours} ساعت سکوت شد`);
+        const onUserMuted = (e: { hours?: number }) => {
+          const hours = e.hours ?? 1;
+          toast.error(`شما برای ${hours} ساعت از چت محروم شدید`);
         };
         const onMessageDeleted = (e: { messageId: string }) => {
           useChatStore.getState().removeMessage(e.messageId);
+        };
+        const onMessageHidden = (e: { messageId: string }) => {
+          useChatStore.getState().removeMessage(e.messageId);
+        };
+        const onChatError = (e: { message?: string }) => {
+          const message = e.message?.trim() || 'خطا در چت';
+          const handled = handleTeamAccessError(message);
+          if (!handled) {
+            toast.error(message);
+          }
+        };
+        const onUserKicked = (e: { userId?: string; teamId?: string }) => {
+          if (
+            roomType !== 'team' ||
+            !currentUserId ||
+            e.teamId !== teamId ||
+            String(e.userId ?? '') !== currentUserId
+          ) {
+            return;
+          }
+
+          toast.error('از تیم اخراج شدید');
+          router.replace('/community');
         };
 
         socketInstance.on('connect', onConnect);
@@ -66,26 +162,16 @@ export function useChat({ roomType, teamId }: UseChatOptions) {
         socketInstance.on('onlineCount', onOnlineCount);
         socketInstance.on('userMuted', onUserMuted);
         socketInstance.on('messageDeleted', onMessageDeleted);
+        socketInstance.on('messageHidden', onMessageHidden);
+        socketInstance.on('error', onChatError);
+        socketInstance.on('userKicked', onUserKicked);
 
-        joinRoom(roomType, teamId);
-
-        try {
-          const history = roomType === 'global'
-            ? await chatApi.getGlobalMessages({ limit: 50 })
-            : teamId
-              ? await chatApi.getTeamMessages(teamId, { limit: 50 })
-              : null;
-          const items = (history as { items?: ChatMessage[]; data?: ChatMessage[] })?.items
-            ?? (history as { data?: ChatMessage[] })?.data
-            ?? (Array.isArray(history) ? history : []);
-          if (items.length) setMessages(items as ChatMessage[]);
-        } catch {
-          // history optional if socket delivers chatHistory
-        }
-
-        return () => {
+        cleanup = () => {
           try {
             leaveRoom(roomType, teamId);
+            if (typingTimeout.current) {
+              clearTimeout(typingTimeout.current);
+            }
             if (socketInstance) {
               socketInstance.off('connect', onConnect);
               socketInstance.off('disconnect', onDisconnect);
@@ -95,25 +181,36 @@ export function useChat({ roomType, teamId }: UseChatOptions) {
               socketInstance.off('onlineCount', onOnlineCount);
               socketInstance.off('userMuted', onUserMuted);
               socketInstance.off('messageDeleted', onMessageDeleted);
+              socketInstance.off('messageHidden', onMessageHidden);
+              socketInstance.off('error', onChatError);
+              socketInstance.off('userKicked', onUserKicked);
             }
           } catch {
             // cleanup
           }
         };
+
+        if (socketInstance.connected) {
+          joinCurrentRoom();
+        } else {
+          socketInstance.connect();
+        }
       } catch {
         // socket not available in SSR or during build
-        return () => {};
+        if (!cancelled) {
+          setConnected(false);
+        }
       }
     };
 
-    let cleanup: (() => void) | undefined;
-    setup().then((fn) => { cleanup = fn; });
+    void setup();
 
     return () => {
-      if (cleanup) cleanup();
+      cancelled = true;
+      cleanup();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomType, teamId]);
+  }, [roomType, teamId, currentUserId, router]);
 
   const send = useCallback(
     (text: string) => {
@@ -128,8 +225,12 @@ export function useChat({ roomType, teamId }: UseChatOptions) {
 
   const handleTyping = useCallback(() => {
     try {
+      if (typingTimeout.current) return;
+
       emitTyping(roomType, teamId);
-      if (typingTimeout.current) clearTimeout(typingTimeout.current);
+      typingTimeout.current = setTimeout(() => {
+        typingTimeout.current = null;
+      }, 1500);
     } catch {
       // socket not connected
     }

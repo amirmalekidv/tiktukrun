@@ -8,6 +8,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { GameQueryDto, GameSortBy } from '../dto/game-query.dto';
 import { parsePagination, buildPaginatedResponse } from '../../../common/helpers/pagination.helper';
 import { DateTime } from 'luxon';
+import { SettingsService } from '../../settings/settings.service';
 
 // سلوت‌های روزانه: ساعت ۹ تا ۲۳ با فاصله ۱ ساعت
 const SLOT_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
@@ -35,7 +36,10 @@ const GAME_FULL_INCLUDE = {
 export class GamesService {
   private readonly logger = new Logger(GamesService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private settings: SettingsService,
+  ) {}
 
   // ─── Build Prisma where ──────────────────────────────────────────────────────
   private buildWhere(q: GameQueryDto, adminMode = false): any {
@@ -169,8 +173,6 @@ export class GamesService {
       'horror':             { tags: { has: 'ترسناک' } },
       'non-horror':         { NOT: { tags: { has: 'ترسناک' } } },
       'featured':           { isFeatured: true },
-      'stories':            { isFeatured: true },
-      'leaderboard':        {},
       'popular-this-week':  {},
     };
 
@@ -223,24 +225,25 @@ export class GamesService {
 
   // ─── Availability ─────────────────────────────────────────────────────────────
   async getAvailability(gameId: string, dateStr: string) {
-    const gid = gameId;
-    if (!Number.isFinite(gid)) throw new NotFoundException('بازی یافت نشد');
     const game = await this.prisma.game.findFirst({
-      where: { id: gid, isActive: true },
+      where: { id: gameId, isActive: true },
     });
     if (!game) throw new NotFoundException('بازی یافت نشد');
 
-    // خواندن maxConcurrent از Settings (default 1)
-    const maxConcurrent = 1;
-
-    // تبدیل تاریخ ISO
     const dayStart = DateTime.fromISO(dateStr, { zone: TEHRAN_TZ }).startOf('day');
+    if (!dayStart.isValid) {
+      throw new BadRequestException('تاریخ نامعتبر است');
+    }
     const dayEnd   = dayStart.endOf('day');
+    const maxConcurrent = Math.max(
+      1,
+      Number(await this.settings.get('booking.maxConcurrent', '1')) || 1,
+    );
 
     // رزروهای موجود آن روز
     const existingBookings = await this.prisma.booking.findMany({
       where: {
-        gameId: gid,
+        gameId,
         slotDateTime: {
           gte: dayStart.toJSDate(),
           lte: dayEnd.toJSDate(),
@@ -253,6 +256,7 @@ export class GamesService {
     const slots = SLOT_HOURS.map((hour) => {
       const slotTime   = dayStart.set({ hour, minute: 0, second: 0, millisecond: 0 });
       const slotJSDate = slotTime.toJSDate();
+      const slotEndTime = slotTime.plus({ minutes: game.durationMinutes });
 
       const bookingsInSlot = existingBookings.filter(
         (b) => Math.abs(b.slotDateTime.getTime() - slotJSDate.getTime()) < 1000,
@@ -260,17 +264,30 @@ export class GamesService {
 
       const bookedCount = bookingsInSlot.length;
       // مقایسه با timezone یکسان (Asia/Tehran)
-      const available   = bookedCount < maxConcurrent && slotTime > DateTime.now().setZone(TEHRAN_TZ);
+      const remainingSlots = Math.max(0, maxConcurrent - bookedCount);
+      const available   = remainingSlots > 0 && slotTime > DateTime.now().setZone(TEHRAN_TZ);
+      const slotId = slotJSDate.toISOString();
 
       return {
-        slotDateTime:  slotJSDate.toISOString(),
+        id:            slotId,
+        slotDateTime:  slotId,
+        startTime:     slotTime.toFormat('HH:mm'),
+        endTime:       slotEndTime.toFormat('HH:mm'),
         hour,
+        price:         Number(game.pricePerPerson),
         available,
+        isAvailable:   available,
         bookedCount,
-        remainingSlots: Math.max(0, maxConcurrent - bookedCount),
+        remainingSlots,
+        availableCapacity: remainingSlots,
+        totalCapacity: maxConcurrent,
       };
     });
 
-    return { gameId, date: dateStr, slots };
+    return {
+      gameId,
+      date: dateStr,
+      slots,
+    };
   }
 }

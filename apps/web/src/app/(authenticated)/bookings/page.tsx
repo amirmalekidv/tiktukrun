@@ -25,11 +25,35 @@ interface Booking {
   status: string;
 }
 
+interface ApiBooking {
+  id: string;
+  status: string;
+  totalAmount?: number | string;
+  slotDateTime?: string;
+  game?: {
+    title?: string;
+  };
+}
+
 const DEMO_BOOKINGS: Booking[] = [
   { id: 'b1', roomName: 'اتاق وحشت شماره ۱', date: '۱۴۰۳/۱۰/۰۵', time: '۱۸:۰۰', price: 120000, status: 'CONFIRMED' },
   { id: 'b2', roomName: 'معمای هزارتو', date: '۱۴۰۳/۰۹/۲۰', time: '۲۰:۰۰', price: 95000, status: 'COMPLETED' },
   { id: 'b3', roomName: 'قلعه ارواح', date: '۱۴۰۳/۰۹/۱۰', price: 150000, status: 'CANCELLED' },
 ];
+
+function normalizeBooking(booking: ApiBooking): Booking {
+  const slotDate = booking.slotDateTime ? new Date(booking.slotDateTime) : null;
+  return {
+    id: booking.id,
+    roomName: booking.game?.title ?? 'رزرو',
+    date: slotDate ? slotDate.toLocaleDateString('fa-IR') : '—',
+    time: slotDate
+      ? slotDate.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
+      : undefined,
+    price: Number(booking.totalAmount ?? 0),
+    status: booking.status,
+  };
+}
 
 export default function BookingsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
@@ -40,9 +64,11 @@ export default function BookingsPage() {
     { keepPreviousData: true }
   );
 
-  const bookingsData = data as { bookings?: Booking[] } | null;
+  const bookingsData = data as { data?: ApiBooking[] } | ApiBooking[] | null;
   const bookings: Booking[] =
-    bookingsData?.bookings ?? (USE_MOCK ? DEMO_BOOKINGS : []);
+    Array.isArray(bookingsData)
+      ? bookingsData.map(normalizeBooking)
+      : bookingsData?.data?.map(normalizeBooking) ?? (USE_MOCK ? DEMO_BOOKINGS : []);
   const filtered = statusFilter
     ? bookings.filter((b) => b.status === statusFilter)
     : bookings;

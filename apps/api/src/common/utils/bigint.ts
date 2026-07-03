@@ -52,6 +52,7 @@ export function subtractBigInt(a: bigint, b: bigint): bigint {
 export function serializeBigInts(obj: any): any {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj === 'bigint') return obj.toString();
+  if (obj instanceof Date) return obj.toISOString();
   if (Array.isArray(obj)) return obj.map(serializeBigInts);
   if (typeof obj === 'object') {
     const result: any = {};

@@ -106,6 +106,9 @@ export class UpdateGameDto {
   subtitle?: string;
 
   @IsOptional() @IsString()
+  slug?: string;
+
+  @IsOptional() @IsString()
   categoryId?: string;
 
   @IsOptional() @IsString()
@@ -123,8 +126,8 @@ export class UpdateGameDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(10)
   fearLevel?: number;
 
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(5)
-  difficulty?: number;
+  @IsOptional() @IsString()
+  difficulty?: string;
 
   @IsOptional() @IsEnum(GameTierEnum)
   tier?: GameTierEnum;
@@ -135,23 +138,46 @@ export class UpdateGameDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1)
   maxPlayers?: number;
 
+  @Transform(({ obj, value }) => {
+    const raw = value ?? obj?.duration;
+    return raw !== undefined && raw !== '' ? Number(raw) : undefined;
+  })
   @IsOptional() @Type(() => Number) @IsInt() @Min(15)
   durationMinutes?: number;
 
   @IsOptional() @Type(() => Number) @IsNumber()
   pricePerPerson?: number;
 
+  @IsOptional() @Type(() => Number) @IsNumber()
+  siteRank?: number;
+
   @IsOptional() @IsArray() @IsString({ each: true })
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value !== 'string' || !value.trim()) return [];
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      /* comma-separated fallback */
+    }
+    return value.split(',').map((s) => s.trim()).filter(Boolean);
+  })
   tags?: string[];
 
   @IsOptional() @IsBoolean()
+  @Transform(({ value }) => value === true || value === 'true')
   isFeatured?: boolean;
 
   @IsOptional() @IsBoolean()
+  @Transform(({ value }) => value === true || value === 'true')
   isActive?: boolean;
 
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(50)
   weeklyDiscountPercent?: number;
+
+  @IsOptional() @IsString()
+  teaserUrl?: string;
 }
 
 export class WeeklyDiscountDto {

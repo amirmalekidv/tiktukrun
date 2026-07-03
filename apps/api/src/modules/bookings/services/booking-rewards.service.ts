@@ -95,6 +95,16 @@ export class BookingRewardsService {
       },
     });
 
+    await this.prisma.xpHistory.create({
+      data: {
+        userId,
+        amount: rewards.xp,
+        source: 'BOOKING_COMPLETION',
+        refId: bookingId,
+        description: `پاداش تکمیل رزرو ${booking.code ?? bookingId}`,
+      },
+    });
+
     await this.addCoinsWithAudit(
       userId,
       rewards.coins,
@@ -115,6 +125,15 @@ export class BookingRewardsService {
     await this.prisma.userProfile.update({
       where: { userId },
       data: { xp: { increment: rewards.xp } },
+    });
+    await this.prisma.xpHistory.create({
+      data: {
+        userId,
+        amount: rewards.xp,
+        source: 'REVIEW',
+        refId: reviewId ?? userId,
+        description: 'پاداش ثبت نظر',
+      },
     });
     await this.addCoinsWithAudit(
       userId,

@@ -29,7 +29,25 @@ interface ChatStore {
   setOnlineCount: (count: number) => void;
   setConnected: (status: boolean) => void;
   clearMessages: () => void;
+  clearTypingUsers: () => void;
   removeMessage: (messageId: string) => void;
+  resetRoom: () => void;
+}
+
+function normalizeMessages(messages: ChatMessage[]) {
+  const unique = new Map<string, ChatMessage>();
+
+  for (const message of messages) {
+    unique.set(message.id, message);
+  }
+
+  return Array.from(unique.values())
+    .sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return aTime - bTime;
+    })
+    .slice(-200);
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
@@ -40,10 +58,10 @@ export const useChatStore = create<ChatStore>((set) => ({
 
   addMessage: (message) =>
     set((state) => ({
-      messages: [...state.messages.slice(-199), message],
+      messages: normalizeMessages([...state.messages, message]),
     })),
 
-  setMessages: (messages) => set({ messages }),
+  setMessages: (messages) => set({ messages: normalizeMessages(messages) }),
 
   setTypingUser: (userId, userName, isTyping) =>
     set((state) => {
@@ -61,9 +79,17 @@ export const useChatStore = create<ChatStore>((set) => ({
   setOnlineCount: (count) => set({ onlineCount: count }),
   setConnected: (status) => set({ isConnected: status }),
   clearMessages: () => set({ messages: [] }),
+  clearTypingUsers: () => set({ typingUsers: [] }),
 
   removeMessage: (messageId) =>
     set((state) => ({
       messages: state.messages.filter((m) => m.id !== messageId),
     })),
+
+  resetRoom: () =>
+    set({
+      messages: [],
+      typingUsers: [],
+      onlineCount: 0,
+    }),
 }));

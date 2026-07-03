@@ -10,7 +10,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export enum DiscountType {
   PERCENT = 'PERCENT',
@@ -33,10 +33,12 @@ export class ValidateDiscountDto {
   @IsString()
   gameId: string;
 
+  @Transform(({ value, obj }) => value ?? obj.players)
   @IsInt()
   @Type(() => Number)
   playersCount: number;
 
+  @Transform(({ value, obj }) => value ?? obj.slotId)
   @IsDateString()
   slotDateTime: string;
 }

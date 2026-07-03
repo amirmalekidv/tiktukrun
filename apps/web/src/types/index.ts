@@ -107,6 +107,7 @@ export interface GameLikeStatus {
 
 export interface TimeSlot {
   id: string
+  slotDateTime?: string
   startTime: string // ISO
   endTime: string
   availableCapacity: number

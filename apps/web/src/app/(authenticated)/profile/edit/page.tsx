@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { profileApi } from '@/lib/api/profile';
+import { normalizeProfilePayload } from '@/lib/profile-adapter';
 
 const schema = z.object({
   name: z.string().min(2, 'نام باید حداقل ۲ حرف باشد').max(50),
@@ -34,19 +35,31 @@ export default function ProfileEditPage() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   useEffect(() => {
-    profileApi.getMe().then((raw) => {
-      const d = raw as { profile?: FormValues } | FormValues | null;
-      const profile =
-        d && typeof d === 'object' && 'profile' in d
-          ? (d as { profile?: FormValues }).profile
-          : (d as FormValues | null);
-      if (profile) reset(profile);
+    profileApi.getMe().then((raw: unknown) => {
+      const normalized = normalizeProfilePayload(raw);
+      const user = raw && typeof raw === 'object' ? (raw as Record<string, any>) : null;
+      const profile = user?.profile && typeof user.profile === 'object'
+        ? (user.profile as Record<string, any>)
+        : null;
+
+      reset({
+        name: normalized?.name ?? '',
+        nickname: user?.nickname ?? '',
+        email: user?.email ?? '',
+        bio: profile?.bio ?? '',
+        city: normalized?.city ?? '',
+      });
     }).catch(() => {});
   }, [reset]);
 
   const onSubmit = async (data: FormValues) => {
     try {
-      await profileApi.updateProfile(data);
+      await profileApi.updateProfile({
+        fullName: data.name,
+        nickname: data.nickname || undefined,
+        email: data.email,
+        bio: data.bio || undefined,
+      });
       toast.success('پروفایل با موفقیت بروزرسانی شد');
       router.push('/profile');
     } catch (err: unknown) {

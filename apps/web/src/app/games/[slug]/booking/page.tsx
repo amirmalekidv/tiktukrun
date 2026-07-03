@@ -15,7 +15,7 @@ function BookingContent({ params }: { params: { slug: string } }) {
   const { slug } = params
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isLoading, hasHydrated, user, setUser } = useAuthStore()
 
   const [step, setStep] = useState<Step>(1)
   const [selectedDate, setSelectedDate] = useState('')
@@ -35,15 +35,22 @@ function BookingContent({ params }: { params: { slug: string } }) {
 
   // Auth guard
   useEffect(() => {
+    if (!hasHydrated || isLoading) return
+
     if (!isAuthenticated) {
       router.push(`/login?redirect=/games/${slug}/booking`)
     }
-  }, [isAuthenticated, slug, router])
+  }, [hasHydrated, isAuthenticated, isLoading, slug, router])
 
   const handleValidateDiscount = async () => {
     if (!discountCode || !game || !selectedSlot) return
     try {
-      const result = await validateDiscountCode(discountCode, game.id, players, selectedSlot.id)
+      const result = await validateDiscountCode(
+        discountCode,
+        game.id,
+        players,
+        selectedSlot.slotDateTime ?? selectedSlot.id,
+      )
       setDiscountResult({ valid: result.valid, amount: result.discountAmount, message: result.message })
       if (result.valid) {
         toast.success(result.message || 'کد تخفیف اعمال شد!')
@@ -61,8 +68,8 @@ function BookingContent({ params }: { params: { slug: string } }) {
     try {
       const result = await createBooking({
         gameId: game.id,
-        slotId: selectedSlot.id,
-        players,
+        slotDateTime: selectedSlot.slotDateTime ?? selectedSlot.id,
+        playersCount: players,
         discountCode: discountResult?.valid ? discountCode : undefined,
         paymentMethod,
       })
@@ -70,7 +77,20 @@ function BookingContent({ params }: { params: { slug: string } }) {
       if (paymentMethod === 'ZARINPAL' && result.paymentUrl) {
         window.location.href = result.paymentUrl
       } else {
-        setBookingResult(result.booking)
+        if (paymentMethod === 'WALLET' && typeof result.walletBalance === 'number' && user) {
+          setUser({ ...user, walletBalance: result.walletBalance })
+        }
+        toast.success(
+          result.message
+            || (paymentMethod === 'WALLET'
+              ? 'پرداخت با کیف پول با موفقیت انجام شد'
+              : 'پرداخت آزمایشی با موفقیت انجام شد'),
+        )
+        setBookingResult(result.booking ?? {
+          id: result.bookingId,
+          code: result.code,
+          status: result.status,
+        })
         setStep(4)
       }
     } catch (e: any) {
@@ -88,7 +108,7 @@ function BookingContent({ params }: { params: { slug: string } }) {
       const d = new Date(today)
       d.setDate(today.getDate() + i)
       dates.push({
-        value: d.toISOString().split('T')[0],
+        value: toIsoLocalDate(d),
         label: i === 0 ? 'امروز' : i === 1 ? 'فردا' : formatPersianDate(d),
         dayOfWeek: getDayOfWeek(d),
       })
@@ -96,9 +116,12 @@ function BookingContent({ params }: { params: { slug: string } }) {
     return dates
   }
 
-  const slotAmount = selectedSlot?.price || game?.basePrice || 0
+  const unitPrice = selectedSlot?.price || game?.pricePerPlayer || game?.basePrice || 0
+  const baseAmount = unitPrice * players
   const discountAmount = discountResult?.valid ? discountResult.amount : 0
-  const finalAmount = slotAmount - discountAmount
+  const finalAmount = Math.max(0, baseAmount - discountAmount)
+
+  if (!hasHydrated || isLoading || !isAuthenticated) return null
 
   if (!game) return (
     <div className="min-h-screen pt-24 flex items-center justify-center">
@@ -245,7 +268,7 @@ function BookingContent({ params }: { params: { slug: string } }) {
               <div className="flex items-center gap-3">
                 <i className="fas fa-calendar-check text-red-500" />
                 <div>
-                  <span className="text-white">{selectedDate}</span>
+                  <span className="text-white">{formatSelectedDate(selectedDate)}</span>
                   <span className="text-gray-400 mx-2">—</span>
                   <span className="text-red-400">{selectedSlot?.startTime} تا {selectedSlot?.endTime}</span>
                 </div>
@@ -312,7 +335,7 @@ function BookingContent({ params }: { params: { slug: string } }) {
             <div className="bg-black/30 rounded-xl p-4 space-y-2 border border-red-950/20">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">قیمت اصلی</span>
-                <span className="text-gray-200">{formatToman(selectedSlot?.price || game!.basePrice)} ت</span>
+                <span className="text-gray-200">{formatToman(baseAmount)} ت</span>
               </div>
               {discountResult?.valid && (
                 <div className="flex justify-between text-sm text-green-400">
@@ -355,7 +378,7 @@ function BookingContent({ params }: { params: { slug: string } }) {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">زمان</span>
-                <span className="text-white">{selectedDate} — {selectedSlot?.startTime}</span>
+                <span className="text-white">{formatSelectedDate(selectedDate)} — {selectedSlot?.startTime}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">تعداد</span>
@@ -431,7 +454,7 @@ function BookingContent({ params }: { params: { slug: string } }) {
           <div className="dark-card rounded-2xl p-8 text-center space-y-6 fade-in">
             <div className="text-7xl">✅</div>
             <h2 className="font-cinzel font-bold text-2xl text-white">رزرو با موفقیت ثبت شد!</h2>
-            <p className="text-gray-300">کد رزرو شما: <span className="font-cinzel font-bold text-yellow-400">{bookingResult?.id || 'BK-MOCK-001'}</span></p>
+            <p className="text-gray-300">کد رزرو شما: <span className="font-cinzel font-bold text-yellow-400">{bookingResult?.code || bookingResult?.id || 'BK-MOCK-001'}</span></p>
             <p className="text-gray-400 text-sm">پیامک تأیید به شماره‌تان ارسال خواهد شد</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <a href="/bookings" className="btn-blood py-3 px-8">مشاهده رزروهای من</a>
@@ -460,11 +483,26 @@ export default function BookingPage({ params }: { params: { slug: string } }) {
 }
 
 function formatPersianDate(date: Date): string {
-  const months = ['ژانویه', 'فوریه', 'مارس', 'آوریل', 'مه', 'ژوئن', 'ژوئیه', 'اوت', 'سپتامبر', 'اکتبر', 'نوامبر', 'دسامبر']
-  return `${date.getDate()} ${months[date.getMonth()]}`
+  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+    day: 'numeric',
+    month: 'long',
+  }).format(date)
 }
 
 function getDayOfWeek(date: Date): string {
-  const days = ['یک', 'دو', 'سه', 'چهار', 'پنج', 'جمعه', 'شنبه']
-  return days[date.getDay()]
+  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+    weekday: 'short',
+  }).format(date)
+}
+
+function formatSelectedDate(value: string): string {
+  if (!value) return ''
+  return formatPersianDate(new Date(`${value}T00:00:00`))
+}
+
+function toIsoLocalDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }

@@ -235,6 +235,227 @@ async function seedAdmin() {
   console.log(`  ✅ کاربر ادمین (موبایل: ${mobile} / رمز: ${password})`);
 }
 
+type CommunitySeedUser = {
+  fullName: string;
+  mobile: string;
+  nickname: string;
+  inviteCode: string;
+  citySlug: 'tehran' | 'karaj';
+};
+
+const COMMUNITY_SEED_USERS: CommunitySeedUser[] = [
+  { fullName: 'آرش محمدی', mobile: '09594683961', nickname: 'community-user-01', inviteCode: 'COMM001', citySlug: 'tehran' },
+  { fullName: 'سارا احمدی', mobile: '09321837212', nickname: 'community-user-02', inviteCode: 'COMM002', citySlug: 'tehran' },
+  { fullName: 'مهدی رضایی', mobile: '09203719068', nickname: 'community-user-03', inviteCode: 'COMM003', citySlug: 'tehran' },
+  { fullName: 'نرگس کریمی', mobile: '09868756319', nickname: 'community-user-04', inviteCode: 'COMM004', citySlug: 'tehran' },
+  { fullName: 'کیان حسینی', mobile: '09693869455', nickname: 'community-user-05', inviteCode: 'COMM005', citySlug: 'karaj' },
+  { fullName: 'پریا نوری', mobile: '09874389015', nickname: 'community-user-06', inviteCode: 'COMM006', citySlug: 'karaj' },
+  { fullName: 'امیر علوی', mobile: '09302035180', nickname: 'community-user-07', inviteCode: 'COMM007', citySlug: 'karaj' },
+  { fullName: 'لیلا صادقی', mobile: '09820885148', nickname: 'community-user-08', inviteCode: 'COMM008', citySlug: 'karaj' },
+  { fullName: 'رضا موسوی', mobile: '09195915230', nickname: 'community-user-09', inviteCode: 'COMM009', citySlug: 'tehran' },
+  { fullName: 'فاطمه جعفری', mobile: '09382371837', nickname: 'community-user-10', inviteCode: 'COMM010', citySlug: 'tehran' },
+  { fullName: 'حسین اکبری', mobile: '09594307623', nickname: 'community-user-11', inviteCode: 'COMM011', citySlug: 'tehran' },
+  { fullName: 'مریم باقری', mobile: '09377704904', nickname: 'community-user-12', inviteCode: 'COMM012', citySlug: 'tehran' },
+  { fullName: 'علی زارعی', mobile: '09715460542', nickname: 'community-user-13', inviteCode: 'COMM013', citySlug: 'karaj' },
+  { fullName: 'زهرا طاهری', mobile: '09369413018', nickname: 'community-user-14', inviteCode: 'COMM014', citySlug: 'karaj' },
+  { fullName: 'پویا شریفی', mobile: '09779021547', nickname: 'community-user-15', inviteCode: 'COMM015', citySlug: 'karaj' },
+  { fullName: 'نازنین فرهادی', mobile: '09187775116', nickname: 'community-user-16', inviteCode: 'COMM016', citySlug: 'karaj' },
+  { fullName: 'سینا مرادی', mobile: '09907968209', nickname: 'community-user-17', inviteCode: 'COMM017', citySlug: 'tehran' },
+  { fullName: 'الهام قاسمی', mobile: '09248540679', nickname: 'community-user-18', inviteCode: 'COMM018', citySlug: 'tehran' },
+  { fullName: 'بهرام یوسفی', mobile: '09841753339', nickname: 'community-user-19', inviteCode: 'COMM019', citySlug: 'tehran' },
+  { fullName: 'شیدا رحیمی', mobile: '09718989686', nickname: 'community-user-20', inviteCode: 'COMM020', citySlug: 'tehran' },
+];
+
+const COMMUNITY_TEAM_NAME = 'تیم قوی ما ۱';
+const COMMUNITY_TEAM_MEMBER_MOBILES = [
+  '09594683961',
+  '09321837212',
+  '09203719068',
+  '09868756319',
+  '09693869455',
+  '09874389015',
+];
+
+function communityAvatarUrl(fullName: string) {
+  return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}&backgroundColor=dc2626&textColor=ffffff`;
+}
+
+function communityEmail(nickname: string) {
+  return `${nickname}@community.tiktakrun.local`;
+}
+
+async function ensureCustomerRole(userId: string) {
+  const role = await prisma.userRoleAssignment.findFirst({
+    where: { userId, role: 'CUSTOMER' as any },
+  });
+  if (!role) {
+    await prisma.userRoleAssignment.create({
+      data: { userId, role: 'CUSTOMER' as any },
+    });
+  }
+}
+
+async function seedCommunityUsers(cityMap: Record<string, string>) {
+  const usersByMobile: Record<string, string> = {};
+
+  for (const item of COMMUNITY_SEED_USERS) {
+    const existing = await prisma.user.findUnique({
+      where: { mobile: item.mobile },
+      select: { id: true, email: true, nickname: true, inviteCode: true },
+    });
+
+    const user = existing
+      ? await prisma.user.update({
+          where: { mobile: item.mobile },
+          data: {
+            email: existing.email ?? communityEmail(item.nickname),
+            fullName: item.fullName,
+            avatarUrl: communityAvatarUrl(item.fullName),
+            isActive: true,
+            deletedAt: null,
+            nickname: existing.nickname ?? item.nickname,
+          },
+          select: { id: true },
+        })
+      : await prisma.user.create({
+        data: {
+            mobile: item.mobile,
+            email: communityEmail(item.nickname),
+            fullName: item.fullName,
+            nickname: item.nickname,
+            inviteCode: item.inviteCode,
+            avatarUrl: communityAvatarUrl(item.fullName),
+            isActive: true,
+            profile: {
+              create: {
+                levelId: 1,
+                xp: 0,
+                cityId: cityMap[item.citySlug],
+              },
+            },
+            wallet: {
+              create: {
+                tomanBalance: 0,
+                coinsBalance: 250,
+                diamondsBalance: 10,
+              },
+            },
+          },
+          select: { id: true },
+        });
+
+    await prisma.userProfile.upsert({
+      where: { userId: user.id },
+      update: { cityId: cityMap[item.citySlug] },
+      create: {
+        userId: user.id,
+        levelId: 1,
+        xp: 0,
+        cityId: cityMap[item.citySlug],
+      },
+    });
+
+    await prisma.wallet.upsert({
+      where: { userId: user.id },
+      update: {},
+      create: {
+        userId: user.id,
+        tomanBalance: 0,
+        coinsBalance: 250,
+        diamondsBalance: 10,
+      },
+    });
+
+    await ensureCustomerRole(user.id);
+    usersByMobile[item.mobile] = user.id;
+  }
+
+  console.log(`  ✅ ${COMMUNITY_SEED_USERS.length} کاربر تست Community`);
+  return usersByMobile;
+}
+
+async function seedCommunityTeam(usersByMobile: Record<string, string>) {
+  const teamMembers = COMMUNITY_TEAM_MEMBER_MOBILES
+    .map((mobile) => usersByMobile[mobile])
+    .filter((userId): userId is string => !!userId);
+
+  if (teamMembers.length < 6) {
+    throw new Error('کاربران تیم Community کامل ایجاد نشدند');
+  }
+
+  const game =
+    (await prisma.game.findUnique({
+      where: { slug: 'mafia-pro' },
+      select: { id: true, branchId: true, title: true },
+    })) ||
+    (await prisma.game.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, branchId: true, title: true },
+    }));
+
+  if (!game) {
+    throw new Error('برای ساخت تیم Community هیچ بازی فعالی یافت نشد');
+  }
+
+  const captainId = teamMembers[0];
+  const existing = await prisma.team.findFirst({
+    where: { name: COMMUNITY_TEAM_NAME },
+    select: { id: true },
+  });
+
+  const team = existing
+    ? await prisma.team.update({
+        where: { id: existing.id },
+        data: {
+          gameId: game.id,
+          branchId: game.branchId,
+          captainId,
+          capacity: 6,
+          status: 'FORMING',
+          description: `تیم تست Community برای بازی ${game.title}`,
+          isPublic: true,
+        },
+        select: { id: true },
+      })
+    : await prisma.team.create({
+        data: {
+          name: COMMUNITY_TEAM_NAME,
+          gameId: game.id,
+          branchId: game.branchId,
+          captainId,
+          capacity: 6,
+          status: 'FORMING',
+          description: `تیم تست Community برای بازی ${game.title}`,
+          isPublic: true,
+        },
+        select: { id: true },
+      });
+
+  for (const [index, userId] of teamMembers.entries()) {
+    await prisma.teamMember.upsert({
+      where: { teamId_userId: { teamId: team.id, userId } },
+      update: { role: index === 0 ? 'CAPTAIN' : 'MEMBER' },
+      create: {
+        teamId: team.id,
+        userId,
+        role: index === 0 ? 'CAPTAIN' : 'MEMBER',
+      },
+    });
+  }
+
+  const memberCount = await prisma.teamMember.count({
+    where: { teamId: team.id },
+  });
+
+  await prisma.team.update({
+    where: { id: team.id },
+    data: { status: memberCount >= 6 ? 'FULL' : 'FORMING' },
+  });
+
+  console.log(`  ✅ تیم ${COMMUNITY_TEAM_NAME} با ${teamMembers.length} عضو`);
+}
+
 // ─── Wheel prizes ────────────────────────────────────────────────────────────
 async function seedWheelPrizes() {
   const prizes = [
@@ -266,6 +487,8 @@ async function main() {
   const catMap = await seedCategories();
   await seedGames(catMap, branchIds);
   await seedAdmin();
+  const communityUsers = await seedCommunityUsers(cityMap);
+  await seedCommunityTeam(communityUsers);
   await seedWheelPrizes();
   console.log('\n✅ Seed با موفقیت کامل شد.');
 }

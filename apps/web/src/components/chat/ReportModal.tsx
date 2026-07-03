@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { chatApi } from '@/lib/api/chat';
 
@@ -21,6 +22,47 @@ interface ReportModalProps {
 export default function ReportModal({ messageId, isOpen, onClose }: ReportModalProps) {
   const [selected, setSelected] = useState('');
   const [sending, setSending] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelected('');
+      return;
+    }
+
+    const { body } = document;
+    const scrollY = window.scrollY;
+    const previousOverflow = body.style.overflow;
+    const previousPosition = body.style.position;
+    const previousTop = body.style.top;
+    const previousWidth = body.style.width;
+
+    body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.width = '100%';
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+      body.style.overflow = previousOverflow;
+      body.style.position = previousPosition;
+      body.style.top = previousTop;
+      body.style.width = previousWidth;
+      window.scrollTo({ top: scrollY });
+    };
+  }, [isOpen, onClose]);
 
   const handleReport = async () => {
     if (!selected) {
@@ -41,7 +83,11 @@ export default function ReportModal({ messageId, isOpen, onClose }: ReportModalP
     }
   };
 
-  return (
+  if (!mounted) {
+    return null;
+  }
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -66,6 +112,7 @@ export default function ReportModal({ messageId, isOpen, onClose }: ReportModalP
             <div className="space-y-2 mb-6">
               {REPORT_REASONS.map((reason) => (
                 <button
+                  type="button"
                   key={reason}
                   onClick={() => setSelected(reason)}
                   className={`
@@ -86,6 +133,7 @@ export default function ReportModal({ messageId, isOpen, onClose }: ReportModalP
 
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={handleReport}
                 disabled={!selected || sending}
                 className="flex-1 py-2.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl font-vazir text-sm transition-colors"
@@ -93,6 +141,7 @@ export default function ReportModal({ messageId, isOpen, onClose }: ReportModalP
                 {sending ? <i className="fas fa-spinner fa-spin" /> : 'ارسال گزارش'}
               </button>
               <button
+                type="button"
                 onClick={onClose}
                 className="flex-1 py-2.5 border border-gray-700 text-gray-400 rounded-xl font-vazir text-sm hover:bg-gray-900 transition-colors"
               >
@@ -103,5 +152,7 @@ export default function ReportModal({ messageId, isOpen, onClose }: ReportModalP
         </motion.div>
       )}
     </AnimatePresence>
+    ,
+    document.body
   );
 }

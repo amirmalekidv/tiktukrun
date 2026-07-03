@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import useSWR from 'swr';
 import { wheelApi } from '@/lib/api/wheel';
+import { normalizeWheelPrize, normalizeWheelPrizes, type ApiWheelPrize } from '@/lib/wheel-adapter';
 import { calculateRotation, getPrizeIndexById } from '@/lib/wheel-engine';
 import type { WheelPrize } from '@/lib/wheel-engine';
 import toast from 'react-hot-toast';
@@ -27,10 +28,11 @@ export function useWheel() {
     { refreshInterval: 10000 }
   );
 
-  const prizesPayload = prizesData as { prizes?: WheelPrize[] } | WheelPrize[] | null | undefined;
-  const prizes: WheelPrize[] = Array.isArray(prizesPayload)
+  const prizesPayload = prizesData as { prizes?: unknown[] } | unknown[] | null | undefined;
+  const rawPrizes = Array.isArray(prizesPayload)
     ? prizesPayload
     : prizesPayload?.prizes ?? [];
+  const prizes = normalizeWheelPrizes(rawPrizes);
 
   const spin = useCallback(
     async (paidWith: 'xp' | 'coins' | 'diamonds') => {
@@ -53,16 +55,15 @@ export function useWheel() {
       setIsSpinning(true);
       try {
         const response = await wheelApi.spin(paidWith) as {
-          prize?: WheelPrize;
-          data?: { prize?: WheelPrize };
+          prize?: unknown;
+          data?: { prize?: unknown };
         };
 
-        const prize: WheelPrize | null =
-          response?.prize ?? response?.data?.prize ?? null;
-
-        if (!prize) {
+        const rawPrize = response?.prize ?? response?.data?.prize ?? null;
+        if (!rawPrize) {
           throw new Error('نتیجه گردونه دریافت نشد');
         }
+        const prize = normalizeWheelPrize(rawPrize as ApiWheelPrize);
 
         const activePrizes = prizes.length > 0 ? prizes : [];
         const prizeIndex = activePrizes.length > 0

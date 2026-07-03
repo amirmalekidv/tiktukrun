@@ -1,21 +1,33 @@
 'use client';
 import { io, Socket } from 'socket.io-client';
-import { AUTH_TOKEN_KEY, getWsRoot } from './http';
+import { AUTH_TOKEN_KEY, getWsRoot, refreshAccessToken } from './http';
 
 let socket: Socket | null = null;
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshSocketToken() {
+  if (!refreshPromise) {
+    refreshPromise = refreshAccessToken().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
+}
 
 export function getSocket(): Socket {
   if (typeof window === 'undefined') {
     throw new Error('Socket is not available on the server');
   }
 
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+
   if (!socket) {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     const wsRoot = getWsRoot();
 
     socket = io(`${wsRoot}/chat`, {
       path: '/socket.io',
-      auth: { token },
+      auth: { token: token ?? undefined },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
@@ -33,12 +45,16 @@ export function getSocket(): Socket {
 
     socket.on('connect_error', (err) => {
       console.error('[Socket] Connection error:', err.message);
-      const newToken = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (socket && newToken) {
-        socket.auth = { token: newToken };
-        socket.connect();
-      }
+      void refreshSocketToken().then((refreshedToken) => {
+        const newToken = refreshedToken || localStorage.getItem(AUTH_TOKEN_KEY);
+        if (socket && newToken) {
+          socket.auth = { token: newToken };
+          socket.connect();
+        }
+      });
     });
+  } else {
+    socket.auth = { token: token ?? undefined };
   }
 
   return socket;

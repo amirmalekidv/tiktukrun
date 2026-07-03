@@ -1,22 +1,139 @@
 import apiClient from './client';
 import type { Game, ApiResponse } from '../types';
 
+const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(
+  /\/api\/v1\/?$/,
+  '',
+);
+
+function resolveMediaUrl(path?: string | null): string | undefined {
+  if (!path) return undefined;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${API_ROOT}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+function normalizeDifficulty(value: unknown): Game['difficulty'] {
+  switch (value) {
+    case 'EASY':
+    case 'MEDIUM':
+    case 'HARD':
+    case 'EXPERT':
+      return value;
+    case 'VERY_HARD':
+    case 'LEGENDARY':
+      return 'EXPERT';
+    default:
+      return 'MEDIUM';
+  }
+}
+
+function normalizeGame(raw: any): Game {
+  const images = Array.isArray(raw?.images)
+    ? raw.images.map((img: any, index: number) => ({
+        id: String(img?.id ?? index),
+        url: resolveMediaUrl(img?.url) || '',
+        displayOrder: Number(img?.displayOrder ?? index),
+        caption: img?.caption ?? undefined,
+      }))
+    : [];
+
+  return {
+    ...raw,
+    id: String(raw?.id ?? ''),
+    title: String(raw?.title ?? ''),
+    slug: String(raw?.slug ?? ''),
+    subtitle: raw?.subtitle ?? undefined,
+    description: raw?.description ?? undefined,
+    scenario: raw?.scenario ?? undefined,
+    fearLevel: Number(raw?.fearLevel ?? 0),
+    difficulty: normalizeDifficulty(raw?.difficulty),
+    tier: raw?.tier ?? undefined,
+    minPlayers: Number(raw?.minPlayers ?? 0),
+    maxPlayers: Number(raw?.maxPlayers ?? 0),
+    duration: Number(raw?.duration ?? raw?.durationMinutes ?? 0),
+    pricePerPerson: String(raw?.pricePerPerson ?? ''),
+    weeklyDiscountPercent: raw?.weeklyDiscountPercent != null ? Number(raw.weeklyDiscountPercent) : undefined,
+    siteRank: raw?.siteRank != null ? Number(raw.siteRank) : undefined,
+    tags: Array.isArray(raw?.tags) ? raw.tags : [],
+    coverImage: resolveMediaUrl(raw?.coverImage) || images[0]?.url,
+    images,
+    teaserUrl: resolveMediaUrl(raw?.teaserUrl),
+    isActive: Boolean(raw?.isActive),
+    isFeatured: Boolean(raw?.isFeatured),
+    rating: raw?.rating != null
+      ? Number(raw.rating)
+      : raw?.siteRank != null
+        ? Number(raw.siteRank)
+        : raw?.userRankCached != null
+          ? Number(raw.userRankCached)
+          : undefined,
+    totalBookings: raw?.totalBookings != null
+      ? Number(raw.totalBookings)
+      : raw?.stats?.totalBookings != null
+        ? Number(raw.stats.totalBookings)
+        : raw?._count?.bookings != null
+          ? Number(raw._count.bookings)
+          : undefined,
+    totalRevenue: raw?.totalRevenue != null
+      ? String(raw.totalRevenue)
+      : raw?.stats?.totalRevenue != null
+        ? String(raw.stats.totalRevenue)
+        : undefined,
+    createdAt: String(raw?.createdAt ?? ''),
+    updatedAt: String(raw?.updatedAt ?? ''),
+  };
+}
+
+function normalizeGameListPayload(payload: any) {
+  if (Array.isArray(payload?.data)) {
+    payload.data = payload.data.map((game: any) => normalizeGame(game));
+  }
+  return payload;
+}
+
+function normalizeSingleGamePayload(payload: any) {
+  if (payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    payload.data = normalizeGame(payload.data);
+  }
+  return payload;
+}
+
 export const gamesApi = {
-  getAll: (params?: Record<string, unknown>) =>
-    apiClient.get<ApiResponse<Game[]>>('/admin/games', { params }),
+  getAll: async (params?: Record<string, unknown>) => {
+    const res = await apiClient.get<ApiResponse<Game[]>>('/admin/games', { params });
+    if (res.data && typeof res.data === 'object') {
+      normalizeGameListPayload(res.data as any);
+    }
+    return res;
+  },
 
-  getById: (id: string) =>
-    apiClient.get<ApiResponse<Game>>(`/admin/games/${id}`),
+  getById: async (id: string) => {
+    const res = await apiClient.get<ApiResponse<Game>>(`/admin/games/${id}`);
+    if (res.data && typeof res.data === 'object') {
+      normalizeSingleGamePayload(res.data as any);
+    }
+    return res;
+  },
 
-  create: (data: FormData) =>
-    apiClient.post<ApiResponse<Game>>('/admin/games', data, {
+  create: async (data: FormData) => {
+    const res = await apiClient.post<ApiResponse<Game>>('/admin/games', data, {
       headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+    });
+    if (res.data && typeof res.data === 'object') {
+      normalizeSingleGamePayload(res.data as any);
+    }
+    return res;
+  },
 
-  update: (id: string, data: FormData) =>
-    apiClient.patch<ApiResponse<Game>>(`/admin/games/${id}`, data, {
+  update: async (id: string, data: FormData) => {
+    const res = await apiClient.patch<ApiResponse<Game>>(`/admin/games/${id}`, data, {
       headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+    });
+    if (res.data && typeof res.data === 'object') {
+      normalizeSingleGamePayload(res.data as any);
+    }
+    return res;
+  },
 
   delete: (id: string) =>
     apiClient.delete(`/admin/games/${id}`),

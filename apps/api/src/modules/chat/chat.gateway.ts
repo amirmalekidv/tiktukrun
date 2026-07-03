@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ChatService } from './chat.service';
 import { SettingsService } from '../settings/settings.service';
@@ -48,6 +49,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private readonly jwtService: JwtService,
+    private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly chatService: ChatService,
     private readonly settings: SettingsService,
@@ -64,7 +66,36 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      const payload = this.jwtService.verify(token);
+      const payload = this.jwtService.verify<{
+        sub: string;
+        sessionId: string;
+        type: 'access' | 'refresh';
+      }>(token, {
+        secret: this.config.get<string>(
+          'JWT_ACCESS_SECRET',
+          'fallback-secret-please-change',
+        ),
+      });
+
+      if (payload.type !== 'access') {
+        client.disconnect();
+        return;
+      }
+
+      const session = await this.prisma.session.findFirst({
+        where: {
+          id: payload.sessionId,
+          userId: payload.sub,
+          revokedAt: { isSet: false },
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (!session) {
+        client.disconnect();
+        return;
+      }
+
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
         select: { id: true, fullName: true, avatarUrl: true, isBanned: true, isMuted: true },

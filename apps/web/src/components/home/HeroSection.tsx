@@ -103,7 +103,7 @@ export default function HeroSection() {
             ورود به قلمرو
           </Link>
           <Link
-            href="/section/stories"
+            href="/stories"
             className="btn-ghost text-base px-8 py-4 rounded-xl flex items-center gap-2"
           >
             <i className="fas fa-book-open ml-2 text-red-500" />

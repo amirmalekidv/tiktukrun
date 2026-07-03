@@ -8,7 +8,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export enum PaymentMethod {
   WALLET   = 'WALLET',
@@ -27,9 +27,11 @@ export class BookingPreviewDto {
   @IsString()
   gameId: string;
 
+  @Transform(({ value, obj }) => value ?? obj.slotId)
   @IsDateString()
   slotDateTime: string;
 
+  @Transform(({ value, obj }) => value ?? obj.players)
   @IsInt() @Type(() => Number) @Min(1)
   playersCount: number;
 
@@ -41,9 +43,11 @@ export class CreateBookingDto {
   @IsString()
   gameId: string;
 
+  @Transform(({ value, obj }) => value ?? obj.slotId)
   @IsDateString()
   slotDateTime: string;
 
+  @Transform(({ value, obj }) => value ?? obj.players)
   @IsInt() @Type(() => Number) @Min(1)
   playersCount: number;
 

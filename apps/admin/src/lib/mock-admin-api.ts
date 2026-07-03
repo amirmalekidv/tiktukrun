@@ -275,12 +275,17 @@ export const mockApi = {
   async getCustomers(params: Record<string, unknown> = {}) {
     await sleep(MOCK_DELAY)
     let filtered = [...MOCK_CUSTOMERS]
-    if (params.search) {
-      const q = String(params.search).toLowerCase()
-      filtered = filtered.filter(c => c.name.includes(q) || c.mobile.includes(q))
+    const searchTerm = params.search ?? params.q
+    if (searchTerm) {
+      const q = String(searchTerm).toLowerCase()
+      filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || c.mobile.includes(q) || (c.email || '').toLowerCase().includes(q))
     }
     if (params.tier) filtered = filtered.filter(c => c.tier === params.tier)
     if (params.status) filtered = filtered.filter(c => c.status === params.status)
+    if (params.city) {
+      const city = String(params.city).toLowerCase()
+      filtered = filtered.filter(c => (c.city || '').toLowerCase().includes(city))
+    }
     
     const page = Number(params.page) || 1
     const limit = Number(params.limit) || 20

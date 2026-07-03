@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { useAuthStore } from '@/store/auth.store';
 import MessageItem from '@/components/chat/MessageItem';
 import MessageInput from '@/components/chat/MessageInput';
 import TypingIndicator from '@/components/chat/TypingIndicator';
@@ -12,32 +12,39 @@ interface LiveChatPanelProps {
   title?: string;
 }
 
-// Demo messages for when socket is not connected
-const DEMO_MESSAGES = [
-  { id: '1', userId: 'u1', userName: 'Shadow Reaper', text: 'سلام به همه! آماده‌اید؟', createdAt: new Date(Date.now() - 300000).toISOString(), roomType: 'global' as const },
-  { id: '2', userId: 'u2', userName: 'Night Walker', text: 'بله! اتاق ترس امشب فوق‌العاده بود 😱', createdAt: new Date(Date.now() - 240000).toISOString(), roomType: 'global' as const },
-  { id: '3', userId: 'u3', userName: 'Void Dancer', text: 'کی میاد تیم تشکیل بده؟', createdAt: new Date(Date.now() - 180000).toISOString(), roomType: 'global' as const },
-  { id: '4', userId: 'u1', userName: 'Shadow Reaper', text: 'منم! ۶ نفر می‌خوایم برای اتاق فرار', createdAt: new Date(Date.now() - 120000).toISOString(), roomType: 'global' as const },
-  { id: '5', userId: 'u4', userName: 'Blood Hunter', text: 'این هفته رتبه سوم شدم 🎉', createdAt: new Date(Date.now() - 60000).toISOString(), roomType: 'global' as const },
-];
-
 export default function LiveChatPanel({
   roomType = 'global',
   teamId,
   title = 'چت زنده',
 }: LiveChatPanelProps) {
+  const currentUserId = useAuthStore((state) =>
+    state.user?.id ? String(state.user.id) : null
+  );
   const { messages, typingUsers, onlineCount, isConnected, send, handleTyping } = useChat({
     roomType,
     teamId,
   });
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const previousMessageCountRef = useRef(0);
 
-  const displayMessages = messages.length > 0 ? messages : DEMO_MESSAGES;
-
-  // Auto-scroll to bottom
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [displayMessages]);
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const messageCount = messages.length;
+    const shouldStickToBottom =
+      previousMessageCountRef.current === 0 ||
+      container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+
+    if (messageCount > previousMessageCountRef.current && shouldStickToBottom) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: previousMessageCountRef.current === 0 ? 'auto' : 'smooth',
+      });
+    }
+
+    previousMessageCountRef.current = messageCount;
+  }, [messages.length]);
 
   return (
     <div
@@ -54,21 +61,29 @@ export default function LiveChatPanel({
         </div>
         <div className="flex items-center gap-1.5 text-xs text-gray-500 font-vazir">
           <i className="fas fa-users text-green-600" />
-          <span>{onlineCount || 18} آنلاین</span>
+          <span>{isConnected ? `${onlineCount} آنلاین` : 'در حال اتصال...'}</span>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-red-900/30">
-        {displayMessages.map((msg) => (
-          <MessageItem
-            key={msg.id}
-            message={msg as any}
-            isMe={msg.userId === 'me'}
-          />
-        ))}
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-red-900/30"
+      >
+        {messages.length === 0 ? (
+          <div className="h-full min-h-40 flex items-center justify-center text-center text-sm font-vazir text-gray-600">
+            {isConnected ? 'هنوز پیامی در این اتاق ثبت نشده است' : 'اتصال چت در حال برقراری است'}
+          </div>
+        ) : (
+          messages.map((msg) => (
+            <MessageItem
+              key={msg.id}
+              message={msg}
+              isMe={!!currentUserId && msg.userId === currentUserId}
+            />
+          ))
+        )}
         <TypingIndicator typingUsers={typingUsers} />
-        <div ref={bottomRef} />
       </div>
 
       {/* Input */}
@@ -76,8 +91,8 @@ export default function LiveChatPanel({
         <MessageInput
           onSend={send}
           onTyping={handleTyping}
-          disabled={!isConnected && messages.length === 0}
-          placeholder={isConnected ? 'پیام خود را بنویسید...' : 'در حال اتصال...'}
+          disabled={!isConnected}
+          placeholder={isConnected ? 'پیام خود را بنویسید...' : 'اتصال چت برقرار نیست'}
         />
       </div>
     </div>

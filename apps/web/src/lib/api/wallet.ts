@@ -11,7 +11,14 @@ export const walletApi = {
     return apiFetch(`/wallet/me/transactions?${q}`);
   },
   chargeWallet: (amount: number) =>
-    apiFetch<{ paymentUrl: string; authority: string }>('/wallet/charge', {
+    apiFetch<{
+      paymentUrl?: string;
+      paymentId: string;
+      completed?: boolean;
+      isSandbox?: boolean;
+      message?: string;
+      walletBalance?: number;
+    }>('/wallet/charge', {
       method: 'POST',
       body: JSON.stringify({ amount, method: 'ZARINPAL' }),
     }),

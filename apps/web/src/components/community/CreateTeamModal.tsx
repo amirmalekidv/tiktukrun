@@ -4,13 +4,15 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
+import useSWR from 'swr';
+import { getGames } from '@/lib/api';
 import { teamsApi } from '@/lib/api/teams';
 
 const schema = z.object({
   name: z.string().min(3, 'نام تیم باید حداقل ۳ حرف باشد').max(50),
   description: z.string().max(200).optional(),
   maxMembers: z.coerce.number().min(2).max(12),
-  gameType: z.string().optional(),
+  gameId: z.string().min(1, 'انتخاب بازی الزامی است'),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -21,13 +23,17 @@ interface CreateTeamModalProps {
   onSuccess?: () => void;
 }
 
-const GAME_TYPES = ['فرار از اتاق', 'وحشت', 'معمایی', 'هیجانی', 'ماجراجویی'];
-
 export default function CreateTeamModal({
   isOpen,
   onClose,
   onSuccess,
 }: CreateTeamModalProps) {
+  const { data: gamesResponse, isLoading: isGamesLoading } = useSWR(
+    'team-create-games',
+    () => getGames({ limit: 100 })
+  );
+  const games = gamesResponse?.data ?? [];
+
   const {
     register,
     handleSubmit,
@@ -96,11 +102,22 @@ export default function CreateTeamModal({
                 </div>
 
                 <div>
-                  <label className="text-xs text-gray-400 font-vazir mb-1.5 block">نوع بازی</label>
-                  <select {...register('gameType')} className={`${inputClass} cursor-pointer`}>
-                    <option value="">انتخاب کنید</option>
-                    {GAME_TYPES.map((g) => <option key={g} value={g}>{g}</option>)}
+                  <label className="text-xs text-gray-400 font-vazir mb-1.5 block">بازی *</label>
+                  <select
+                    {...register('gameId')}
+                    className={`${inputClass} cursor-pointer`}
+                    disabled={isGamesLoading || games.length === 0}
+                  >
+                    <option value="">
+                      {isGamesLoading ? 'در حال دریافت بازی‌ها...' : 'انتخاب کنید'}
+                    </option>
+                    {games.map((game) => (
+                      <option key={game.id} value={game.id}>
+                        {game.title}
+                      </option>
+                    ))}
                   </select>
+                  {errors.gameId && <p className="text-xs text-red-500 font-vazir mt-1">{errors.gameId.message}</p>}
                 </div>
               </div>
 

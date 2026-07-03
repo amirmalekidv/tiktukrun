@@ -66,6 +66,7 @@ const DEFAULT_SETTINGS: Record<string, { value: string; group: string; descripti
 
   // Payments
   'payments.gateway': { value: 'zarinpal', group: 'payments' },
+  'payments.mockMode': { value: 'true', group: 'payments' },
   'payments.sandboxMode': { value: 'true', group: 'payments' },
 
   // Wallet packages (JSON arrays)

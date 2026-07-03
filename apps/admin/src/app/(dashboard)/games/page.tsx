@@ -16,7 +16,7 @@ type ViewMode = 'table' | 'grid';
 export default function GamesPage() {
   const [view, setView] = useState<ViewMode>('table');
   const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive' | 'all'>('active');
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
 
@@ -30,7 +30,8 @@ export default function GamesPage() {
     setLoading(true);
     try {
       const params: Record<string, unknown> = { page, limit };
-      if (activeFilter) params.isActive = activeFilter === 'active' ? 'true' : 'false';
+      if (activeFilter === 'active') params.isActive = 'true';
+      if (activeFilter === 'inactive') params.isActive = 'false';
       const res = await gamesApi.getAll(params);
       const { items, total: count } = readPaginatedList<Game>(res);
       setGames(items);
@@ -51,8 +52,10 @@ export default function GamesPage() {
     setDeleting(true);
     try {
       await gamesApi.delete(deleteId);
+      setGames((prev) => prev.filter((game) => game.id !== deleteId));
+      setTotal((prev) => Math.max(0, prev - 1));
       toast.success('بازی حذف شد');
-      loadGames();
+      await loadGames();
     } catch {
       toast.error('خطا در حذف بازی');
     } finally {
@@ -126,7 +129,7 @@ export default function GamesPage() {
         {stats.map((s, i) => <StatsCard key={i} {...s} />)}
       </div>
 
-      <FilterBar onReset={() => { setSearch(''); setActiveFilter(''); setPage(1); }}>
+      <FilterBar onReset={() => { setSearch(''); setActiveFilter('active'); setPage(1); }}>
         <div className="relative flex-1 min-w-48">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
@@ -137,10 +140,14 @@ export default function GamesPage() {
             className="input-field pr-10"
           />
         </div>
-        <select value={activeFilter} onChange={e => { setActiveFilter(e.target.value); setPage(1); }} className="select-field w-36">
-          <option value="">همه وضعیت‌ها</option>
+        <select
+          value={activeFilter}
+          onChange={e => { setActiveFilter(e.target.value as 'active' | 'inactive' | 'all'); setPage(1); }}
+          className="select-field w-36"
+        >
           <option value="active">فعال</option>
           <option value="inactive">غیرفعال</option>
+          <option value="all">همه وضعیت‌ها</option>
         </select>
 
         {/* View Toggle */}

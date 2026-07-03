@@ -4,6 +4,11 @@ import type { Game, GameCategory, GameImage, Genre, PaginatedResponse, GamesFilt
 /** Local fallback — avoids unconfigured remote hosts in next/image */
 export const GAME_COVER_PLACEHOLDER = '/placeholder-game.svg'
 
+export function shouldBypassImageOptimization(src?: string | null): boolean {
+  if (!src) return false
+  return src.startsWith('/') && src.toLowerCase().endsWith('.svg')
+}
+
 const CATEGORY_SLUG_TO_ENUM: Record<string, GameCategory> = {
   'cinema-horror': 'CINEMA_HORROR',
   'board-games': 'BOARD_GAME',

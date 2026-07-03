@@ -17,6 +17,7 @@ import { SmsService } from '../sms/sms.service';
 import { NotificationType } from '@tiktakrun/shared-types';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CurrencyType, TransactionType } from '@prisma/client';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class PaymentsService {
@@ -26,6 +27,7 @@ export class PaymentsService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
+    private settings: SettingsService,
     @Inject(PAYMENT_PROVIDER)
     private paymentProvider: IPaymentProvider,
     private sms: SmsService,
@@ -35,7 +37,20 @@ export class PaymentsService {
   }
 
   async initiate(params: PaymentInitiateParams) {
-    const callbackUrl = `${this.config.get('API_URL', 'http://localhost:4000')}/api/v1/payments/zarinpal/verify?paymentId=${params.paymentId}`;
+    const callbackUrl = this.buildCallbackUrl(params.paymentId);
+
+    if (await this.isMockMode()) {
+      const authority = this.buildMockAuthority(params.paymentId);
+      const paymentUrl = this.buildMockPaymentUrl(params.paymentId, authority);
+
+      await this.prisma.payment.update({
+        where: { id: params.paymentId },
+        data:  { gatewayAuthority: authority },
+      });
+
+      this.logger.warn(`Mock payment initiated: paymentId=${params.paymentId}`);
+      return { authority, paymentUrl };
+    }
 
     const result = await this.paymentProvider.initiate({ ...params, callbackUrl });
 
@@ -79,10 +94,15 @@ export class PaymentsService {
         : `${this.webUrl}/bookings/${bookingId}?status=failed`;
     }
 
-    const verifyResult = await this.paymentProvider.verify({
-      authority,
-      amount: payment.amount,
-    });
+    const verifyResult = authority?.startsWith('MOCK_') || await this.isMockMode()
+      ? {
+          success: true,
+          refId: this.buildMockRefId(payment.id),
+        }
+      : await this.paymentProvider.verify({
+          authority,
+          amount: payment.amount,
+        });
 
     if (!verifyResult.success) {
       await this.handleFailedPayment(payment.id, authority, bookingId);
@@ -118,6 +138,30 @@ export class PaymentsService {
 
     this.logger.log(`Payment confirmed: bookingId=${bookingId} refId=${verifyResult.refId}`);
     return `${this.webUrl}/bookings/${bookingId}?status=success`;
+  }
+
+  async isMockMode(): Promise<boolean> {
+    const envValue = this.config.get<string>('PAYMENTS_MOCK_MODE');
+    if (envValue === 'true' || envValue === 'false') {
+      return envValue === 'true';
+    }
+    return (await this.settings.get('payments.mockMode', 'true')) === 'true';
+  }
+
+  private buildCallbackUrl(paymentId: string): string {
+    return `${this.config.get('API_URL', 'http://localhost:4000')}/api/v1/payments/zarinpal/verify?paymentId=${paymentId}`;
+  }
+
+  private buildMockAuthority(paymentId: string): string {
+    return `MOCK_${paymentId}_${Date.now()}`;
+  }
+
+  private buildMockRefId(paymentId: string): string {
+    return `MOCK_REF_${paymentId}`;
+  }
+
+  private buildMockPaymentUrl(paymentId: string, authority: string): string {
+    return `${this.buildCallbackUrl(paymentId)}&Authority=${authority}&Status=OK`;
   }
 
   private buildSuccessRedirect(payment: {

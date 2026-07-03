@@ -69,22 +69,27 @@ class CreateTeamDto {
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
-  @Public()
   @Get()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'لیست تیم‌های در حال تشکیل' })
   async findAll(
+    @CurrentUser() user: any,
     @Query('cityId') cityId?: string,
     @Query('gameId') gameId?: string,
     @Query('status') status?: string,
+    @Query('mine') mine = 'false',
     @Query('page') page = '1',
     @Query('limit') limit = '20',
   ) {
     const result = await this.teamsService.findAll(
+      user.id,
       cityId,
       gameId,
       Number(page),
       Number(limit),
       status,
+      mine === 'true',
     );
     return { success: true, ...result };
   }

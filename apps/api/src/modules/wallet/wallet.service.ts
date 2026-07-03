@@ -6,7 +6,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../settings/settings.service';
 import { PaymentsService } from '../payments/payments.service';
 import {
@@ -46,7 +45,6 @@ export class WalletService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
     private readonly settings: SettingsService,
     private readonly payments: PaymentsService,
   ) {}
@@ -104,16 +102,12 @@ export class WalletService {
       throw new BadRequestException(`حداکثر مبلغ شارژ ${maxTopup.toLocaleString()} تومان است`);
     }
 
-    const sandboxSetting = await this.settings.get('payments.sandboxMode', 'true');
-    const isSandbox = sandboxSetting === 'true'
-      || this.configService.get<string>('ZARINPAL_SANDBOX', 'true') === 'true';
-
-    const wallet = await this.ensureWallet(userId);
+    const currentWallet = await this.ensureWallet(userId);
 
     const payment = await this.prisma.payment.create({
       data: {
         userId,
-        walletId: wallet.id,
+        walletId: currentWallet.id,
         amount:   dto.amount,
         method:   PaymentMethod.ZARINPAL,
         status:   PaymentStatus.PENDING,
@@ -126,21 +120,50 @@ export class WalletService {
       },
     });
 
-    const apiUrl = this.configService.get('API_URL', 'http://localhost:4000');
-    const verifyBase = `${apiUrl}/api/v1/payments/zarinpal/verify?paymentId=${payment.id}`;
+    const isMockMode = await this.payments.isMockMode();
+    if (isMockMode) {
+      const gatewayAuthority = `MOCK_${payment.id}`;
+      const gatewayRefId = `MOCK_REF_${payment.id}`;
 
-    if (isSandbox) {
-      const fakeAuthority = `TEST_${payment.id}`;
-      await this.prisma.payment.update({
-        where: { id: payment.id },
-        data:  { gatewayAuthority: fakeAuthority },
+      const walletState = await this.prisma.$transaction(async (tx) => {
+        const wallet = await tx.wallet.update({
+          where: { id: currentWallet.id },
+          data:  { tomanBalance: { increment: dto.amount } },
+          select: { id: true, tomanBalance: true },
+        });
+
+        await tx.payment.update({
+          where: { id: payment.id },
+          data:  {
+            status:           PaymentStatus.SUCCESS,
+            gatewayAuthority,
+            gatewayRefId,
+            paidAt:           new Date(),
+          },
+        });
+
+        await tx.transaction.create({
+          data: {
+            walletId:     wallet.id,
+            type:         TransactionType.DEPOSIT,
+            currency:     CurrencyType.TOMAN,
+            amount:       dto.amount,
+            balanceAfter: wallet.tomanBalance,
+            refType:      'WALLET_CHARGE',
+            refId:        payment.id,
+            description:  `شارژ آزمایشی کیف پول — ${dto.amount.toLocaleString()} تومان`,
+          },
+        });
+
+        return wallet;
       });
 
       return serializeBigInts({
-        paymentId:  payment.id,
-        paymentUrl: `${verifyBase}&Authority=${fakeAuthority}&Status=OK`,
-        isSandbox:  true,
-        message:    'در حالت تست - پرداخت شبیه‌سازی شده است',
+        paymentId:     payment.id,
+        completed:     true,
+        isSandbox:     true,
+        message:       'شارژ آزمایشی کیف پول با موفقیت انجام شد.',
+        walletBalance: walletState.tomanBalance,
       });
     }
 
@@ -155,7 +178,8 @@ export class WalletService {
     return serializeBigInts({
       paymentId:  payment.id,
       paymentUrl: initiateResult.paymentUrl,
-      isSandbox:  false,
+      isSandbox:  isMockMode,
+      message:    isMockMode ? 'پرداخت در حالت شبیه‌سازی انجام می‌شود' : undefined,
     });
   }
 

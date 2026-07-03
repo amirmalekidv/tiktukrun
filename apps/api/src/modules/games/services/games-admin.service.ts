@@ -188,21 +188,57 @@ export class GamesAdminService {
     return this.findOne(game.id, UserRole.ADMIN);
   }
 
-  async update(id: string, dto: UpdateGameDto) {
+  async update(
+    id: string,
+    dto: UpdateGameDto,
+    files?: {
+      cover?:   Express.Multer.File[];
+      gallery?: Express.Multer.File[];
+      teaser?:  Express.Multer.File[];
+    },
+  ) {
     const game = await this.prisma.game.findUnique({ where: { id } });
     if (!game) throw new NotFoundException('بازی یافت نشد');
 
     const data: any = { ...dto };
     // `genre` exists on the DTO but not on the MongoDB Game schema.
     delete data.genre;
+    if (dto.slug !== undefined) {
+      data.slug = slugify(dto.slug);
+    }
     if (dto.pricePerPerson !== undefined) {
       data.pricePerPerson = Math.round(dto.pricePerPerson);
     }
     if (dto.difficulty !== undefined) {
       data.difficulty = mapDifficulty(dto.difficulty);
     }
+    if (dto.siteRank !== undefined) {
+      data.siteRank = dto.siteRank;
+    }
 
-    return this.prisma.game.update({ where: { id }, data });
+    await this.prisma.game.update({ where: { id }, data });
+
+    if (files?.cover?.[0]) {
+      const coverImage = await this.imageService.processCover(files.cover[0], id);
+      await this.prisma.game.update({
+        where: { id },
+        data: { coverImage },
+      });
+    }
+
+    if (files?.teaser?.[0]) {
+      const teaserUrl = await this.imageService.processTeaserVideo(files.teaser[0], id);
+      await this.prisma.game.update({
+        where: { id },
+        data: { teaserUrl },
+      });
+    }
+
+    if (files?.gallery?.length) {
+      await this.addImages(id, files.gallery);
+    }
+
+    return this.findOne(id, UserRole.ADMIN);
   }
 
   async addImages(

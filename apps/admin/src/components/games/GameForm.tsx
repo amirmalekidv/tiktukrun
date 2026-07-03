@@ -58,6 +58,31 @@ interface GameFormProps {
   onSuccess?: () => void;
 }
 
+function buildDefaultValues(game?: Game): FormData {
+  return {
+    title: game?.title || '',
+    subtitle: game?.subtitle || '',
+    slug: game?.slug || '',
+    categoryId: game?.categoryId || '',
+    branchId: game?.branchId || '',
+    description: game?.description || '',
+    scenario: game?.scenario || '',
+    fearLevel: game?.fearLevel || 3,
+    difficulty: game?.difficulty || 'MEDIUM',
+    tier: (game as any)?.tier || 'STANDARD',
+    minPlayers: game?.minPlayers || 2,
+    maxPlayers: game?.maxPlayers || 6,
+    duration: game?.duration || 60,
+    pricePerPerson: game?.pricePerPerson || '',
+    weeklyDiscountPercent: game?.weeklyDiscountPercent || 0,
+    siteRank: game?.siteRank != null ? Number(game.siteRank) : undefined,
+    tags: game?.tags || [],
+    teaserUrl: game?.teaserUrl || '',
+    isActive: game?.isActive ?? true,
+    isFeatured: game?.isFeatured ?? false,
+  };
+}
+
 export default function GameForm({ game, onSuccess }: GameFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -85,27 +110,16 @@ export default function GameForm({ game, onSuccess }: GameFormProps) {
     })();
   }, []);
 
-  const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, watch, setValue, reset, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      title: game?.title || '',
-      subtitle: game?.subtitle || '',
-      categoryId: game?.categoryId || '',
-      branchId: game?.branchId || '',
-      description: game?.description || '',
-      fearLevel: game?.fearLevel || 3,
-      difficulty: game?.difficulty || 'MEDIUM',
-      tier: (game as any)?.tier || 'STANDARD',
-      minPlayers: game?.minPlayers || 2,
-      maxPlayers: game?.maxPlayers || 6,
-      duration: game?.duration || 60,
-      pricePerPerson: game?.pricePerPerson || '',
-      weeklyDiscountPercent: game?.weeklyDiscountPercent || 0,
-      tags: game?.tags || [],
-      isActive: game?.isActive ?? true,
-      isFeatured: game?.isFeatured ?? false,
-    },
+    defaultValues: buildDefaultValues(game),
   });
+
+  useEffect(() => {
+    reset(buildDefaultValues(game));
+    setCoverPreview(game?.coverImage || null);
+    setCoverFile(null);
+  }, [game, reset]);
 
   const fearLevel = watch('fearLevel');
   const tags = watch('tags');

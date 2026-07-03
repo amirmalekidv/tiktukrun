@@ -3,7 +3,7 @@
  * Connected directly to the real TIK TAK RUN backend (no mock mode).
  */
 import axios, { AxiosError } from 'axios'
-import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, getApiV1, getApiRoot } from './http'
+import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, getApiV1, getApiRoot, refreshAccessToken } from './http'
 import {
   buildGamesQueryParams,
   normalizeGame,
@@ -49,21 +49,9 @@ httpClient.interceptors.response.use(
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
       try {
-        const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
-        const res = await axios.post(
-          `${getApiV1()}/auth/refresh`,
-          refreshToken ? { refreshToken } : {},
-          { withCredentials: true },
-        )
-        const payload = res.data?.data ?? res.data
-        const accessToken = payload.accessToken
-        if (accessToken && typeof localStorage !== 'undefined') {
-          localStorage.setItem(AUTH_TOKEN_KEY, accessToken)
-          if (payload.refreshToken) {
-            localStorage.setItem(REFRESH_TOKEN_KEY, payload.refreshToken)
-          }
-        }
+        const accessToken = await refreshAccessToken()
         if (error.config && accessToken) {
+          error.config.headers = error.config.headers ?? {}
           error.config.headers.Authorization = `Bearer ${accessToken}`
           return httpClient(error.config)
         }
@@ -165,32 +153,66 @@ export async function validateDiscountCode(
   code: string,
   gameId: string,
   players: number,
-  slotId: string
+  slotDateTime: string
 ): Promise<DiscountValidation> {
-  const { data } = await httpClient.post('/discounts/validate', { code, gameId, players, slotId })
+  const { data } = await httpClient.post('/discounts/validate', {
+    code,
+    gameId,
+    playersCount: players,
+    slotDateTime,
+  })
   return data.data
 }
 
 // ==================== BOOKING ====================
 export async function bookingPreview(params: {
   gameId: string
-  slotId: string
-  players: number
+  slotId?: string
+  slotDateTime?: string
+  players?: number
+  playersCount?: number
   discountCode?: string
 }): Promise<BookingPreview> {
-  const { data } = await httpClient.post('/bookings/preview', params)
+  const payload = {
+    gameId: params.gameId,
+    slotDateTime: params.slotDateTime ?? params.slotId,
+    playersCount: params.playersCount ?? params.players,
+    discountCode: params.discountCode,
+  }
+  const { data } = await httpClient.post('/bookings/preview', payload)
   return data.data
 }
 
 export async function createBooking(params: {
   gameId: string
-  slotId: string
-  players: number
+  slotId?: string
+  slotDateTime?: string
+  players?: number
+  playersCount?: number
   discountCode?: string
   paymentMethod: string
-}): Promise<{ booking: Partial<Booking>; paymentUrl?: string }> {
-  const { data } = await httpClient.post('/bookings', params)
-  return data.data
+}): Promise<{
+  booking: Partial<Booking> & { id?: string; code?: string; status?: string; slotDateTime?: string }
+  bookingId?: string
+  code?: string
+  status?: string
+  paymentUrl?: string
+  message?: string
+  walletBalance?: number
+}> {
+  const payload = {
+    gameId: params.gameId,
+    slotDateTime: params.slotDateTime ?? params.slotId,
+    playersCount: params.playersCount ?? params.players,
+    discountCode: params.discountCode,
+    paymentMethod: params.paymentMethod,
+  }
+  const { data } = await httpClient.post('/bookings', payload)
+  const body = data.data ?? data
+  return {
+    ...body,
+    message: data.message ?? body.message,
+  }
 }
 
 export async function getBookingById(id: string): Promise<Booking> {
@@ -310,7 +332,9 @@ export async function getLeaderboard(period: 'WEEKLY' | 'MONTHLY' | 'ALL_TIME' =
   try {
     // Map UI period names → API period names
     const apiPeriod = period === 'WEEKLY' ? 'week' : period === 'MONTHLY' ? 'month' : 'all'
-    const { data } = await httpClient.get('/profile/leaderboard', { params: { period: apiPeriod } })
+    const { data } = await httpClient.get('/profile/leaderboard', {
+      params: { type: 'xp', period: apiPeriod, limit: 10 },
+    })
     const raw = Array.isArray(data?.data) ? data.data : []
     // Map flat API shape → frontend's nested shape
     return raw.map((row: any) => ({

@@ -1,13 +1,94 @@
 import api from '../api'
 import { mockApi, USE_MOCK } from '../mock-admin-api'
-import type { CustomerFilterParams } from '@/types'
+import type { ApiResponse, Customer, CustomerFilterParams } from '@/types'
+
+const CUSTOMER_TIERS = new Set(['VIP', 'PLATINUM', 'GOLD', 'SILVER', 'BRONZE', 'AT_RISK', 'NEWCOMER'])
+
+function normalizeCustomer(raw: any): Customer {
+  const inferredStatus = raw?.isBanned ? 'BANNED' : raw?.isActive === false ? 'INACTIVE' : 'ACTIVE'
+  const inferredTier = CUSTOMER_TIERS.has(String(raw?.status ?? '')) ? raw.status : 'NEWCOMER'
+  const tier = CUSTOMER_TIERS.has(String(raw?.tier ?? '')) ? raw.tier : inferredTier
+  const status = CUSTOMER_TIERS.has(String(raw?.status ?? '')) ? inferredStatus : raw?.status ?? inferredStatus
+  const xp = Number(raw?.xp ?? 0)
+  const requiredXp = Number(raw?.xpForNextLevel ?? 1000)
+
+  return {
+    ...raw,
+    id: String(raw?.id ?? ''),
+    name: String(raw?.name ?? raw?.fullName ?? raw?.mobile ?? ''),
+    mobile: String(raw?.mobile ?? raw?.phone ?? ''),
+    email: raw?.email ?? undefined,
+    avatar: raw?.avatar ?? raw?.avatarUrl ?? undefined,
+    tier,
+    status,
+    level: Number(raw?.level ?? raw?.profile?.levelId ?? 1),
+    xp,
+    xpForNextLevel: Number.isFinite(requiredXp) ? requiredXp : 1000,
+    ltv: Number(raw?.ltv ?? raw?.profile?.totalSpent ?? 0),
+    totalBookings: Number(raw?.totalBookings ?? raw?.bookings ?? raw?.stats?.totalBookings ?? 0),
+    avgRating: Number(raw?.avgRating ?? raw?.stats?.avgRating ?? 0),
+    lastActiveAt: String(raw?.lastActiveAt ?? raw?.lastLoginAt ?? raw?.createdAt ?? new Date().toISOString()),
+    registeredAt: String(raw?.registeredAt ?? raw?.createdAt ?? raw?.lastActiveAt ?? new Date().toISOString()),
+    city: raw?.city ?? raw?.profile?.city?.name ?? undefined,
+    tags: Array.isArray(raw?.tags) ? raw.tags : [],
+    segment: Array.isArray(raw?.segment) ? raw.segment : [],
+    walletBalance: Number(raw?.walletBalance ?? raw?.wallet?.tomanBalance ?? 0),
+    coins: Number(raw?.coins ?? raw?.wallet?.coinsBalance ?? 0),
+    referredBy: raw?.referredBy ?? undefined,
+    totalReferrals: Number(raw?.totalReferrals ?? 0),
+  }
+}
+
+function normalizeListPayload(payload: ApiResponse<Customer[]>) {
+  if (Array.isArray(payload?.data)) {
+    payload.data = payload.data.map((customer: any) => normalizeCustomer(customer))
+  }
+  return payload
+}
+
+function normalizeSinglePayload(payload: ApiResponse<Customer>) {
+  if (payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    payload.data = normalizeCustomer(payload.data as any)
+  }
+  return payload
+}
+
+function buildListParams(params?: CustomerFilterParams) {
+  if (!params) return undefined
+
+  const mapped = {
+    ...params,
+    q: params.search,
+    segmentId: params.segment,
+    ltvMin: params.minLtv,
+    ltvMax: params.maxLtv,
+  } as Record<string, unknown>
+
+  delete mapped.search
+  delete mapped.segment
+  delete mapped.minLtv
+  delete mapped.maxLtv
+
+  return Object.fromEntries(
+    Object.entries(mapped).filter(([, value]) => value !== undefined && value !== null && value !== '')
+  )
+}
 
 export const customersApi = {
-  list: (params?: CustomerFilterParams) =>
-    USE_MOCK ? mockApi.getCustomers(params as Record<string, unknown>) : api.get('/customers', { params }).then(r => r.data),
+  list: async (params?: CustomerFilterParams) => {
+    const requestParams = buildListParams(params)
+    if (USE_MOCK) return mockApi.getCustomers(requestParams as Record<string, unknown>)
 
-  get: (id: string) =>
-    USE_MOCK ? mockApi.getCustomer(id) : api.get(`/customers/${id}`).then(r => r.data),
+    const response = await api.get<ApiResponse<Customer[]>>('/customers', { params: requestParams })
+    return normalizeListPayload(response.data)
+  },
+
+  get: async (id: string) => {
+    if (USE_MOCK) return mockApi.getCustomer(id)
+
+    const response = await api.get<ApiResponse<Customer>>(`/customers/${id}`)
+    return normalizeSinglePayload(response.data)
+  },
 
   getBookings: (id: string) =>
     USE_MOCK ? mockApi.getCustomerBookings(id) : api.get(`/customers/${id}/bookings`).then(r => r.data),

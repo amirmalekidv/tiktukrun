@@ -105,8 +105,13 @@ import { PublicModule } from './modules/public/public.module';
     JwtModule.registerAsync({
       global: true,
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET', 'change-this-secret-in-production'),
-        signOptions: { expiresIn: config.get<string>('JWT_EXPIRES_IN', '7d') },
+        secret: config.get<string>(
+          'JWT_ACCESS_SECRET',
+          'fallback-secret-please-change',
+        ),
+        signOptions: {
+          expiresIn: config.get<string>('JWT_ACCESS_EXPIRES_IN', '15m'),
+        },
       }),
       inject: [ConfigService],
     }),

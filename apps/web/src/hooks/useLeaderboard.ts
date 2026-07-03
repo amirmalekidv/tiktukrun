@@ -1,37 +1,59 @@
 'use client';
 import { useState } from 'react';
 import useSWR from 'swr';
-import { leaderboardApi } from '@/lib/api/leaderboard';
+import useSWRInfinite from 'swr/infinite';
+import {
+  leaderboardApi,
+  mapLeaderboardRows,
+  type LeaderboardPeriod,
+} from '@/lib/api/leaderboard';
 
-type Period = 'week' | 'month' | 'all';
+const PAGE_SIZE = 25;
 
 export function useLeaderboard() {
-  const [period, setPeriod] = useState<Period>('week');
-  const [page, setPage] = useState(1);
+  const [period, setPeriod] = useState<LeaderboardPeriod>('all');
 
-  const { data, error, isLoading } = useSWR(
-    ['leaderboard', period, page],
-    ([, p, pg]) =>
-      leaderboardApi.getLeaderboard(p as Period, pg as number).catch(() => null),
-    { keepPreviousData: true }
+  const {
+    data,
+    error,
+    isLoading,
+    isValidating,
+    size,
+    setSize,
+  } = useSWRInfinite(
+    (index: number, previousPageData: ReturnType<typeof mapLeaderboardRows> | null) => {
+      if (previousPageData && previousPageData.length < PAGE_SIZE) return null;
+      return ['leaderboard', period, index + 1] as const;
+    },
+    ([, currentPeriod, page]: readonly [string, LeaderboardPeriod, number]) =>
+      leaderboardApi
+        .getLeaderboard({ type: 'xp', period: currentPeriod, limit: PAGE_SIZE, page })
+        .then(mapLeaderboardRows)
+        .catch(() => [] as ReturnType<typeof mapLeaderboardRows>),
+    { revalidateFirstPage: false },
   );
 
   const { data: myRankData } = useSWR(
-    'leaderboard-me',
-    () => leaderboardApi.getMyRank().catch(() => null)
+    ['leaderboard-me', period],
+    () => leaderboardApi.getMyRank({ type: 'xp', period }).catch(() => null),
   );
 
-  const lbData = data as { entries?: unknown[]; total?: number } | null | undefined;
-  const rankData = myRankData as { rank?: number } | null | undefined;
+  const pages = data ?? [];
+  const entries = pages.flat();
+  const lastPage = pages[pages.length - 1] ?? [];
+  const hasMore = lastPage.length === PAGE_SIZE;
+  const isLoadingMore = isValidating && size > 0;
 
   return {
-    entries: lbData?.entries ?? [],
-    myRank: rankData?.rank ?? null,
-    total: lbData?.total ?? 0,
+    entries,
+    myRank: myRankData?.rank ?? null,
+    myXp: myRankData?.xp ?? null,
+    total: entries.length,
     period,
-    setPeriod: (p: Period) => { setPeriod(p); setPage(1); },
-    page,
-    setPage,
+    setPeriod,
+    loadMore: () => setSize((current: number) => current + 1),
+    hasMore,
+    isLoadingMore,
     isLoading,
     error,
   };

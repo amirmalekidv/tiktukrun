@@ -15,7 +15,12 @@ export function getApiV1(): string {
 }
 
 export function getWsRoot(): string {
-  return process.env.NEXT_PUBLIC_WS_URL || getApiRoot();
+  const raw = process.env.NEXT_PUBLIC_WS_URL || getApiRoot();
+  return raw
+    .replace(/\/api\/v1\/?$/, '')
+    .replace(/\/socket\.io\/?$/, '')
+    .replace(/\/chat\/?$/, '')
+    .replace(/\/$/, '');
 }
 
 export function getAuthToken(): string | null {
@@ -45,9 +50,38 @@ export function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+export async function refreshAccessToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+
+  try {
+    const res = await fetch('/api-bridge/refresh', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+    });
+
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const payload = json?.data ?? json;
+    const accessToken = payload?.accessToken;
+
+    if (!accessToken || typeof accessToken !== 'string') return null;
+
+    setAuthTokens(accessToken, payload?.refreshToken);
+    return accessToken;
+  } catch {
+    return null;
+  }
+}
+
 export async function apiFetch<T = unknown>(
   path: string,
   init?: RequestInit,
+  retry = true,
 ): Promise<T> {
   const normalized = path.startsWith('/') ? path : `/${path}`;
   const url = path.startsWith('http') ? path : `${getApiV1()}${normalized}`;
@@ -60,6 +94,19 @@ export async function apiFetch<T = unknown>(
       ...(init?.headers as Record<string, string> | undefined),
     },
   });
+
+  if (res.status === 401 && retry && !normalized.startsWith('/auth/refresh')) {
+    const refreshedToken = await refreshAccessToken();
+
+    if (refreshedToken) {
+      return apiFetch<T>(path, init, false);
+    }
+
+    clearAuthTokens();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -75,3 +122,7 @@ export async function apiFetch<T = unknown>(
 
 export const USE_MOCK =
   process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+
+export const DEMO_OTP_CODE =
+  process.env.NEXT_PUBLIC_DEMO_OTP_CODE ||
+  (process.env.NODE_ENV !== 'production' ? '123456' : '');

@@ -14,6 +14,16 @@ interface Props {
   onLogout: () => void
 }
 
+const authMenuItems = [
+  { label: 'پروفایل', href: '/profile', icon: 'fas fa-user' },
+  { label: 'کیف پول', href: '/wallet', icon: 'fas fa-wallet' },
+  { label: 'رزروهای من', href: '/bookings', icon: 'fas fa-calendar-check' },
+  { label: 'دعوت', href: '/invites', icon: 'fas fa-user-plus' },
+  { label: 'پشتیبانی', href: '/tickets', icon: 'fas fa-headset' },
+  { label: 'اعلان‌ها', href: '/notifications', icon: 'fas fa-bell' },
+  { label: 'تنظیمات', href: '/settings', icon: 'fas fa-cog' },
+]
+
 export default function MobileMenu({ isOpen, onClose, menuItems, user, isAuthenticated, onLogout }: Props) {
   useEffect(() => {
     if (isOpen) {
@@ -100,22 +110,17 @@ export default function MobileMenu({ isOpen, onClose, menuItems, user, isAuthent
           {isAuthenticated && (
             <>
               <div className="border-t border-red-900/30 mt-4 pt-4 px-3 space-y-1">
-                <Link
-                  href="/profile"
-                  onClick={onClose}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-200 hover:text-red-400 hover:bg-red-950/30 transition-all"
-                >
-                  <i className="fas fa-user text-red-400 w-4" />
-                  <span>پروفایل</span>
-                </Link>
-                <Link
-                  href="/bookings"
-                  onClick={onClose}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-200 hover:text-red-400 hover:bg-red-950/30 transition-all"
-                >
-                  <i className="fas fa-calendar-check text-red-400 w-4" />
-                  <span>رزروهای من</span>
-                </Link>
+                {authMenuItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onClose}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-200 hover:text-red-400 hover:bg-red-950/30 transition-all"
+                  >
+                    <i className={`${item.icon} text-red-400 w-4`} />
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
                 <button
                   onClick={() => { onLogout(); onClose() }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-950/30 transition-all text-right"

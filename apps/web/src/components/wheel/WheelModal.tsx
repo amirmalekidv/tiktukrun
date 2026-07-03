@@ -2,14 +2,7 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { WheelPrize } from '@/lib/wheel-engine';
-
-const PRIZE_ICONS = {
-  xp: { icon: 'fa-bolt', color: '#8b5cf6', label: 'XP' },
-  coins: { icon: 'fa-circle', color: '#f59e0b', label: 'سکه' },
-  diamonds: { icon: 'fa-gem', color: '#22d3ee', label: 'الماس' },
-  item: { icon: 'fa-gift', color: '#ec4899', label: 'آیتم' },
-  nothing: { icon: 'fa-ghost', color: '#6b7280', label: 'دفعه بعد!' },
-};
+import { formatPrizeValue, getPrizeDisplay } from '@/lib/wheel-adapter';
 
 // Pre-generate particle offsets to avoid hydration mismatch from Math.random() in render
 const PARTICLE_OFFSETS = [
@@ -25,8 +18,9 @@ interface WheelModalProps {
 
 export default function WheelModal({ prize, isOpen, onClose }: WheelModalProps) {
   if (!prize) return null;
-  const cfg = PRIZE_ICONS[prize.type] ?? PRIZE_ICONS.nothing;
+  const cfg = getPrizeDisplay(prize.type);
   const isNothing = prize.type === 'nothing';
+  const valueText = formatPrizeValue(prize);
   // Memoize so particles don't re-randomize on re-render (hydration safety)
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const particles = useMemo(() => PARTICLE_OFFSETS, []);
@@ -94,12 +88,14 @@ export default function WheelModal({ prize, isOpen, onClose }: WheelModalProps) 
                 {isNothing ? 'این بار نشد!' : 'تبریک! 🎉'}
               </h2>
 
-              {!isNothing && (
+              {!isNothing && valueText && (
                 <div className="mb-2">
                   <span className="font-cinzel text-3xl font-bold" style={{ color: cfg.color }}>
-                    +{prize.value.toLocaleString('fa-IR')}
+                    {valueText}
                   </span>
-                  <span className="text-gray-400 font-vazir text-lg mr-2">{cfg.label}</span>
+                  {prize.type !== 'discount' && (
+                    <span className="text-gray-400 font-vazir text-lg mr-2">{cfg.label}</span>
+                  )}
                 </div>
               )}
 

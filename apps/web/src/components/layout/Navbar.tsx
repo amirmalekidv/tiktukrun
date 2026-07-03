@@ -4,16 +4,27 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/auth.store'
-import { formatToman, toPersianDigits } from '@/lib/utils'
+import { formatToman } from '@/lib/utils'
 import MobileMenu from './MobileMenu'
 
 const menuItems = [
   { label: 'قلمرو', href: '/games' },
   { label: 'تجربه‌ها', href: '/section/featured' },
-  { label: 'داستان‌ها', href: '/section/stories' },
-  { label: 'شجاعان', href: '/section/leaderboard' },
-  { label: 'گردونه', href: '/section/wheel' },
-  { label: 'انجمن', href: '/about' },
+  { label: 'داستان‌ها', href: '/stories' },
+  { label: 'شجاعان', href: '/leaderboard' },
+  { label: 'گردونه', href: '/wheel' },
+  { label: 'انجمن', href: '/community' },
+]
+
+const authDropdownItems = [
+  { label: 'پروفایل', href: '/profile', icon: 'fas fa-user', iconClassName: 'text-red-400' },
+  { label: 'کیف پول', href: '/wallet', icon: 'fas fa-wallet', iconClassName: 'text-yellow-400' },
+  { label: 'رزروهای من', href: '/bookings', icon: 'fas fa-calendar-check', iconClassName: 'text-red-400' },
+  { label: 'انجمن', href: '/community', icon: 'fas fa-users', iconClassName: 'text-red-400' },
+  { label: 'دعوت', href: '/invites', icon: 'fas fa-user-plus', iconClassName: 'text-red-400' },
+  { label: 'پشتیبانی', href: '/tickets', icon: 'fas fa-headset', iconClassName: 'text-red-400' },
+  { label: 'اعلان‌ها', href: '/notifications', icon: 'fas fa-bell', iconClassName: 'text-red-400' },
+  { label: 'تنظیمات', href: '/settings', icon: 'fas fa-cog', iconClassName: 'text-red-400' },
 ]
 
 export default function Navbar() {
@@ -22,6 +33,11 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const desktopMenuItems = menuItems.map((item) =>
+    item.href === '/community' && !isAuthenticated
+      ? { ...item, href: '/login?redirect=/community' }
+      : item
+  )
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50)
@@ -49,7 +65,7 @@ export default function Navbar() {
 
           {/* Desktop Menu */}
           <ul className="hidden lg:flex items-center gap-1 flex-1 justify-center">
-            {menuItems.map((item) => (
+            {desktopMenuItems.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
@@ -70,12 +86,15 @@ export default function Navbar() {
             {isAuthenticated && user ? (
               <>
                 {/* Wallet pill */}
-                <div className="hidden md:flex items-center gap-2 bg-yellow-900/30 border border-yellow-700/40 rounded-full px-3 py-1.5">
+                <Link
+                  href="/wallet"
+                  className="hidden md:flex items-center gap-2 bg-yellow-900/30 border border-yellow-700/40 rounded-full px-3 py-1.5 transition-all hover:border-yellow-500/60 hover:bg-yellow-900/40"
+                >
                   <i className="fas fa-wallet text-yellow-400 text-xs" />
                   <span className="text-yellow-300 text-xs font-bold">
                     {formatToman(user.walletBalance)} ت
                   </span>
-                </div>
+                </Link>
 
                 {/* User avatar + dropdown */}
                 <div className="relative">
@@ -102,30 +121,17 @@ export default function Navbar() {
 
                   {userMenuOpen && (
                     <div className="absolute right-0 top-full mt-2 w-52 dark-card rounded-xl border border-red-900/40 shadow-xl shadow-black/80 overflow-hidden z-50">
-                      <Link
-                        href="/profile"
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-red-950/40 transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <i className="fas fa-user text-red-400 w-4" />
-                        <span className="text-sm text-gray-200">پروفایل</span>
-                      </Link>
-                      <Link
-                        href="/bookings"
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-red-950/40 transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <i className="fas fa-calendar-check text-red-400 w-4" />
-                        <span className="text-sm text-gray-200">رزروهای من</span>
-                      </Link>
-                      <Link
-                        href="/wallet"
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-red-950/40 transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <i className="fas fa-wallet text-yellow-400 w-4" />
-                        <span className="text-sm text-gray-200">کیف پول</span>
-                      </Link>
+                      {authDropdownItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-red-950/40 transition-colors"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <i className={`${item.icon} ${item.iconClassName} w-4`} />
+                          <span className="text-sm text-gray-200">{item.label}</span>
+                        </Link>
+                      ))}
                       <div className="border-t border-red-900/30 mt-1">
                         <button
                           onClick={() => { logout(); setUserMenuOpen(false) }}
@@ -165,7 +171,7 @@ export default function Navbar() {
       <MobileMenu
         isOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
-        menuItems={menuItems}
+        menuItems={desktopMenuItems}
         user={user}
         isAuthenticated={isAuthenticated}
         onLogout={logout}

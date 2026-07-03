@@ -9,18 +9,31 @@ import BadgesPossibleList from '@/components/profile/BadgesPossibleList';
 import LevelTierBanner from '@/components/profile/LevelTierBanner';
 import { profileApi } from '@/lib/api/profile';
 import { USE_MOCK } from '@/lib/http';
+import {
+  getLevelXpBounds,
+  normalizeBadgeCollections,
+  normalizeProfilePayload,
+  normalizeProfileStats,
+  type BadgeViewModel,
+  type ProfileViewModel,
+  type StatsViewModel,
+} from '@/lib/profile-adapter';
+
+const DEMO_LEVEL = 19;
+const { levelStartXp: demoLevelStartXp, levelEndXp: demoLevelEndXp } = getLevelXpBounds(DEMO_LEVEL);
 
 // Demo profile used as fallback when API is unavailable
 const DEMO_PROFILE = {
   name: 'Shadow Walker',
   nickname: 'shadow_w',
   avatar: null,
-  level: 19,
+  level: DEMO_LEVEL,
   title: 'Reaper of Shadows',
   city: 'تهران',
   joinedAt: '۱۴۰۲',
   currentXp: 7200,
-  nextLevelXp: 10000,
+  levelStartXp: demoLevelStartXp,
+  levelEndXp: demoLevelEndXp,
 };
 
 const DEMO_STATS = {
@@ -38,10 +51,10 @@ const DEMO_BADGES = [
 ];
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<typeof DEMO_PROFILE | null>(null);
-  const [badges, setBadges] = useState<typeof DEMO_BADGES>([]);
-  const [possibleBadges, setPossibleBadges] = useState<typeof DEMO_BADGES>([]);
-  const [stats, setStats] = useState<typeof DEMO_STATS | null>(null);
+  const [profile, setProfile] = useState<ProfileViewModel | typeof DEMO_PROFILE | null>(null);
+  const [badges, setBadges] = useState<BadgeViewModel[] | typeof DEMO_BADGES>([]);
+  const [possibleBadges, setPossibleBadges] = useState<BadgeViewModel[] | typeof DEMO_BADGES>([]);
+  const [stats, setStats] = useState<StatsViewModel | typeof DEMO_STATS | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,31 +64,14 @@ export default function ProfilePage() {
       profileApi.getStats().catch(() => null),
     ])
       .then(([pRaw, bRaw, sRaw]) => {
-        const b = bRaw as { earned?: typeof DEMO_BADGES; available?: typeof DEMO_BADGES } | null;
-        const s = sRaw as { stats?: typeof DEMO_STATS } | null;
+        const normalizedBadges = normalizeBadgeCollections(bRaw);
+        const profileData = normalizeProfilePayload(pRaw, sRaw);
+        const statsData = normalizeProfileStats(sRaw, normalizedBadges.earned.length);
 
-        let profileData: typeof DEMO_PROFILE | null = USE_MOCK ? DEMO_PROFILE : null;
-        if (pRaw && typeof pRaw === 'object') {
-          if ('profile' in pRaw && (pRaw as { profile?: typeof DEMO_PROFILE }).profile) {
-            profileData = (pRaw as { profile: typeof DEMO_PROFILE }).profile;
-          } else if ('name' in pRaw) {
-            profileData = pRaw as typeof DEMO_PROFILE;
-          }
-        }
-
-        let statsData: typeof DEMO_STATS | null = USE_MOCK ? DEMO_STATS : null;
-        if (sRaw && typeof sRaw === 'object') {
-          if ('stats' in sRaw && (sRaw as { stats?: typeof DEMO_STATS }).stats) {
-            statsData = (sRaw as { stats: typeof DEMO_STATS }).stats;
-          } else if ('totalXp' in sRaw) {
-            statsData = sRaw as typeof DEMO_STATS;
-          }
-        }
-
-        setProfile(profileData);
-        setBadges(b?.earned ?? (USE_MOCK ? DEMO_BADGES : []));
-        setPossibleBadges(b?.available ?? []);
-        setStats(statsData);
+        setProfile(profileData ?? (USE_MOCK ? DEMO_PROFILE : null));
+        setBadges(normalizedBadges.earned.length ? normalizedBadges.earned : (USE_MOCK ? DEMO_BADGES : []));
+        setPossibleBadges(normalizedBadges.available);
+        setStats((profileData || sRaw) ? statsData : (USE_MOCK ? DEMO_STATS : null));
       })
       .finally(() => setLoading(false));
   }, []);
@@ -125,7 +121,8 @@ export default function ProfilePage() {
         <div className="lg:col-span-2 space-y-4">
           <XpProgressBar
             currentXp={p.currentXp}
-            nextLevelXp={p.nextLevelXp}
+            levelStartXp={p.levelStartXp}
+            levelEndXp={p.levelEndXp}
             level={p.level}
           />
           <StatsGrid {...finalStats} />

@@ -8,7 +8,7 @@ import { formatToman, toPersianDigits } from '@/lib/utils'
 import FearMeter from '@/components/ui/FearMeter'
 import StarRating from '@/components/ui/StarRating'
 import TierBadge from '@/components/games/TierBadge'
-import { GAME_COVER_PLACEHOLDER } from '@/lib/games'
+import { GAME_COVER_PLACEHOLDER, shouldBypassImageOptimization } from '@/lib/games'
 
 interface GameCardProps {
   game: Game
@@ -17,6 +17,7 @@ interface GameCardProps {
 
 export default function GameCard({ game, variant = 'default' }: GameCardProps) {
   const coverImage = game.coverImage || game.images[0]?.url || GAME_COVER_PLACEHOLDER
+  const unoptimized = shouldBypassImageOptimization(coverImage)
 
   if (variant === 'horizontal') {
     return (
@@ -27,6 +28,7 @@ export default function GameCard({ game, variant = 'default' }: GameCardProps) {
               src={coverImage}
               alt={game.title}
               fill
+              unoptimized={unoptimized}
               className="object-cover group-hover:scale-105 transition duration-500"
               sizes="160px"
             />
@@ -60,6 +62,7 @@ export default function GameCard({ game, variant = 'default' }: GameCardProps) {
             src={coverImage}
             alt={game.title}
             fill
+            unoptimized={unoptimized}
             className="object-cover group-hover:scale-110 transition duration-500"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />

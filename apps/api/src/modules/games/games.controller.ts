@@ -142,8 +142,27 @@ export class GamesAdminController {
 
   @Roles(UserRole.ADMIN)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateGameDto) {
-    return this.svc.update(id, dto);
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'cover',   maxCount: 1 },
+        { name: 'gallery', maxCount: 10 },
+        { name: 'teaser',  maxCount: 1 },
+      ],
+      { storage: multerStorage, limits: { fileSize: 50 * 1024 * 1024 } },
+    ),
+  )
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateGameDto,
+    @UploadedFiles()
+    files: {
+      cover?:   Express.Multer.File[];
+      gallery?: Express.Multer.File[];
+      teaser?:  Express.Multer.File[];
+    },
+  ) {
+    return this.svc.update(id, dto, files);
   }
 
   @Post(':id/images')

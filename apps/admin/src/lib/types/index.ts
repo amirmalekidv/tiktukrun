@@ -100,6 +100,13 @@ export const GAME_TIER_STYLE: Record<GameTier, string> = {
   DIAMOND: 'bg-purple-500/20 text-purple-300',
 };
 
+export interface GameImageAsset {
+  id: string;
+  url: string;
+  displayOrder: number;
+  caption?: string;
+}
+
 export interface Game {
   id: string;
   title: string;
@@ -124,7 +131,7 @@ export interface Game {
   siteRank?: number;
   tags: string[];
   coverImage?: string;
-  images: string[];
+  images: GameImageAsset[];
   teaserUrl?: string;
   isActive: boolean;
   isFeatured: boolean;

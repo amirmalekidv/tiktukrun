@@ -6,6 +6,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { requestOtp, verifyOtp } from '@/lib/api'
 import { setRefreshTokenCookie } from '@/lib/auth'
+import { DEMO_OTP_CODE } from '@/lib/http'
 import { useAuthStore } from '@/store/auth.store'
 import { isValidIranianMobile, toPersianDigits } from '@/lib/utils'
 
@@ -214,9 +215,11 @@ function LoginForm() {
                 />
               ))}
             </div>
-            <p className="text-gray-500 text-xs text-center mt-2">
-              کد demo: <span className="text-yellow-400 font-bold" dir="ltr">123456</span>
-            </p>
+            {DEMO_OTP_CODE && (
+              <p className="text-gray-500 text-xs text-center mt-2">
+                کد demo: <span className="text-yellow-400 font-bold" dir="ltr">{DEMO_OTP_CODE}</span>
+              </p>
+            )}
           </div>
 
           {/* Countdown */}

@@ -3,12 +3,13 @@ import { chatApi } from './chat';
 
 export const teamsApi = {
   getActiveTeams: () => apiFetch('/teams?status=FORMING'),
+  getMyTeams: () => apiFetch('/teams?mine=true'),
   getTeam: (teamId: string) => apiFetch(`/teams/${teamId}`),
   createTeam: (data: {
     name: string;
     description?: string;
     maxMembers: number;
-    gameType?: string;
+    gameId: string;
   }) =>
     apiFetch('/teams', { method: 'POST', body: JSON.stringify(data) }),
   joinTeam: (teamId: string) =>

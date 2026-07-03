@@ -56,6 +56,14 @@ export class UsersService {
 
     if (!user) throw new NotFoundException('کاربر یافت نشد');
 
+    if (!user.profile) {
+      user.profile = await this.prisma.userProfile.upsert({
+        where: { userId: uid },
+        update: {},
+        create: { userId: uid, levelId: 1, xp: 0 },
+      });
+    }
+
     return serializeBigInts({
       id: user.id,
       mobile: user.mobile,

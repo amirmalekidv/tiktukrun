@@ -2,6 +2,7 @@
 
 import { SWRConfig } from 'swr'
 import { ReactNode } from 'react'
+import AuthBootstrap from '@/components/auth/AuthBootstrap'
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -17,6 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       }}
     >
+      <AuthBootstrap />
       {children}
     </SWRConfig>
   )
