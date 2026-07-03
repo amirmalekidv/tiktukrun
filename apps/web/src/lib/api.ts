@@ -86,6 +86,29 @@ function getApiErrorMessage(error: AxiosError): string {
 
 export { httpClient }
 
+function normalizeReview(raw: any): Review {
+  const user = raw?.user ?? {}
+  const game = raw?.game ?? {}
+
+  return {
+    id: String(raw?.id ?? ''),
+    user: {
+      id: String(user?.id ?? ''),
+      name: user?.name ?? user?.fullName ?? user?.nickname ?? undefined,
+      avatar: user?.avatar ?? user?.avatarUrl ?? undefined,
+    },
+    game: {
+      id: String(game?.id ?? raw?.gameId ?? ''),
+      title: String(game?.title ?? ''),
+    },
+    rating: Number(raw?.rating ?? 0),
+    comment: String(raw?.comment ?? raw?.text ?? ''),
+    helpful: Number(raw?.helpful ?? raw?.helpfulCount ?? 0),
+    createdAt: String(raw?.createdAt ?? ''),
+    isVerified: Boolean(raw?.isVerified ?? raw?.bookingId),
+  }
+}
+
 // ==================== AUTH ====================
 export async function requestOtp(mobile: string, inviteCode?: string): Promise<OtpRequestResponse> {
   const { data } = await httpClient.post('/auth/otp/request', { mobile, inviteCode })
@@ -223,20 +246,22 @@ export async function getBookingById(id: string): Promise<Booking> {
 // ==================== REVIEWS ====================
 export async function getReviews(gameId: string): Promise<Review[]> {
   const { data } = await httpClient.get(`/games/${gameId}/reviews`)
-  return data.data
+  const items = Array.isArray(data?.data) ? data.data : []
+  return items.map(normalizeReview)
 }
 
 export async function getAllReviews(): Promise<Review[]> {
   try {
     const { data } = await httpClient.get('/reviews/public')
-    return data.data || []
+    const items = Array.isArray(data?.data) ? data.data : []
+    return items.map(normalizeReview)
   } catch {
     return []
   }
 }
 
-export async function submitReview(gameId: string, rating: number, comment: string) {
-  const { data } = await httpClient.post(`/games/${gameId}/reviews`, { rating, comment })
+export async function submitReview(bookingId: string, rating: number, comment: string) {
+  const { data } = await httpClient.post(`/reviews/booking/${bookingId}`, { rating, text: comment })
   return data.data
 }
 
@@ -337,16 +362,20 @@ export async function getLeaderboard(period: 'WEEKLY' | 'MONTHLY' | 'ALL_TIME' =
     })
     const raw = Array.isArray(data?.data) ? data.data : []
     // Map flat API shape → frontend's nested shape
-    return raw.map((row: any) => ({
-      rank: row.rank ?? 0,
-      score: row.score ?? row.xp ?? 0,
-      gamesPlayed: row.gamesPlayed ?? row.totalGames ?? 0,
-      user: row.user ?? {
-        id: String(row.userId ?? ''),
-        name: row.nickname ?? row.fullName ?? row.name ?? '',
-        avatar: row.avatarUrl ?? row.avatar ?? null,
-      },
-    })) as LeaderboardEntry[]
+    return raw.map((row: any) => {
+      const rawUser = row.user ?? {}
+      return {
+        rank: row.rank ?? 0,
+        score: row.score ?? row.xp ?? 0,
+        gamesPlayed: row.gamesPlayed ?? row.totalGames ?? 0,
+        user: {
+          ...rawUser,
+          id: String(rawUser.id ?? row.userId ?? ''),
+          name: rawUser.fullName ?? rawUser.name ?? rawUser.nickname ?? row.fullName ?? row.nickname ?? row.name ?? '',
+          avatar: rawUser.avatar ?? rawUser.avatarUrl ?? row.avatarUrl ?? row.avatar ?? null,
+        },
+      }
+    }) as LeaderboardEntry[]
   } catch {
     return []
   }

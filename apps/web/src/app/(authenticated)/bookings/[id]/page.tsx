@@ -61,8 +61,10 @@ function BookingDetailContent() {
     scheduledAt?: string;
     slotDateTime?: string;
     totalAmount?: number;
+    review?: { id?: string } | null;
   };
   const scheduledAt = b.scheduledAt ?? b.slotDateTime;
+  const hasReview = Boolean(b.review?.id) || reviewed;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-lg mx-auto space-y-6">
@@ -104,10 +106,10 @@ function BookingDetailContent() {
           </button>
         )}
       </div>
-      {b.status === 'COMPLETED' && !reviewed && (
+      {b.status === 'COMPLETED' && !hasReview && (
         <ReviewForm bookingId={id} onSuccess={() => setReviewed(true)} />
       )}
-      {reviewed && (
+      {hasReview && (
         <div className="text-center p-6 text-green-500 font-vazir">
           <i className="fas fa-check-circle text-3xl mb-2" />
           <p>نظر شما ثبت شد</p>

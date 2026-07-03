@@ -448,6 +448,7 @@ export class BookingsService {
       include: {
         game:    { include: { branch: true, images: true } },
         payment: true,
+        review:  true,
       },
     });
     if (!booking) throw new NotFoundException('رزرو یافت نشد');

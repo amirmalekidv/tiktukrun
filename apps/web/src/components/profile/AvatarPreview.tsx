@@ -1,16 +1,10 @@
 'use client';
 import { motion } from 'framer-motion';
-
-export interface AvatarConfig {
-  skin?: string;
-  hat?: string;
-  glasses?: string;
-  effect?: string;
-  background?: string;
-}
+import type { AvatarTab, AvatarUiConfig, AvatarUiItem } from '@/lib/avatar-adapter';
 
 interface AvatarPreviewProps {
-  config: AvatarConfig;
+  config: AvatarUiConfig;
+  selectedItems?: Partial<Record<AvatarTab, AvatarUiItem | undefined>>;
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -31,10 +25,15 @@ const SIZES = {
 
 export default function AvatarPreview({
   config,
+  selectedItems = {},
   size = 'md',
 }: AvatarPreviewProps) {
-  const bg = BACKGROUNDS[config.background ?? 'default'] ?? BACKGROUNDS.default;
-  const hasEffect = config.effect && config.effect !== 'none';
+  const backgroundCode = selectedItems.background?.code?.replace(/^background_/, '') ?? 'default';
+  const bg = BACKGROUNDS[backgroundCode] ?? BACKGROUNDS.default;
+  const hasEffect = Boolean(selectedItems.effect ?? config.effect);
+  const hatIcon = selectedItems.hat?.icon;
+  const glassesIcon = selectedItems.glasses?.icon;
+  const effectIcon = selectedItems.effect?.icon;
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -63,20 +62,27 @@ export default function AvatarPreview({
           </div>
 
           {/* Hat overlay */}
-          {config.hat && config.hat !== 'none' && (
+          {hatIcon && (
             <div className="absolute top-0 inset-x-0 flex justify-center pt-1">
-              <span className="text-2xl" title={config.hat}>
-                {config.hat === 'witch' ? '🎩' : config.hat === 'crown' ? '👑' : config.hat === 'horns' ? '😈' : '🎃'}
+              <span className="text-2xl" title={selectedItems.hat?.name}>
+                {hatIcon}
               </span>
             </div>
           )}
 
           {/* Glasses overlay */}
-          {config.glasses && config.glasses !== 'none' && (
+          {glassesIcon && (
             <div className="absolute top-1/3 inset-x-0 flex justify-center">
-              <span className="text-lg" title={config.glasses}>
-                {config.glasses === 'spectral' ? '👓' : '🕶️'}
+              <span className="text-lg" title={selectedItems.glasses?.name}>
+                {glassesIcon}
               </span>
+            </div>
+          )}
+
+          {/* Effect badge */}
+          {effectIcon && (
+            <div className="absolute bottom-2 right-2 text-lg drop-shadow-[0_0_8px_rgba(220,38,38,0.7)]">
+              {effectIcon}
             </div>
           )}
         </div>

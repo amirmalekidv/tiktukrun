@@ -20,8 +20,11 @@ export const bookingsApi = {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
-  submitReview: (_bookingId: string, _data: { rating: number; comment: string }) =>
-    Promise.reject(new Error('ثبت نظر از صفحه بازی انجام شود')),
+  submitReview: (bookingId: string, data: { rating: number; comment: string }) =>
+    apiFetch(`/reviews/booking/${bookingId}`, {
+      method: 'POST',
+      body: JSON.stringify({ rating: data.rating, text: data.comment }),
+    }),
   getMyBookings: (params?: { page?: number; limit?: number; status?: string }) => {
     const q = new URLSearchParams({
       page: String(params?.page ?? 1),

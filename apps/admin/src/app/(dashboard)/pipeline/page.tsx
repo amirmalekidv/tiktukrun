@@ -91,7 +91,7 @@ export default function PipelinePage() {
   const [deals, setDeals] = useState<Deal[]>([])
   const [draggingId, setDraggingId] = useState<string | null>(null)
 
-  const allDeals: Deal[] = (res?.data || deals) as Deal[]
+  const allDeals: Deal[] = Array.isArray(res?.data) ? res.data : deals
 
   const handleDragStart = (e: React.DragEvent, dealId: string) => {
     setDraggingId(dealId)

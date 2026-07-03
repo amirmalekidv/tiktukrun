@@ -1,0 +1,12 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Shared VPS override — host nginx already uses port 80/443 (e.g. modiranet)
+# ═══════════════════════════════════════════════════════════════════════════
+# Set in server .env:  DEPLOY_MODE=shared
+# Route host nginx to 127.0.0.1:3000 / 3001 / 4000
+# See: infra/nginx/host/tiktakrun.conf.example
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  nginx:
+    profiles:
+      - bundled-nginx

@@ -1,4 +1,5 @@
 import type { ChatMessageDto } from '@tiktakrun/shared-types';
+import { resolvePublicDisplayName } from '../../common/utils/display-name';
 
 /** Map Prisma chat message (with user include) to stable socket/REST DTO. */
 export function toChatMessageDto(message: {
@@ -11,7 +12,9 @@ export function toChatMessageDto(message: {
   createdAt: Date;
   user?: {
     id: string;
-    fullName: string;
+    fullName?: string | null;
+    nickname?: string | null;
+    mobile?: string | null;
     avatarUrl?: string | null;
     profile?: { levelId?: number | null } | null;
   } | null;
@@ -20,7 +23,7 @@ export function toChatMessageDto(message: {
     id: message.id,
     roomId: message.roomId,
     userId: message.userId,
-    userName: message.user?.fullName ?? 'کاربر',
+    userName: resolvePublicDisplayName(message.user),
     userAvatar: message.user?.avatarUrl ?? null,
     text: message.text,
     status: message.status,

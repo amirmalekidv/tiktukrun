@@ -20,12 +20,15 @@ import {
   socketRoomName,
   toChatMessageDto,
 } from './chat-message.mapper';
+import { resolvePublicDisplayName } from '../../common/utils/display-name';
 
 interface AuthSocket extends Socket {
   userId?: string;
   userData?: {
     id: string;
-    fullName: string;
+    fullName: string | null;
+    nickname: string | null;
+    mobile: string;
     avatarUrl: string | null;
   };
 }
@@ -98,7 +101,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
-        select: { id: true, fullName: true, avatarUrl: true, isBanned: true, isMuted: true },
+        select: {
+          id: true,
+          mobile: true,
+          fullName: true,
+          nickname: true,
+          avatarUrl: true,
+          isBanned: true,
+          isMuted: true,
+        },
       });
 
       if (!user || user.isBanned) {
@@ -162,7 +173,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.server.to(room).emit('userOnline', {
       userId: client.userId,
-      userName: client.userData?.fullName,
+      userName: resolvePublicDisplayName(client.userData),
       userAvatar: client.userData?.avatarUrl,
     });
 
@@ -262,7 +273,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         user: {
           select: {
             id: true,
+            mobile: true,
             fullName: true,
+            nickname: true,
             avatarUrl: true,
             profile: { select: { levelId: true } },
           },
@@ -285,7 +298,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = socketRoomName(roomType, data.teamId);
     client.to(room).emit('typing', {
       userId: client.userId,
-      userName: client.userData?.fullName,
+      userName: resolvePublicDisplayName(client.userData),
     });
   }
 

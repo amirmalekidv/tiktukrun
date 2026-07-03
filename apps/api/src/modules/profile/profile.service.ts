@@ -195,6 +195,7 @@ export class ProfileService {
               return {
                 rank: skip + i + 1,
                 userId: g.userId,
+                fullName: user.fullName,
                 nickname: user.nickname || user.fullName || 'کاربر',
                 level: (user as any).profile?.levelId ?? 1,
                 xp: Number(g._sum?.amount ?? 0),
@@ -219,6 +220,7 @@ export class ProfileService {
           result = profiles.map((p: any, i: number) => ({
             rank: skip + i + 1,
             userId: p.userId,
+            fullName: p.user.fullName,
             nickname: p.user.nickname || p.user.fullName || 'کاربر',
             level: p.levelId,
             xp: p.xp,
@@ -246,6 +248,7 @@ export class ProfileService {
         result = profiles.map((p: any, i: number) => ({
           rank: skip + i + 1,
           userId: p.userId,
+          fullName: p.user.fullName,
           nickname: p.user.nickname || p.user.fullName || 'کاربر',
           level: p.levelId,
           totalBookings: p.totalBookings,
@@ -293,6 +296,7 @@ export class ProfileService {
             return serializeBigInts({
               rank: skip + i + 1,
               userId: wallet.userId,
+              fullName: wallet.user.fullName,
               nickname: wallet.user.nickname || wallet.user.fullName || 'کاربر',
               level: wallet.user.profile?.levelId || 1,
               avatarUrl: wallet.user.avatarUrl,

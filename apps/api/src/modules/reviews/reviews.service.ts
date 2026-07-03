@@ -60,9 +60,11 @@ export class ReviewsService {
         bookingId,
         rating:     dto.rating,
         text:       dto.text,
-        isApproved: false,   // نیاز به تایید ادمین — id توسط @default(uuid()) در Prisma ست می‌شود
+        isApproved: true,
       },
     });
+
+    await this.recomputeGameRating(review.gameId);
 
     // اعطای XP و coins
     await this.rewards.awardReviewCompletion(userId, review.id);

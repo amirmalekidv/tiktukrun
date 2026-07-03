@@ -1,15 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
-
-export interface AvatarItem {
-  id: string;
-  name: string;
-  type: 'hat' | 'glasses' | 'skin' | 'effect' | 'background';
-  icon: string;
-  diamondCost: number;
-  status: 'locked' | 'unlocked' | 'purchased' | 'active';
-  preview?: string;
-}
+import type { AvatarUiItem as AvatarItem } from '@/lib/avatar-adapter';
 
 interface AvatarItemCardProps {
   item: AvatarItem;

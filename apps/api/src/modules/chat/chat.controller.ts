@@ -12,6 +12,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { toChatMessageDto } from './chat-message.mapper';
 import { IsString, IsOptional } from 'class-validator';
 
 class PostMessageDto {
@@ -42,7 +43,7 @@ export class ChatController {
       Number(page),
       Number(limit),
     );
-    return { success: true, data };
+    return { success: true, data: data.map((m) => toChatMessageDto(m)) };
   }
 
   @Get('rooms/team/:teamId/messages')
@@ -59,7 +60,7 @@ export class ChatController {
       Number(page),
       Number(limit),
     );
-    return { success: true, data };
+    return { success: true, data: data.map((m) => toChatMessageDto(m)) };
   }
 
   @Post('rooms/global/messages')
@@ -74,7 +75,7 @@ export class ChatController {
       dto.text,
       req.ip,
     );
-    return { success: true, data: message };
+    return { success: true, data: toChatMessageDto(message) };
   }
 
   @Post('rooms/:roomId/messages/:messageId/report')

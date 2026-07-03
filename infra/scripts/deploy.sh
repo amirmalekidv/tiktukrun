@@ -1,19 +1,29 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════
-# TIK TAK RUN — Production Deployment Script
+# TIK TAK RUN — Production Deployment Script (first install)
+# ═══════════════════════════════════════════════════════════════════════════
+# Usage:
+#   SEED=yes bash infra/scripts/deploy.sh    # first deploy with seed data
+#   bash infra/scripts/deploy.sh             # first deploy without seed
+#
+# For updates after initial deploy, use: bash infra/scripts/update.sh
 # ═══════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-
 cd "$PROJECT_ROOT"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/compose.sh"
+deploy_compose_init
 
 echo "╔══════════════════════════════════════════════════════════╗"
 echo "║       TIK TAK RUN — Production Deployment              ║"
 echo "╚══════════════════════════════════════════════════════════╝"
+echo "  Mode: ${DEPLOY_MODE:-standalone}"
+echo ""
 
-# ─── Check prerequisites ──────────────────────────────────────────────────
 command -v docker >/dev/null 2>&1 || { echo "❌ Docker not installed"; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo "❌ Docker Compose v2 required"; exit 1; }
 
@@ -22,44 +32,38 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# ─── Pre-deploy backup ────────────────────────────────────────────────────
 if docker ps --format '{{.Names}}' | grep -q tiktakrun-mongo; then
-    echo "📦 Creating pre-deploy backup..."
-    bash "$SCRIPT_DIR/backup.sh" || echo "⚠️  Backup failed (continuing)"
+    echo "⚠️  Stack already running — use infra/scripts/update.sh for updates"
+    exit 1
 fi
 
-# ─── Pull / build images ──────────────────────────────────────────────────
 echo "🔨 Building Docker images..."
-docker compose build --pull
+dc build --pull
 
-# ─── Start services ───────────────────────────────────────────────────────
 echo "🚀 Starting services..."
-docker compose up -d
+if [ "${DEPLOY_MODE:-standalone}" = "standalone" ]; then
+    dc up -d
+else
+    dc up -d mongo mongo-init redis api web admin
+    echo "  ℹ️  Shared mode — configure host nginx (see infra/nginx/host/tiktakrun.conf.example)"
+fi
 
-# ─── Wait for DB ──────────────────────────────────────────────────────────
-echo "⏳ Waiting for MongoDB to be healthy..."
-for i in {1..60}; do
-    if docker compose exec -T mongo mongosh --quiet --eval "db.adminCommand('ping')" >/dev/null 2>&1; then
-        echo "✅ MongoDB ready"
-        break
-    fi
-    sleep 2
-done
+deploy_wait_healthy mongo 120
+deploy_wait_healthy api 180
 
-# ─── Run migrations ───────────────────────────────────────────────────────
-echo "📊 Syncing database schema (prisma db push — Mongo has no migrate)..."
-docker compose exec -T api npx prisma db push --skip-generate
+echo "📊 Syncing database schema..."
+dc exec -T api npx prisma db push --skip-generate
 
-# ─── Optional: Seed (only if explicitly requested) ────────────────────────
 if [ "${SEED:-no}" = "yes" ]; then
     echo "🌱 Seeding database..."
-    docker compose exec -T api pnpm seed || echo "⚠️ Seed failed (may already be seeded)"
+    dc exec -T api pnpm seed || echo "⚠️ Seed failed (may already be seeded)"
 fi
 
-# ─── Health checks ────────────────────────────────────────────────────────
 echo "🏥 Checking service health..."
 sleep 5
-docker compose ps
+dc ps
+deploy_health_smoke
+deploy_maybe_prune_build_cache
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════╗"
@@ -68,5 +72,6 @@ echo "║                                                          ║"
 echo "║  🌐 Site:    https://${PROD_DOMAIN:-tiktakrun.ir}        ║"
 echo "║  👨‍💼 Admin:   https://admin.${PROD_DOMAIN:-tiktakrun.ir} ║"
 echo "║  📚 API:     https://api.${PROD_DOMAIN:-tiktakrun.ir}    ║"
-echo "║  📖 Swagger: /api/v1/docs                                ║"
+echo "║                                                          ║"
+echo "║  Next updates: bash infra/scripts/update.sh              ║"
 echo "╚══════════════════════════════════════════════════════════╝"

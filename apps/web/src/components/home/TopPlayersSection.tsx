@@ -63,7 +63,7 @@ export default function TopPlayersSection() {
               ))
             : (leaderboard as any[]).slice(0, 5).map((entry: any, i: number) => {
                 const u = entry?.user || {}
-                const name: string = u.name || u.nickname || ''
+                const name: string = u.fullName || u.name || u.nickname || ''
                 const avatar: string | null = u.avatar || u.avatarUrl || null
                 const score: number = Number(entry?.score ?? entry?.xp ?? 0) || 0
                 const gamesPlayed: number = Number(entry?.gamesPlayed ?? 0) || 0

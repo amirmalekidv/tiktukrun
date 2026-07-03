@@ -50,18 +50,34 @@ export function useChat({ roomType, teamId }: UseChatOptions) {
       userAvatar?: string | null;
       text?: string;
       createdAt?: string;
-    }): ChatMessage => ({
+      user?: {
+        fullName?: string | null;
+        nickname?: string | null;
+        mobile?: string | null;
+        avatarUrl?: string | null;
+      };
+    }): ChatMessage => {
+      const nestedUser = raw.user;
+      const resolvedName =
+        (raw.userName ?? nestedUser?.nickname?.trim()) ||
+        (nestedUser?.fullName?.trim() && !/^09\d{9}$/.test(nestedUser.fullName.replace(/\s/g, ''))
+          ? nestedUser.fullName.trim()
+          : undefined) ||
+        'کاربر';
+
+      return {
       id: String(raw.id ?? ''),
       userId: String(raw.userId ?? ''),
-      userName: raw.userName ?? 'کاربر',
-      userAvatar: raw.userAvatar ?? undefined,
+      userName: resolvedName,
+      userAvatar: raw.userAvatar ?? nestedUser?.avatarUrl ?? undefined,
       text: raw.text ?? '',
       createdAt: raw.createdAt ?? new Date().toISOString(),
       roomType,
       teamId,
       isMuted: raw.isMuted,
       isReported: raw.isReported,
-    });
+    };
+    };
 
     const handleTeamAccessError = (message: string) => {
       if (roomType !== 'team') return false;

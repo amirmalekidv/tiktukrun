@@ -14,9 +14,9 @@ import { ReviewsModule }      from '../reviews/reviews.module';
   imports: [ReviewsModule],
   controllers: [
     GamesController,
+    GameCommentsAdminController,
     GamesAdminController,
     GameInteractionController,
-    GameCommentsAdminController,
   ],
   providers:   [
     GamesService,

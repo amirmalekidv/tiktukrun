@@ -22,7 +22,7 @@ export function mapLeaderboardRows(raw: unknown): LeaderboardEntry[] {
   return rows.map((row: Record<string, unknown>) => ({
     rank: Number(row.rank ?? 0),
     userId: String(row.userId ?? ''),
-    name: String(row.nickname ?? row.name ?? row.fullName ?? 'کاربر'),
+    name: String(row.fullName ?? row.nickname ?? row.name ?? 'کاربر'),
     avatar: (row.avatarUrl ?? row.avatar) as string | undefined,
     level: Number(row.level ?? row.levelId ?? 1),
     xp: Number(row.xp ?? row.score ?? 0),

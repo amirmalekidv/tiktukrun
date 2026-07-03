@@ -165,8 +165,7 @@ export function normalizeProfilePayload(raw: unknown, statsRaw?: unknown): Profi
   const name =
     toText(record.fullName) ??
     toText(record.name) ??
-    toText(record.nickname) ??
-    toText(record.mobile);
+    toText(record.nickname);
 
   if (!name) return null;
 

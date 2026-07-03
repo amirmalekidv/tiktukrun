@@ -66,7 +66,9 @@ export class ChatService {
         user: {
           select: {
             id: true,
+            mobile: true,
             fullName: true,
+            nickname: true,
             avatarUrl: true,
             profile: { select: { levelId: true } },
           },
@@ -91,7 +93,15 @@ export class ChatService {
       take: limit,
       skip,
       include: {
-        user: { select: { id: true, fullName: true, avatarUrl: true } },
+        user: {
+          select: {
+            id: true,
+            mobile: true,
+            fullName: true,
+            nickname: true,
+            avatarUrl: true,
+          },
+        },
       },
     });
     return messages.reverse();
@@ -136,7 +146,9 @@ export class ChatService {
         user: {
           select: {
             id: true,
+            mobile: true,
             fullName: true,
+            nickname: true,
             avatarUrl: true,
             profile: { select: { levelId: true } },
           },

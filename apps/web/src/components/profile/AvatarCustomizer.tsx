@@ -2,11 +2,20 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import AvatarItemCard, { AvatarItem } from './AvatarItemCard';
-import AvatarPreview, { AvatarConfig } from './AvatarPreview';
+import AvatarItemCard from './AvatarItemCard';
+import AvatarPreview from './AvatarPreview';
 import { profileApi } from '@/lib/api/profile';
-
-type TabType = 'hat' | 'glasses' | 'skin' | 'effect' | 'background';
+import {
+  DEMO_AVATAR_ITEMS,
+  getSelectedAvatarItems,
+  normalizeAvatarConfig,
+  normalizeAvatarItems,
+  serializeAvatarConfig,
+  type AvatarTab as TabType,
+  type AvatarUiConfig as AvatarConfig,
+  type AvatarUiItem as AvatarItem,
+} from '@/lib/avatar-adapter';
+import { USE_MOCK } from '@/lib/http';
 
 const TABS: { key: TabType; label: string; icon: string }[] = [
   { key: 'hat', label: 'کلاه', icon: 'fa-hat-wizard' },
@@ -29,29 +38,43 @@ export default function AvatarCustomizer({
 }: AvatarCustomizerProps) {
   const [activeTab, setActiveTab] = useState<TabType>('hat');
   const [config, setConfig] = useState<AvatarConfig>(initialConfig);
-  const [items, setItems] = useState<AvatarItem[]>(initialItems);
+  const [items, setItems] = useState<AvatarItem[]>(
+    initialItems.length ? initialItems : (USE_MOCK ? DEMO_AVATAR_ITEMS : []),
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [purchaseTarget, setPurchaseTarget] = useState<AvatarItem | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
-    profileApi.getAvatarItems()
-      .then((raw) => {
-        const d = raw as { items?: AvatarItem[] } | AvatarItem[];
-        const list = Array.isArray(d) ? d : d?.items;
-        if (list) setItems(list);
-      })
-      .catch(() => {}); // keep demo empty state on failure
-    profileApi.getAvatarConfig()
-      .then((raw) => {
-        const d = raw as { config?: AvatarConfig } | AvatarConfig;
-        const cfg = d && 'config' in d ? d.config : (d as AvatarConfig);
-        if (cfg) setConfig(cfg);
-      })
-      .catch(() => {});
+    Promise.all([
+      profileApi.getAvatarItems().catch(() => null),
+      profileApi.getAvatarConfig().catch(() => null),
+    ]).then(([itemsRaw, configRaw]) => {
+      const normalizedItems = normalizeAvatarItems(itemsRaw);
+      const normalizedConfig = normalizeAvatarConfig(configRaw);
+
+      if (normalizedItems.length > 0) {
+        setItems(normalizedItems);
+      } else if (USE_MOCK) {
+        setItems(DEMO_AVATAR_ITEMS);
+      }
+
+      if (Object.keys(normalizedConfig).length > 0) {
+        setConfig(normalizedConfig);
+      } else if (USE_MOCK) {
+        setConfig({
+          hat: 'demo-hat-pumpkin',
+          glasses: 'demo-glasses-shadow',
+          skin: 'demo-skin-ember',
+          effect: 'demo-effect-pulse',
+          background: 'demo-background-default',
+        });
+      }
+    });
   }, []);
 
   const filteredItems = items.filter((i) => i.type === activeTab);
+  const selectedItems = getSelectedAvatarItems(items, config);
 
   const handleSelect = (item: AvatarItem) => {
     setConfig((prev) => ({ ...prev, [item.type]: item.id }));
@@ -92,7 +115,7 @@ export default function AvatarCustomizer({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await profileApi.updateAvatarConfig(config);
+      await profileApi.updateAvatarConfig(serializeAvatarConfig(config));
       toast.success('تنظیمات آواتار ذخیره شد!');
       onSave?.();
     } catch {
@@ -108,7 +131,7 @@ export default function AvatarCustomizer({
       <div className="lg:col-span-1">
         <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d] flex flex-col items-center gap-6">
           <h3 className="font-cinzel text-red-500 text-sm">پیش‌نمایش زنده</h3>
-          <AvatarPreview config={config} size="lg" />
+          <AvatarPreview config={config} selectedItems={selectedItems} size="lg" />
           <button
             onClick={handleSave}
             disabled={isSaving}

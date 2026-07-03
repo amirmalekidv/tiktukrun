@@ -50,6 +50,7 @@ fi
 
 # ─── Cleanup old backups ──────────────────────────────────────────────────
 echo "  → Cleaning backups older than $RETENTION_DAYS days"
+find "$BACKUP_DIR" -name "db_*.archive.gz" -mtime "+$RETENTION_DAYS" -delete
 find "$BACKUP_DIR" -name "db_*.sql.gz" -mtime "+$RETENTION_DAYS" -delete
 find "$BACKUP_DIR" -name "uploads_*.tar.gz" -mtime "+$RETENTION_DAYS" -delete
 

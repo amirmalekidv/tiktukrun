@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
 import {
   leaderboardApi,
@@ -33,11 +32,6 @@ export function useLeaderboard() {
     { revalidateFirstPage: false },
   );
 
-  const { data: myRankData } = useSWR(
-    ['leaderboard-me', period],
-    () => leaderboardApi.getMyRank({ type: 'xp', period }).catch(() => null),
-  );
-
   const pages = data ?? [];
   const entries = pages.flat();
   const lastPage = pages[pages.length - 1] ?? [];
@@ -46,8 +40,6 @@ export function useLeaderboard() {
 
   return {
     entries,
-    myRank: myRankData?.rank ?? null,
-    myXp: myRankData?.xp ?? null,
     total: entries.length,
     period,
     setPeriod,

@@ -1,7 +1,10 @@
 # 🚀 راهنمای دیپلوی TIK TAK RUN روی VPS Ubuntu
 
-> راهنمای کامل و گام‌به‌گام برای دیپلوی پروژه TIK TAK RUN روی سرور Ubuntu 22.04 LTS.
+> راهنمای کامل و گام‌به‌گام برای دیپلوی پروژه TIK TAK RUN روی سرور Ubuntu.
 > برنامه‌نویس فقط نیاز به اجرای دستورات این فایل دارد.
+>
+> **سرور اشتراکی (مثلاً `185.250.249.187` با modiranet روی پورت 80):**  
+> حتماً [`docs/SERVER_DEPLOYMENT_PLAN.md`](./docs/SERVER_DEPLOYMENT_PLAN.md) را ببینید — شامل `DEPLOY_MODE=shared`، `push-update.sh` و nginx هاست.
 
 ---
 
@@ -123,12 +126,19 @@ nano .env
 **⚠️ متغیرهای الزامی که باید پر کنید:**
 
 ```env
+# Deployment mode
+# standalone = nginx داخلی روی 80/443
+# shared     = VPS اشتراکی؛ nginx هاست (modiranet)
+DEPLOY_MODE=standalone
+
 # Domain
 PROD_DOMAIN=tiktakrun.ir
 
-# Database - رمز قوی
-POSTGRES_PASSWORD=<رمز_قوی_حداقل_۱۶_کاراکتر>
-DATABASE_URL=postgresql://tiktakrun:<همان_رمز>@postgres:5432/tiktakrun_db?schema=public
+# MongoDB - رمز قوی
+MONGO_PASSWORD=<رمز_قوی>
+MONGO_USER=tiktakrun
+MONGO_DB=tiktakrun_db
+DATABASE_URL=mongodb://tiktakrun:<همان_رمز>@mongo:27017/tiktakrun_db?authSource=admin&replicaSet=rs0&directConnection=true
 
 # JWT - حداقل ۳۲ کاراکتر تصادفی
 JWT_SECRET=<openssl rand -base64 48>
@@ -143,9 +153,8 @@ NEXT_PUBLIC_SOCKET_URL=wss://api.tiktakrun.ir
 
 # SMS.ir
 SMS_MOCK_MODE=false
-SMSIR_API_KEY=<کلید_از_sms.ir>
-SMSIR_LINE_NUMBER=<شماره_خط>
-SMSIR_TEMPLATE_ID_OTP=<شناسه_الگوی_OTP>
+SMS_IR_API_KEY=<کلید_از_sms.ir>
+SMS_IR_TEMPLATE_ID=<شناسه_الگوی_OTP>
 
 # ZarinPal
 ZARINPAL_SANDBOX=false
@@ -156,29 +165,32 @@ ZARINPAL_CALLBACK_URL=https://tiktakrun.ir/api/v1/payments/verify
 **نکته امنیتی:** برای تولید secrets از این استفاده کنید:
 ```bash
 openssl rand -base64 48   # برای JWT_SECRET، JWT_REFRESH_SECRET
-openssl rand -base64 32   # برای COOKIE_SECRET، POSTGRES_PASSWORD
+openssl rand -base64 32   # برای COOKIE_SECRET، MONGO_PASSWORD
 ```
 
-### 3.3 ساخت تصاویر و بالا آوردن سرویس‌ها
-
+**MongoDB keyfile (production):**
 ```bash
-# مجوز اسکریپت‌ها
-chmod +x infra/scripts/*.sh
-
-# Build و Up
-docker compose build --pull
-docker compose up -d
-
-# منتظر شدن تا postgres آماده شود
-sleep 30
-docker compose ps
+openssl rand -base64 756 > infra/mongo/mongo-keyfile
+chmod 400 infra/mongo/mongo-keyfile
+chown 999:999 infra/mongo/mongo-keyfile
 ```
 
-### 3.4 اجرای migration و seed
+### 3.3 دیپلوی اولیه (اسکریپت)
 
 ```bash
-# Migration
-docker compose exec api npx prisma migrate deploy
+chmod +x infra/scripts/*.sh infra/scripts/lib/*.sh
+
+# دیپلوی اول با seed:
+SEED=yes bash infra/scripts/deploy.sh
+```
+
+`deploy.sh` برای `DEPLOY_MODE=shared` فقط api/web/admin را بالا می‌آورد (بدون nginx داخلی).
+
+### 3.4 schema و seed (دستی — در صورت نیاز)
+
+```bash
+# MongoDB از migrate پشتیبانی نمی‌کند — db push:
+docker compose exec api npx prisma db push --skip-generate
 
 # Seed داده‌های اولیه (فقط بار اول)
 docker compose exec api pnpm seed
@@ -197,11 +209,21 @@ curl http://localhost:4000/health
 
 ## 4. SSL و دامنه
 
-### 4.1 دریافت گواهی SSL با Let's Encrypt
+### 4.1 VPS اختصاصی (`DEPLOY_MODE=standalone`)
 
 ```bash
 sudo bash infra/scripts/ssl-setup.sh tiktakrun.ir admin@tiktakrun.ir
 ```
+
+### 4.1b VPS اشتراکی (`DEPLOY_MODE=shared`)
+
+nginx داخلی غیرفعال است. SSL و routing از طریق nginx هاست (modiranet):
+
+1. `infra/nginx/host/tiktakrun.conf.example` را در modiranet nginx کپی کنید.
+2. certbot را روی هاست اجرا کنید.
+3. جزئیات: [`docs/SERVER_DEPLOYMENT_PLAN.md`](./docs/SERVER_DEPLOYMENT_PLAN.md) — Phase 5.
+
+### 4.2 جزئیات ssl-setup.sh (standalone)
 
 این اسکریپت:
 1. certbot را نصب می‌کند (اگر نباشد)
@@ -209,7 +231,7 @@ sudo bash infra/scripts/ssl-setup.sh tiktakrun.ir admin@tiktakrun.ir
 3. گواهی برای 4 ساب‌دامنه می‌گیرد: `tiktakrun.ir`, `www.tiktakrun.ir`, `admin.tiktakrun.ir`, `api.tiktakrun.ir`
 4. cron job برای auto-renewal تنظیم می‌کند
 
-### 4.2 تأیید SSL
+### 4.3 تأیید SSL
 
 ```bash
 # تست از داخل سرور
@@ -251,26 +273,43 @@ crontab -e
 ls -lh /var/backups/tiktakrun/
 
 # بازیابی (نیاز به تأیید با تایپ RESTORE)
-bash infra/scripts/restore.sh /var/backups/tiktakrun/db_YYYYMMDD_HHMMSS.sql.gz
+bash infra/scripts/restore.sh /var/backups/tiktakrun/db_YYYYMMDD_HHMMSS.archive.gz
 ```
 
 ---
 
 ## 6. آپدیت و نگهداری
 
-### آپدیت پروژه
+### آپدیت از ماشین لوکال (پیشنهادی)
 
 ```bash
-cd ~/tiktakrun
+cp .env.deploy.example .env.deploy   # یک‌بار
+pnpm deploy:push
+# یا: bash infra/scripts/push-update.sh
+```
+
+تنظیمات `.env.deploy`:
+
+```env
+DEPLOY_SERVER=root@<SERVER_IP>
+DEPLOY_PATH=/home/root/webapp/tiktakrun
+SYNC_MODE=auto   # auto | git | rsync
+```
+
+### آپدیت روی سرور
+
+```bash
+cd ~/tiktakrun   # یا /home/root/webapp/tiktakrun
 bash infra/scripts/update.sh
 ```
 
 این اسکریپت:
 1. بکاپ pre-update می‌گیرد
-2. `git pull` می‌کند (اگر repo git باشد)
-3. images را rebuild می‌کند
-4. migration اجرا می‌کند
+2. `git pull` می‌کند (مگر `GIT_PULL=no`)
+3. images مربوط به api/web/admin را rebuild می‌کند
+4. `prisma db push` اجرا می‌کند (MongoDB)
 5. سرویس‌ها را restart می‌کند
+6. smoke test + پاکسازی build cache
 
 ### restart دستی یک سرویس
 
@@ -329,8 +368,8 @@ docker system prune -a --volumes -f
 | مشکل | تشخیص | راه‌حل |
 |------|-------|--------|
 | `502 Bad Gateway` | `docker compose ps` بررسی وضعیت API | `docker compose restart api` |
-| `Database connection error` | `docker compose logs postgres` | چک کنید `POSTGRES_PASSWORD` در `.env` با URL هماهنگ باشد |
-| `Migration failed` | `docker compose logs api` | `docker compose exec api npx prisma migrate resolve --rolled-back <migration>` |
+| `Database connection error` | `docker compose logs mongo` | چک کنید `MONGO_PASSWORD` در `.env` با `DATABASE_URL` هماهنگ باشد |
+| `Schema sync failed` | `docker compose logs api` | `docker compose exec api npx prisma db push --skip-generate` |
 | `SSL renewal fail` | `certbot certificates` | `certbot renew --dry-run` |
 | `Out of disk` | `df -h` | `docker system prune -af && journalctl --vacuum-time=7d` |
 | `OTP نمی‌رسد` | `docker compose logs api \| grep SMS` | کلید SMS.ir و `SMS_MOCK_MODE=false` |

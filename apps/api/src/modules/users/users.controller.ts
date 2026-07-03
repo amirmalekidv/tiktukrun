@@ -71,6 +71,12 @@ export class UsersController {
     return this.avatarService.updateAvatarConfig(userId, dto);
   }
 
+  @Get('me/avatar/config')
+  @ApiOperation({ summary: 'دریافت تنظیمات آواتار' })
+  async getAvatarConfig(@CurrentUser('id') userId: string) {
+    return this.avatarService.getAvatarConfig(userId);
+  }
+
   @Post('me/avatar/purchase')
   @ApiOperation({ summary: 'خرید آیتم آواتار با الماس' })
   async purchaseAvatarItem(

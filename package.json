@@ -25,6 +25,8 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "deploy:setup": "bash infra/scripts/deploy.sh",
+    "deploy:update": "bash infra/scripts/update.sh",
+    "deploy:push": "bash infra/scripts/push-update.sh",
     "deploy:backup": "bash infra/scripts/backup.sh",
     "deploy:ssl": "bash infra/scripts/ssl-setup.sh"
   },
