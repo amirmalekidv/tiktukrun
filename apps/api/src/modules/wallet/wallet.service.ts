@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
-import { PaymentsService } from '../payments/payments.service';
 import {
   ChargeWalletDto,
   PurchaseDiamondsDto,
@@ -46,7 +45,6 @@ export class WalletService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
-    private readonly payments: PaymentsService,
   ) {}
 
   /** موجودی تومانی کاربر (برای بررسی قبل از پرداخت رزرو) */
@@ -120,66 +118,50 @@ export class WalletService {
       },
     });
 
-    const isMockMode = await this.payments.isMockMode();
-    if (isMockMode) {
-      const gatewayAuthority = `MOCK_${payment.id}`;
-      const gatewayRefId = `MOCK_REF_${payment.id}`;
+    // Until the hosted wallet payment page exists in the web app,
+    // keep top-up completion fully local and do not redirect the user away.
+    const gatewayAuthority = `MOCK_${payment.id}`;
+    const gatewayRefId = `MOCK_REF_${payment.id}`;
 
-      const walletState = await this.prisma.$transaction(async (tx) => {
-        const wallet = await tx.wallet.update({
-          where: { id: currentWallet.id },
-          data:  { tomanBalance: { increment: dto.amount } },
-          select: { id: true, tomanBalance: true },
-        });
-
-        await tx.payment.update({
-          where: { id: payment.id },
-          data:  {
-            status:           PaymentStatus.SUCCESS,
-            gatewayAuthority,
-            gatewayRefId,
-            paidAt:           new Date(),
-          },
-        });
-
-        await tx.transaction.create({
-          data: {
-            walletId:     wallet.id,
-            type:         TransactionType.DEPOSIT,
-            currency:     CurrencyType.TOMAN,
-            amount:       dto.amount,
-            balanceAfter: wallet.tomanBalance,
-            refType:      'WALLET_CHARGE',
-            refId:        payment.id,
-            description:  `شارژ آزمایشی کیف پول — ${dto.amount.toLocaleString()} تومان`,
-          },
-        });
-
-        return wallet;
+    const walletState = await this.prisma.$transaction(async (tx) => {
+      const wallet = await tx.wallet.update({
+        where: { id: currentWallet.id },
+        data:  { tomanBalance: { increment: dto.amount } },
+        select: { id: true, tomanBalance: true },
       });
 
-      return serializeBigInts({
-        paymentId:     payment.id,
-        completed:     true,
-        isSandbox:     true,
-        message:       'شارژ آزمایشی کیف پول با موفقیت انجام شد.',
-        walletBalance: walletState.tomanBalance,
+      await tx.payment.update({
+        where: { id: payment.id },
+        data:  {
+          status:           PaymentStatus.SUCCESS,
+          gatewayAuthority,
+          gatewayRefId,
+          paidAt:           new Date(),
+        },
       });
-    }
 
-    const initiateResult = await this.payments.initiate({
-      amount:      dto.amount,
-      description: `شارژ کیف پول - ${dto.amount.toLocaleString()} تومان`,
-      callbackUrl: '',
-      userId,
-      paymentId:   payment.id,
+      await tx.transaction.create({
+        data: {
+          walletId:     wallet.id,
+          type:         TransactionType.DEPOSIT,
+          currency:     CurrencyType.TOMAN,
+          amount:       dto.amount,
+          balanceAfter: wallet.tomanBalance,
+          refType:      'WALLET_CHARGE',
+          refId:        payment.id,
+          description:  `شارژ آزمایشی کیف پول — ${dto.amount.toLocaleString()} تومان`,
+        },
+      });
+
+      return wallet;
     });
 
     return serializeBigInts({
-      paymentId:  payment.id,
-      paymentUrl: initiateResult.paymentUrl,
-      isSandbox:  isMockMode,
-      message:    isMockMode ? 'پرداخت در حالت شبیه‌سازی انجام می‌شود' : undefined,
+      paymentId:     payment.id,
+      completed:     true,
+      isSandbox:     true,
+      message:       'شارژ آزمایشی کیف پول با موفقیت انجام شد.',
+      walletBalance: walletState.tomanBalance,
     });
   }
 

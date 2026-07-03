@@ -15,6 +15,30 @@ const DEMO_PACKAGES: Package[] = [
   { id: 'd6', name: 'بسته لجند', amount: 1000, currency: 'diamonds', price: 1500000, bonus: 300 },
 ];
 
+type RawDiamondPackage = {
+  id: string;
+  label?: string;
+  name?: string;
+  diamonds?: number;
+  amount?: number;
+  priceToman?: number;
+  price?: number;
+  bonus?: number;
+  popular?: boolean;
+};
+
+function normalizeDiamondPackage(raw: RawDiamondPackage): Package {
+  return {
+    id: raw.id,
+    name: raw.label ?? raw.name ?? 'بسته الماس',
+    amount: Number(raw.diamonds ?? raw.amount ?? 0),
+    currency: 'diamonds',
+    price: Number(raw.priceToman ?? raw.price ?? 0),
+    bonus: raw.bonus,
+    popular: raw.popular,
+  };
+}
+
 export default function DiamondsPage() {
   const router = useRouter();
   const [packages, setPackages] = useState<Package[]>(DEMO_PACKAGES);
@@ -22,17 +46,17 @@ export default function DiamondsPage() {
 
   useEffect(() => {
     walletApi.getDiamondPackages().then((raw) => {
-      const d = raw as { packages?: Package[] } | Package[];
+      const d = raw as { packages?: RawDiamondPackage[] } | RawDiamondPackage[];
       const list = Array.isArray(d) ? d : d?.packages;
-      if (list?.length) setPackages(list as Package[]);
+      if (list?.length) setPackages(list.map(normalizeDiamondPackage));
     }).catch(() => {});
   }, []);
 
   const handleBuy = async (pkg: Package) => {
     setLoadingId(pkg.id);
     try {
-      await walletApi.purchasePackage(pkg.id);
-      toast.success(`${pkg.amount} الماس به کیف پول اضافه شد!`);
+      await walletApi.purchaseDiamonds(pkg.id);
+      toast.success(`${pkg.amount.toLocaleString('fa-IR')} الماس به کیف پول اضافه شد!`);
       router.push('/wallet');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'خطا در خرید';

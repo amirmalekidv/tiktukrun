@@ -18,7 +18,7 @@ export default function ChargePage() {
         </button>
         <div>
           <h1 className="font-cinzel text-2xl text-red-500">شارژ کیف پول</h1>
-          <p className="text-gray-500 font-vazir text-sm">پرداخت از طریق زرین‌پال</p>
+          <p className="text-gray-500 font-vazir text-sm">شارژ آزمایشی بدون خروج از صفحه</p>
         </div>
       </div>
 

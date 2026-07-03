@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { teamsApi } from '@/lib/api/teams';
+import { TEAMS_SWR_KEYS, teamsApi } from '@/lib/api/teams';
 import { USE_MOCK } from '@/lib/http';
 import { useAuthStore } from '@/store/auth.store';
 import TeamCard from './TeamCard';
@@ -169,14 +169,14 @@ export default function ActiveTeamsList() {
     data: activeData,
     isLoading: isActiveLoading,
     mutate: mutateActive,
-  } = useSWR('active-teams', () =>
+  } = useSWR(TEAMS_SWR_KEYS.active, () =>
     teamsApi.getActiveTeams().catch(() => null)
   );
   const {
     data: myTeamsData,
     isLoading: isMyTeamsLoading,
     mutate: mutateMyTeams,
-  } = useSWR(currentUserId ? 'my-teams' : null, () =>
+  } = useSWR(currentUserId ? TEAMS_SWR_KEYS.mine : null, () =>
     teamsApi.getMyTeams().catch(() => null)
   );
 

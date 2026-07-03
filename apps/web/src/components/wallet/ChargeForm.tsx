@@ -7,6 +7,14 @@ import { useAuthStore } from '@/store/auth.store';
 
 const PRESET_AMOUNTS = [50000, 100000, 200000, 500000, 1000000];
 
+function parseLocalizedAmount(value: string) {
+  const englishDigits = value
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const digitsOnly = englishDigits.replace(/[^\d]/g, '');
+  return parseInt(digitsOnly, 10);
+}
+
 interface ChargeFormProps {
   onSuccess?: () => void;
 }
@@ -17,11 +25,7 @@ export default function ChargeForm({ onSuccess }: ChargeFormProps) {
   const { user, setUser } = useAuthStore();
 
   const handleCharge = async () => {
-    // Strip commas, Persian/Arabic-Indic digits, then parse
-    const cleaned = amount
-      .replace(/,/g, '')
-      .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-    const numAmount = parseInt(cleaned, 10);
+    const numAmount = parseLocalizedAmount(amount);
     if (!numAmount || numAmount < 10000) {
       toast.error('حداقل مبلغ شارژ ۱۰,۰۰۰ تومان است');
       return;
@@ -29,16 +33,12 @@ export default function ChargeForm({ onSuccess }: ChargeFormProps) {
 
     setIsLoading(true);
     try {
-      const { paymentUrl, message, walletBalance } = await walletApi.chargeWallet(numAmount);
-      if (paymentUrl) {
-        window.location.href = paymentUrl;
-      } else {
-        if (typeof walletBalance === 'number' && user) {
-          setUser({ ...user, walletBalance });
-        }
-        toast.success(message || 'شارژ کیف پول با موفقیت انجام شد');
-        onSuccess?.();
+      const { message, walletBalance } = await walletApi.chargeWallet(numAmount);
+      if (typeof walletBalance === 'number' && user) {
+        setUser({ ...user, walletBalance });
       }
+      toast.success(message || 'شارژ کیف پول با موفقیت انجام شد');
+      onSuccess?.();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'خطا در شارژ کیف پول';
       toast.error(msg);
@@ -96,7 +96,7 @@ export default function ChargeForm({ onSuccess }: ChargeFormProps) {
       <div className="flex items-center gap-3 p-3 bg-gray-900/30 rounded-xl border border-gray-800/30">
         <i className="fas fa-shield-alt text-green-500" />
         <p className="text-xs text-gray-500 font-vazir">
-          پرداخت امن از طریق درگاه زرین‌پال
+          شارژ در این نسخه به‌صورت آزمایشی و بدون خروج از صفحه انجام می‌شود
         </p>
       </div>
 
@@ -107,7 +107,7 @@ export default function ChargeForm({ onSuccess }: ChargeFormProps) {
         className="w-full py-4 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-vazir font-bold rounded-xl transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(220,38,38,0.3)]"
       >
         {isLoading ? (
-          <><i className="fas fa-spinner fa-spin ml-2" />در حال اتصال به درگاه...</>
+          <><i className="fas fa-spinner fa-spin ml-2" />در حال پردازش شارژ آزمایشی...</>
         ) : (
           <><i className="fas fa-credit-card ml-2" />پرداخت و شارژ</>
         )}

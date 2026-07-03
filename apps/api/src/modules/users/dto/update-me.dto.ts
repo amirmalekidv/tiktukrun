@@ -17,7 +17,7 @@ export class UpdateMeDto {
   @IsString()
   @MinLength(3)
   @MaxLength(30)
-  @Matches(/^[a-zA-Z0-9_\.]+$/, { message: 'نام کاربری فقط می‌تواند شامل حروف انگلیسی، اعداد، _ و . باشد' })
+  @Matches(/^[a-zA-Z0-9_.-]+$/, { message: 'نام کاربری فقط می‌تواند شامل حروف انگلیسی، اعداد، -، _ و . باشد' })
   nickname?: string;
 
   @ApiPropertyOptional({ description: 'ایمیل', example: 'ali@example.com' })

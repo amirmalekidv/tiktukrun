@@ -13,6 +13,30 @@ const DEMO_PACKAGES: Package[] = [
   { id: 'c4', name: 'بسته مگا', amount: 10000, currency: 'coins', price: 220000, bonus: 1500 },
 ];
 
+type RawCoinPackage = {
+  id: string;
+  label?: string;
+  name?: string;
+  coins?: number;
+  amount?: number;
+  priceToman?: number;
+  price?: number;
+  bonus?: number;
+  popular?: boolean;
+};
+
+function normalizeCoinPackage(raw: RawCoinPackage): Package {
+  return {
+    id: raw.id,
+    name: raw.label ?? raw.name ?? 'بسته سکه',
+    amount: Number(raw.coins ?? raw.amount ?? 0),
+    currency: 'coins',
+    price: Number(raw.priceToman ?? raw.price ?? 0),
+    bonus: raw.bonus,
+    popular: raw.popular,
+  };
+}
+
 export default function CoinsPage() {
   const router = useRouter();
   const [packages, setPackages] = useState<Package[]>(DEMO_PACKAGES);
@@ -20,16 +44,16 @@ export default function CoinsPage() {
 
   useEffect(() => {
     walletApi.getCoinPackages().then((raw) => {
-      const d = raw as { packages?: Package[] } | Package[];
+      const d = raw as { packages?: RawCoinPackage[] } | RawCoinPackage[];
       const list = Array.isArray(d) ? d : d?.packages;
-      if (list?.length) setPackages(list as Package[]);
+      if (list?.length) setPackages(list.map(normalizeCoinPackage));
     }).catch(() => {});
   }, []);
 
   const handleBuy = async (pkg: Package) => {
     setLoadingId(pkg.id);
     try {
-      await walletApi.purchasePackage(pkg.id);
+      await walletApi.purchaseCoins(pkg.id);
       toast.success(`${pkg.amount.toLocaleString('fa-IR')} سکه به کیف پول اضافه شد!`);
       router.push('/wallet');
     } catch (err: unknown) {

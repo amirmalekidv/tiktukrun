@@ -28,6 +28,11 @@ const CURRENCY_STYLE = {
   },
 };
 
+function getPackageStyle(currency: string | undefined) {
+  if (currency === 'coins') return CURRENCY_STYLE.coins;
+  return CURRENCY_STYLE.diamonds;
+}
+
 interface PackageCardProps {
   pkg: Package;
   onBuy: (pkg: Package) => void;
@@ -35,7 +40,7 @@ interface PackageCardProps {
 }
 
 export default function PackageCard({ pkg, onBuy, isLoading }: PackageCardProps) {
-  const style = CURRENCY_STYLE[pkg.currency];
+  const style = getPackageStyle(pkg.currency);
 
   return (
     <motion.div

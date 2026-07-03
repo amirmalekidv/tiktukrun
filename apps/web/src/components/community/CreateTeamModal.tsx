@@ -4,9 +4,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import useSWR from 'swr';
+import useSWR, { mutate } from 'swr';
 import { getGames } from '@/lib/api';
-import { teamsApi } from '@/lib/api/teams';
+import { TEAMS_SWR_KEYS, teamsApi } from '@/lib/api/teams';
 
 const schema = z.object({
   name: z.string().min(3, 'نام تیم باید حداقل ۳ حرف باشد').max(50),
@@ -16,6 +16,37 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
+
+function upsertTeamInCache(
+  cachedValue: unknown,
+  createdTeam: Record<string, unknown>
+) {
+  const addTeam = (items: unknown[]) => [
+    createdTeam,
+    ...items.filter((item) => {
+      if (!item || typeof item !== 'object') return true;
+      return (item as { id?: unknown }).id !== createdTeam.id;
+    }),
+  ];
+
+  if (Array.isArray(cachedValue)) {
+    return addTeam(cachedValue);
+  }
+
+  if (cachedValue && typeof cachedValue === 'object') {
+    const payload = cachedValue as { data?: unknown[]; teams?: unknown[] };
+
+    if (Array.isArray(payload.data)) {
+      return { ...payload, data: addTeam(payload.data) };
+    }
+
+    if (Array.isArray(payload.teams)) {
+      return { ...payload, teams: addTeam(payload.teams) };
+    }
+  }
+
+  return [createdTeam];
+}
 
 interface CreateTeamModalProps {
   isOpen: boolean;
@@ -46,7 +77,30 @@ export default function CreateTeamModal({
 
   const onSubmit = async (data: FormValues) => {
     try {
-      await teamsApi.createTeam(data);
+      const createdTeam = await teamsApi.createTeam(data);
+      const optimisticTeam =
+        createdTeam && typeof createdTeam === 'object'
+          ? {
+              ...(createdTeam as Record<string, unknown>),
+              currentMembers: 1,
+              isCurrentUserOwner: true,
+              isCurrentUserMember: true,
+            }
+          : null;
+
+      if (optimisticTeam) {
+        await mutate(
+          TEAMS_SWR_KEYS.mine,
+          (currentValue: unknown) =>
+            upsertTeamInCache(currentValue, optimisticTeam),
+          { revalidate: false }
+        );
+      }
+
+      await Promise.all([
+        mutate(TEAMS_SWR_KEYS.mine),
+        mutate(TEAMS_SWR_KEYS.active),
+      ]);
       toast.success('تیم با موفقیت ساخته شد!');
       reset();
       onClose();

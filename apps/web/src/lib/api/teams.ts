@@ -1,6 +1,11 @@
 import { apiFetch } from '../http';
 import { chatApi } from './chat';
 
+export const TEAMS_SWR_KEYS = {
+  active: 'active-teams',
+  mine: 'my-teams',
+} as const;
+
 export const teamsApi = {
   getActiveTeams: () => apiFetch('/teams?status=FORMING'),
   getMyTeams: () => apiFetch('/teams?mine=true'),
