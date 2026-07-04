@@ -81,12 +81,18 @@ export class AuthService {
    */
   private async createNewUser(mobile: string, inviteCode?: string) {
     const userInviteCode = generateInviteCode(8);
+    const mobileSeed = mobile.replace(/\D/g, '');
+    const placeholderNickname = `user_${mobileSeed}`;
+    const placeholderEmail = `${mobileSeed}@users.tiktakrun.local`;
 
     const user = await this.prisma.$transaction(async (tx: any) => {
       // Create user
       const newUser = await tx.user.create({
         data: {
           mobile,
+          fullName: mobile,
+          email: placeholderEmail,
+          nickname: placeholderNickname,
           inviteCode: userInviteCode,
         },
       });
