@@ -1,13 +1,11 @@
 import {
   Injectable,
   Logger,
-  BadRequestException,
 } from '@nestjs/common';
 import * as path  from 'path';
 import * as fs    from 'fs';
 import sharp from 'sharp';
-
-const UPLOAD_BASE = path.resolve(process.cwd(), 'storage/uploads/games');
+import { getStorageDir, resolveUploadPath } from '../../../common/utils/storage-path';
 
 export interface ProcessedImage {
   original:  string; // relative path
@@ -18,13 +16,8 @@ export interface ProcessedImage {
 export class GameImageService {
   private readonly logger = new Logger(GameImageService.name);
 
-  private ensureDir(dir: string) {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  }
-
   async processCover(file: Express.Multer.File, gameId: string): Promise<string> {
-    const dir      = path.join(UPLOAD_BASE, gameId);
-    this.ensureDir(dir);
+    const dir = getStorageDir('games', gameId);
 
     const filename = `cover-${Date.now()}.webp`;
     const outPath  = path.join(dir, filename);
@@ -46,8 +39,7 @@ export class GameImageService {
     gameId: string,
     index: number,
   ): Promise<ProcessedImage> {
-    const dir      = path.join(UPLOAD_BASE, gameId);
-    this.ensureDir(dir);
+    const dir = getStorageDir('games', gameId);
 
     const ts        = Date.now();
     const mainFile  = `gallery-${ts}-${index}.webp`;
@@ -73,8 +65,7 @@ export class GameImageService {
   }
 
   async processTeaserVideo(file: Express.Multer.File, gameId: string): Promise<string> {
-    const dir      = path.join(UPLOAD_BASE, gameId, 'teasers');
-    this.ensureDir(dir);
+    const dir = getStorageDir('games', gameId, 'teasers');
 
     const ext      = path.extname(file.originalname) || '.mp4';
     const filename = `teaser-${Date.now()}${ext}`;
@@ -88,13 +79,7 @@ export class GameImageService {
 
   deleteFile(relativePath: string) {
     try {
-      // relativePath مثلاً: /uploads/games/{gameId}/cover.webp
-      // فایل در storage/uploads/games/{gameId}/cover.webp ذخیره است
-      // پس باید پیشوند /uploads را با storage/uploads جایگزین کنیم
-      const normalizedPath = relativePath.startsWith('/')
-        ? relativePath.slice(1) // حذف slash ابتدایی
-        : relativePath;
-      const abs = path.join(process.cwd(), 'storage', normalizedPath);
+      const abs = resolveUploadPath(relativePath);
       if (fs.existsSync(abs)) fs.unlinkSync(abs);
     } catch (err) {
       this.logger.warn(`Could not delete file: ${relativePath}`, err);

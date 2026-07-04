@@ -25,9 +25,8 @@ import helmet from 'helmet';
 // (که `import *` را به ‏`{ default: ... }` تبدیل می‌کند) سازگار باشد.
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
-import { join } from 'path';
-
 import { AppModule } from './app.module';
+import { getStorageRoot } from './common/utils/storage-path';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -118,7 +117,8 @@ async function bootstrap() {
 
   // ─── Static files (uploads) ───────────────────────────────────────────────
   // Keep the public uploads mount aligned with where services write files.
-  app.useStaticAssets(join(process.cwd(), 'storage', 'uploads'), {
+  // Docker: STORAGE_PATH=/storage/uploads (bind-mounted). Local: <cwd>/storage/uploads.
+  app.useStaticAssets(getStorageRoot(), {
     prefix: '/uploads/',
     maxAge: '30d',
   });

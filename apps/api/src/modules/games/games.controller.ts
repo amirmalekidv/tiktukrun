@@ -14,8 +14,8 @@ import {
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
-import * as fs   from 'fs';
 import { CurrentUserPayload, UserRole } from '@tiktakrun/shared-types';
+import { getStorageDir } from '../../common/utils/storage-path';
 
 import { GamesService }      from './services/games.service';
 import { GamesAdminService } from './services/games-admin.service';
@@ -31,10 +31,8 @@ import { Roles }           from '../../common/decorators/roles.decorator';
 
 // ─── Multer config ─────────────────────────────────────────────────────────────
 const multerStorage = diskStorage({
-  destination: (req, _file, cb) => {
-    const dir = path.resolve(process.cwd(), 'storage/uploads/tmp');
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
+  destination: (_req, _file, cb) => {
+    cb(null, getStorageDir('tmp'));
   },
   filename: (_req, file, cb) => {
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(file.originalname)}`);

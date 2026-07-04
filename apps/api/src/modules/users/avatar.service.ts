@@ -10,6 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateAvatarConfigDto } from './dto/update-avatar-config.dto';
 import { PurchaseAvatarItemDto } from './dto/purchase-avatar-item.dto';
 import { serializeBigInts } from '../../common/utils/bigint';
+import { getStorageDir } from '../../common/utils/storage-path';
 import { TransactionCurrency, TransactionRefType } from '@tiktakrun/shared-types';
 import { AvatarItemType, TransactionType } from '@prisma/client';
 import * as path from 'path';
@@ -190,13 +191,7 @@ export class AvatarService {
       throw new BadRequestException('فایل تصویر الزامی است');
     }
 
-    const storagePath = process.env.STORAGE_PATH || './storage/uploads/avatars';
-    const avatarDir = path.resolve(storagePath);
-
-    // Ensure directory exists
-    if (!fs.existsSync(avatarDir)) {
-      fs.mkdirSync(avatarDir, { recursive: true });
-    }
+    const avatarDir = getStorageDir('avatars');
 
     const fileName = `${userId}.webp`;
     const filePath = path.join(avatarDir, fileName);
