@@ -27,7 +27,8 @@
     "db:seed": "ts-node --transpile-only prisma/seed.mongo.ts",
     "db:reset": "prisma db push --force-reset && pnpm seed",
     "db:validate": "ts-node --transpile-only prisma/scripts/validate-schema.ts",
-    "db:smoke:transaction": "ts-node --transpile-only prisma/scripts/smoke-transaction.ts"
+    "db:smoke:transaction": "ts-node --transpile-only prisma/scripts/smoke-transaction.ts",
+    "db:cleanup:otp-placeholders": "ts-node --transpile-only prisma/scripts/cleanup-otp-profile-placeholders.ts"
   },
   "dependencies": {
     "@nestjs-modules/ioredis": "^2.0.2",

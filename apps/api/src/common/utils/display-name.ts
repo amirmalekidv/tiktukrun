@@ -10,6 +10,12 @@ export function looksLikeMobile(value: string): boolean {
   return IR_MOBILE_RE.test(value.replace(/\s/g, ''));
 }
 
+export function maskMobileForDisplay(value?: string | null): string | undefined {
+  const digits = value?.replace(/\s/g, '');
+  if (!digits || !looksLikeMobile(digits)) return undefined;
+  return `${digits.slice(0, 4)} ***${digits.slice(-4)}`;
+}
+
 export interface PublicNameUser {
   nickname?: string | null;
   fullName?: string | null;
@@ -31,6 +37,9 @@ export function resolvePublicDisplayName(
 
   const fullName = normalizeText(user.fullName);
   if (fullName && !looksLikeMobile(fullName)) return fullName;
+
+  const maskedMobile = maskMobileForDisplay(user.mobile);
+  if (maskedMobile) return maskedMobile;
 
   return fallback;
 }

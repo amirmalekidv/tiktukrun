@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/auth.store'
-import { formatToman } from '@/lib/utils'
+import { formatToman, maskMobile } from '@/lib/utils'
 import MobileMenu from './MobileMenu'
 
 const menuItems = [
@@ -114,7 +114,7 @@ export default function Navbar() {
                       </div>
                     )}
                     <span className="hidden md:block text-sm text-gray-200 max-w-[100px] truncate">
-                      {user.name || maskMobileDisplay(user.mobile)}
+                      {user.name || maskMobile(user.mobile)}
                     </span>
                     <i className="fas fa-chevron-down text-xs text-gray-400" />
                   </button>
@@ -178,9 +178,4 @@ export default function Navbar() {
       />
     </>
   )
-}
-
-function maskMobileDisplay(mobile: string): string {
-  if (!mobile || mobile.length < 7) return mobile
-  return mobile.slice(0, 4) + '***' + mobile.slice(-2)
 }

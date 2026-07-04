@@ -87,5 +87,5 @@ export function isValidIranianMobile(mobile: string): boolean {
  */
 export function maskMobile(mobile: string): string {
   if (mobile.length < 11) return mobile
-  return mobile.slice(0, 4) + '***' + mobile.slice(8)
+  return `${mobile.slice(0, 4)} ***${mobile.slice(-4)}`
 }

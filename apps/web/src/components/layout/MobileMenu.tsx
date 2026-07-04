@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import type { User } from '@/types'
-import { formatToman } from '@/lib/utils'
+import { formatToman, maskMobile } from '@/lib/utils'
 
 interface Props {
   isOpen: boolean
@@ -69,7 +69,7 @@ export default function MobileMenu({ isOpen, onClose, menuItems, user, isAuthent
                 </div>
               )}
               <div>
-                <div className="text-white font-medium">{user.name || 'کاربر'}</div>
+                <div className="text-white font-medium">{user.name || maskMobile(user.mobile)}</div>
                 <div className="text-yellow-400 text-sm">
                   <i className="fas fa-wallet ml-1" />
                   {formatToman(user.walletBalance)} تومان

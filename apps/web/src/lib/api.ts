@@ -371,7 +371,7 @@ export async function getLeaderboard(period: 'WEEKLY' | 'MONTHLY' | 'ALL_TIME' =
         user: {
           ...rawUser,
           id: String(rawUser.id ?? row.userId ?? ''),
-          name: rawUser.fullName ?? rawUser.name ?? rawUser.nickname ?? row.fullName ?? row.nickname ?? row.name ?? '',
+          name: rawUser.name ?? rawUser.nickname ?? rawUser.fullName ?? row.name ?? row.nickname ?? row.fullName ?? '',
           avatar: rawUser.avatar ?? rawUser.avatarUrl ?? row.avatarUrl ?? row.avatar ?? null,
         },
       }

@@ -1,10 +1,13 @@
 import type { User } from '@/types'
 
+import { maskMobile } from './utils'
+
 export function normalizeAuthUser(raw: any): User {
+  const mobile = String(raw?.mobile ?? '')
   return {
     id: String(raw?.id ?? ''),
-    mobile: String(raw?.mobile ?? ''),
-    name: raw?.name ?? raw?.fullName ?? raw?.profile?.displayName ?? raw?.mobile ?? 'کاربر TIK TAK RUN',
+    mobile,
+    name: raw?.name ?? raw?.fullName ?? raw?.profile?.displayName ?? (mobile ? maskMobile(mobile) : 'کاربر TIK TAK RUN'),
     avatar: raw?.avatar ?? raw?.avatarUrl ?? undefined,
     walletBalance: Number(raw?.walletBalance ?? raw?.wallet?.tomanBalance ?? raw?.wallet?.balance ?? 0),
     xp: Number(raw?.xp ?? raw?.profile?.xp ?? 0),

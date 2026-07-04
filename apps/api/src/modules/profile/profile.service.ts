@@ -4,6 +4,7 @@ import { RedisService } from '../../redis/redis.service';
 import { LevelingService } from '../users/leveling.service';
 import { BadgeService } from './badge.service';
 import { serializeBigInts } from '../../common/utils/bigint';
+import { resolvePublicDisplayName } from '../../common/utils/display-name';
 import { TransactionCurrency } from '@tiktakrun/shared-types';
 import { TransactionType } from '@prisma/client';
 
@@ -111,7 +112,7 @@ export class ProfileService {
     if (!showProfile) {
       return {
         id: user.id,
-        nickname: user.nickname,
+        nickname: resolvePublicDisplayName(user),
         profile: {
           level: user.profile?.levelId,
           avatarUrl: user.avatarUrl,
@@ -123,6 +124,7 @@ export class ProfileService {
     return {
       id: user.id,
       nickname: user.nickname,
+      displayName: resolvePublicDisplayName(user),
       fullName: user.fullName,
       avatarUrl: user.avatarUrl,
       profile: user.profile,
@@ -180,6 +182,7 @@ export class ProfileService {
                   id: true,
                   nickname: true,
                   fullName: true,
+                  mobile: true,
                   avatarUrl: true,
                   profile: { select: { levelId: true } as any },
                 },
@@ -195,8 +198,9 @@ export class ProfileService {
               return {
                 rank: skip + i + 1,
                 userId: g.userId,
+                name: resolvePublicDisplayName(user),
                 fullName: user.fullName,
-                nickname: user.nickname || user.fullName || 'کاربر',
+                nickname: resolvePublicDisplayName(user),
                 level: (user as any).profile?.levelId ?? 1,
                 xp: Number(g._sum?.amount ?? 0),
                 avatarUrl: user.avatarUrl,
@@ -213,15 +217,16 @@ export class ProfileService {
             take: limit,
             include: {
               user: {
-                select: { id: true, nickname: true, fullName: true, avatarUrl: true },
+                select: { id: true, nickname: true, fullName: true, mobile: true, avatarUrl: true },
               },
             },
           } as any);
           result = profiles.map((p: any, i: number) => ({
             rank: skip + i + 1,
             userId: p.userId,
+            name: resolvePublicDisplayName(p.user),
             fullName: p.user.fullName,
-            nickname: p.user.nickname || p.user.fullName || 'کاربر',
+            nickname: resolvePublicDisplayName(p.user),
             level: p.levelId,
             xp: p.xp,
             avatarUrl: p.user.avatarUrl,
@@ -241,15 +246,16 @@ export class ProfileService {
           take: limit,
           include: {
             user: {
-              select: { id: true, nickname: true, fullName: true, avatarUrl: true },
+              select: { id: true, nickname: true, fullName: true, mobile: true, avatarUrl: true },
             },
           },
         } as any);
         result = profiles.map((p: any, i: number) => ({
           rank: skip + i + 1,
           userId: p.userId,
+          name: resolvePublicDisplayName(p.user),
           fullName: p.user.fullName,
-          nickname: p.user.nickname || p.user.fullName || 'کاربر',
+          nickname: resolvePublicDisplayName(p.user),
           level: p.levelId,
           totalBookings: p.totalBookings,
           avatarUrl: p.user.avatarUrl,
@@ -274,6 +280,7 @@ export class ProfileService {
                     id: true,
                     nickname: true,
                     fullName: true,
+                    mobile: true,
                     deletedAt: true,
                     avatarUrl: true,
                     profile: { select: { levelId: true } as any },
@@ -296,8 +303,9 @@ export class ProfileService {
             return serializeBigInts({
               rank: skip + i + 1,
               userId: wallet.userId,
+              name: resolvePublicDisplayName(wallet.user),
               fullName: wallet.user.fullName,
-              nickname: wallet.user.nickname || wallet.user.fullName || 'کاربر',
+              nickname: resolvePublicDisplayName(wallet.user),
               level: wallet.user.profile?.levelId || 1,
               avatarUrl: wallet.user.avatarUrl,
               totalSpent: s._sum.amount || 0n,

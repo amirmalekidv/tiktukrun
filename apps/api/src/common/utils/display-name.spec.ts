@@ -1,4 +1,4 @@
-import { looksLikeMobile, resolvePublicDisplayName } from './display-name';
+import { looksLikeMobile, maskMobileForDisplay, resolvePublicDisplayName } from './display-name';
 
 describe('resolvePublicDisplayName', () => {
   it('prefers nickname over fullName', () => {
@@ -26,11 +26,11 @@ describe('resolvePublicDisplayName', () => {
         fullName: '09123456789',
         mobile: '09123456789',
       }),
-    ).toBe('کاربر');
+    ).toBe('0912 ***6789');
   });
 
   it('falls back when no public name is set', () => {
-    expect(resolvePublicDisplayName({ mobile: '09123456789' })).toBe('کاربر');
+    expect(resolvePublicDisplayName({ mobile: '09123456789' })).toBe('0912 ***6789');
   });
 });
 
@@ -39,5 +39,15 @@ describe('looksLikeMobile', () => {
     expect(looksLikeMobile('09123456789')).toBe(true);
     expect(looksLikeMobile('09 123 456 789')).toBe(true);
     expect(looksLikeMobile('علی')).toBe(false);
+  });
+});
+
+describe('maskMobileForDisplay', () => {
+  it('masks the middle digits of a mobile number', () => {
+    expect(maskMobileForDisplay('09123456789')).toBe('0912 ***6789');
+  });
+
+  it('returns undefined for invalid mobile values', () => {
+    expect(maskMobileForDisplay('02112345678')).toBeUndefined();
   });
 });

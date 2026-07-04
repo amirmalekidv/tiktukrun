@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolvePublicDisplayName } from '../../common/utils/display-name';
 import { ValidateInviteDto, ApplyInviteDto } from './dto/invite.dto';
 import { TransactionCurrency, TransactionRefType } from '@tiktakrun/shared-types';
 import { TransactionType, NotificationType, NotificationChannel } from '@prisma/client';
@@ -39,7 +40,7 @@ export class InvitesService {
     // People this user invited (via invitedById relation)
     const invitees = await this.prisma.user.findMany({
       where: { invitedById: uid },
-      select: { id: true, fullName: true, nickname: true, createdAt: true },
+      select: { id: true, fullName: true, nickname: true, mobile: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
       take: 20,
     });
@@ -54,7 +55,7 @@ export class InvitesService {
       totalRewardXp,
       recentUsages: invitees.map((invitee) => ({
         inviteeId: invitee.id,
-        inviteeName: invitee.nickname || invitee.fullName || 'کاربر جدید',
+        inviteeName: resolvePublicDisplayName(invitee, 'کاربر جدید'),
         rewardXp: INVITE_REWARD_XP,
         joinedAt: invitee.createdAt,
       })),
@@ -83,7 +84,7 @@ export class InvitesService {
     return {
       users: users.map((u) => ({
         id: u.id,
-        name: u.nickname || u.fullName || u.mobile,
+        name: resolvePublicDisplayName(u),
         joinedAt: u.createdAt,
         xpEarned: INVITE_REWARD_XP,
       })),
@@ -123,7 +124,7 @@ export class InvitesService {
   async validateInviteCode(dto: ValidateInviteDto) {
     const user = await this.prisma.user.findFirst({
       where: { inviteCode: dto.code, deletedAt: null, isBanned: false } as any,
-      select: { id: true, nickname: true, fullName: true },
+      select: { id: true, nickname: true, fullName: true, mobile: true },
     });
 
     if (!user) {
@@ -132,7 +133,7 @@ export class InvitesService {
 
     return {
       valid: true,
-      ownerName: user.nickname || user.fullName || 'دوست شما',
+      ownerName: resolvePublicDisplayName(user, 'دوست شما'),
     };
   }
 

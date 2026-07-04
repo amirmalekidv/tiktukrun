@@ -1,3 +1,5 @@
+import { maskMobile } from './utils';
+
 // Mirrors apps/api/src/modules/users/leveling.service.ts LEVEL_XP_TABLE
 const LEVEL_XP_THRESHOLDS = [
   0, 100, 250, 500, 900, 1400, 2100, 3000, 4200, 5700,
@@ -164,9 +166,10 @@ export function normalizeProfilePayload(raw: unknown, statsRaw?: unknown): Profi
 
   const name =
     toText(record.fullName) ??
+    toText(record.displayName) ??
     toText(record.name) ??
     toText(record.nickname) ??
-    toText(record.mobile) ??
+    (toText(record.mobile) ? maskMobile(toText(record.mobile)!) : undefined) ??
     'کاربر TIK TAK RUN';
 
   const level = toNumber(stats?.currentLevel ?? record.level ?? profile?.levelId, 1) || 1;

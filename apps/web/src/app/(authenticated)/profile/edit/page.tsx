@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,7 +18,7 @@ const schema = z.object({
     .regex(/^[a-zA-Z0-9_.-]+$/, 'فقط حروف انگلیسی، اعداد، -، _ و . مجاز است')
     .optional()
     .or(z.literal('')),
-  email: z.string().email('ایمیل نامعتبر است'),
+  email: z.string().email('ایمیل نامعتبر است').optional().or(z.literal('')),
   bio: z.string().max(250, 'بیو حداکثر ۲۵۰ کاراکتر').optional().or(z.literal('')),
   city: z.string().max(50).optional().or(z.literal('')),
 });
@@ -27,6 +27,7 @@ type FormValues = z.infer<typeof schema>;
 
 export default function ProfileEditPage() {
   const router = useRouter();
+  const [mobile, setMobile] = useState('');
   const {
     register,
     handleSubmit,
@@ -36,14 +37,15 @@ export default function ProfileEditPage() {
 
   useEffect(() => {
     profileApi.getMe().then((raw: unknown) => {
-      const normalized = normalizeProfilePayload(raw);
       const user = raw && typeof raw === 'object' ? (raw as Record<string, any>) : null;
       const profile = user?.profile && typeof user.profile === 'object'
         ? (user.profile as Record<string, any>)
         : null;
+      const normalized = normalizeProfilePayload(raw);
 
+      setMobile(typeof user?.mobile === 'string' ? user.mobile : '');
       reset({
-        name: normalized?.name ?? '',
+        name: typeof user?.fullName === 'string' ? user.fullName : '',
         nickname: user?.nickname ?? '',
         email: user?.email ?? '',
         bio: profile?.bio ?? '',
@@ -57,7 +59,7 @@ export default function ProfileEditPage() {
       await profileApi.updateProfile({
         fullName: data.name,
         nickname: data.nickname || undefined,
-        email: data.email,
+        email: data.email || undefined,
         bio: data.bio || undefined,
       });
       toast.success('پروفایل با موفقیت بروزرسانی شد');
@@ -89,6 +91,17 @@ export default function ProfileEditPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
+            <label className={labelClass}>شماره موبایل</label>
+            <input
+              value={mobile}
+              readOnly
+              className={`${inputClass} text-gray-400 cursor-not-allowed`}
+              dir="ltr"
+              placeholder="0912 ***6789"
+            />
+          </div>
+
+          <div>
             <label className={labelClass}>نام کامل *</label>
             <input {...register('name')} className={inputClass} placeholder="نام شما" />
             {errors.name && <p className={errorClass}>{errors.name.message}</p>}
@@ -108,7 +121,7 @@ export default function ProfileEditPage() {
           </div>
 
           <div>
-            <label className={labelClass}>ایمیل *</label>
+            <label className={labelClass}>ایمیل</label>
             <input
               {...register('email')}
               type="email"
