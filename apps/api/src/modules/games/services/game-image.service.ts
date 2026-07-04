@@ -5,11 +5,11 @@ import {
 import * as path  from 'path';
 import * as fs    from 'fs';
 import sharp from 'sharp';
-import { getStorageDir, resolveUploadPath } from '../../../common/utils/storage-path';
+import { getStorageDir, resolveUploadPath, toPublicUploadUrl } from '../../../common/utils/storage-path';
 
 export interface ProcessedImage {
-  original:  string; // relative path
-  thumbnail: string; // relative path (400x225)
+  original:  string; // public URL
+  thumbnail: string; // public URL (400x225)
 }
 
 @Injectable()
@@ -31,7 +31,7 @@ export class GameImageService {
     if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
 
     this.logger.log(`Cover processed: ${outPath}`);
-    return `/uploads/games/${gameId}/${filename}`;
+    return toPublicUploadUrl(`games/${gameId}/${filename}`);
   }
 
   async processGalleryImage(
@@ -59,8 +59,8 @@ export class GameImageService {
 
     this.logger.log(`Gallery image processed: ${mainFile}`);
     return {
-      original:  `/uploads/games/${gameId}/${mainFile}`,
-      thumbnail: `/uploads/games/${gameId}/${thumbFile}`,
+      original:  toPublicUploadUrl(`games/${gameId}/${mainFile}`),
+      thumbnail: toPublicUploadUrl(`games/${gameId}/${thumbFile}`),
     };
   }
 
@@ -74,15 +74,15 @@ export class GameImageService {
     // در production از FFmpeg استفاده می‌شود — فعلاً فایل را منتقل می‌کنیم
     fs.renameSync(file.path, outPath);
     this.logger.log(`Teaser stored: ${outPath}`);
-    return `/uploads/games/${gameId}/teasers/${filename}`;
+    return toPublicUploadUrl(`games/${gameId}/teasers/${filename}`);
   }
 
-  deleteFile(relativePath: string) {
+  deleteFile(publicPath: string) {
     try {
-      const abs = resolveUploadPath(relativePath);
+      const abs = resolveUploadPath(publicPath);
       if (fs.existsSync(abs)) fs.unlinkSync(abs);
     } catch (err) {
-      this.logger.warn(`Could not delete file: ${relativePath}`, err);
+      this.logger.warn(`Could not delete file: ${publicPath}`, err);
     }
   }
 }

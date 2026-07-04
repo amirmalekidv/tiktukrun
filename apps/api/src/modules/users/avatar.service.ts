@@ -10,7 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateAvatarConfigDto } from './dto/update-avatar-config.dto';
 import { PurchaseAvatarItemDto } from './dto/purchase-avatar-item.dto';
 import { serializeBigInts } from '../../common/utils/bigint';
-import { getStorageDir } from '../../common/utils/storage-path';
+import { getStorageDir, toPublicUploadUrl } from '../../common/utils/storage-path';
 import { TransactionCurrency, TransactionRefType } from '@tiktakrun/shared-types';
 import { AvatarItemType, TransactionType } from '@prisma/client';
 import * as path from 'path';
@@ -199,7 +199,7 @@ export class AvatarService {
     // Save file (Sharp processing would be applied in production)
     fs.writeFileSync(filePath, file.buffer);
 
-    const avatarUrl = `/uploads/avatars/${fileName}`;
+    const avatarUrl = toPublicUploadUrl(`avatars/${fileName}`);
 
     await this.prisma.user.update({
       where: { id: userId },

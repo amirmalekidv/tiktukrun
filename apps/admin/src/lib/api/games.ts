@@ -9,6 +9,7 @@ const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').re
 function resolveMediaUrl(path?: string | null): string | undefined {
   if (!path) return undefined;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  if (process.env.NODE_ENV === 'production' && path.startsWith('/uploads/')) return path;
   return `${API_ROOT}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
