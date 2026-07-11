@@ -10,9 +10,9 @@ interface BalanceTileProps {
 const CURRENCY_CONFIG = {
   toman: {
     icon: 'fa-coins',
-    color: '#dc2626',
-    bg: 'from-red-950/40 to-red-900/10',
-    border: 'border-red-900/40',
+    color: '#00f5ff',
+    bg: 'from-[#00f5ff]/20 to-[#00f5ff]/5',
+    border: 'border-[#00f5ff]/30',
     label: 'تومان',
     formatter: (n: number) => n.toLocaleString('fa-IR') + ' تومان',
   },

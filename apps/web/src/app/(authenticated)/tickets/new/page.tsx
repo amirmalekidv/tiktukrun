@@ -22,7 +22,7 @@ export default function NewTicketPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-lg mx-auto">
       <div className="flex items-center gap-4 mb-6"><button onClick={() => router.back()} className="text-gray-500 hover:text-red-400"><i className="fas fa-arrow-right text-lg" /></button><h1 className="font-cinzel text-2xl text-red-500">تیکت جدید</h1></div>
-      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d]">
+      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-white/[0.03]">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div><label className="text-xs text-gray-400 font-vazir mb-1.5 block">موضوع *</label><input {...register('subject')} className={ic} placeholder="موضوع تیکت..." />{errors.subject && <p className="text-xs text-red-500 font-vazir mt-1">{errors.subject.message}</p>}</div>
           <div><label className="text-xs text-gray-400 font-vazir mb-1.5 block">دسته‌بندی *</label><select {...register('category')} className={`${ic} cursor-pointer`}><option value="">انتخاب...</option>{CATS.map(c => <option key={c}>{c}</option>)}</select></div>

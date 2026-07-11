@@ -26,25 +26,25 @@ export default function StatsGrid({
       label: 'کل تجربه',
       value: totalXp.toLocaleString('fa-IR'),
       icon: 'fa-bolt',
-      color: '#dc2626',
+      color: '#00f5ff',
     },
     {
       label: 'اتاق‌های نجات‌یافته',
       value: survivedRooms.toLocaleString('fa-IR'),
       icon: 'fa-skull-crossbones',
-      color: '#7c3aed',
+      color: '#b026ff',
     },
     {
       label: 'نشان‌های کسب‌شده',
       value: badgesCount.toLocaleString('fa-IR'),
       icon: 'fa-medal',
-      color: '#d97706',
+      color: '#ffd700',
     },
     {
       label: 'کل رزروها',
       value: bookingsCount.toLocaleString('fa-IR'),
       icon: 'fa-calendar-check',
-      color: '#059669',
+      color: '#2ee6a0',
     },
   ];
 
@@ -56,7 +56,7 @@ export default function StatsGrid({
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: i * 0.1 }}
-          className="bg-[#0d0d0d] border border-red-900/20 rounded-xl p-4 text-center"
+          className="dark-card rounded-[18px] p-4 text-center"
         >
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-3"

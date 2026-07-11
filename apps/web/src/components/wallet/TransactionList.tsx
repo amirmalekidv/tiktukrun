@@ -13,9 +13,9 @@ export default function TransactionList({
   title = 'تراکنش‌های اخیر',
 }: TransactionListProps) {
   return (
-    <div className="dark-card rounded-2xl p-6 border border-red-900/20 bg-[#0d0d0d]">
+    <div className="dark-card rounded-[18px] p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-cinzel text-red-500 flex items-center gap-2">
+        <h3 className="font-cinzel text-[#00f5ff] flex items-center gap-2">
           <i className="fas fa-list" />
           {title}
         </h3>

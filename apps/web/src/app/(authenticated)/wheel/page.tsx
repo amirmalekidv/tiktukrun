@@ -26,8 +26,10 @@ export default function WheelPage() {
     >
       {/* Header */}
       <div className="text-center">
-        <h1 className="font-cinzel text-3xl text-red-500 mb-2 tracking-widest">
+        <h1 className="font-cinzel text-3xl text-white mb-2">
+          <span className="gradient-text">
           گردونه شانس
+          </span>
         </h1>
         <p className="text-gray-500 font-vazir text-sm">
           یکی از روش‌های زیر را انتخاب کنید و بچرخانید
@@ -37,9 +39,9 @@ export default function WheelPage() {
       {/* Wheel */}
       <div className="relative">
         {/* Glow backdrop */}
-        <div className="absolute inset-0 bg-radial-red opacity-20 rounded-full blur-3xl" />
+        <div className="absolute inset-0 rounded-full bg-[#00f5ff]/20 opacity-60 blur-3xl" />
         {prizesLoading ? (
-          <div className="w-full max-w-[340px] mx-auto aspect-square rounded-full bg-gray-900/50 animate-pulse border border-red-900/20" />
+          <div className="w-full max-w-[340px] mx-auto aspect-square rounded-full bg-gray-900/50 animate-pulse border border-white/10" />
         ) : (
           <LuxuryWheel
             prizes={prizes}
@@ -55,7 +57,7 @@ export default function WheelPage() {
             animate={{ opacity: 1 }}
             className="absolute bottom-4 left-0 right-0 text-center"
           >
-            <span className="text-red-400 font-vazir text-sm animate-pulse">
+            <span className="text-[#00f5ff] font-vazir text-sm animate-pulse">
               در حال چرخش...
             </span>
           </motion.div>
@@ -63,7 +65,7 @@ export default function WheelPage() {
       </div>
 
       {/* Spin buttons */}
-      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d]">
+      <div className="dark-card rounded-[18px] p-6">
         <p className="text-center text-xs text-gray-500 font-vazir mb-4">
           روش پرداخت را انتخاب کنید:
         </p>
@@ -75,26 +77,26 @@ export default function WheelPage() {
       </div>
 
       {/* Rules */}
-      <div className="dark-card rounded-2xl p-5 border border-red-900/20 bg-[#0d0d0d]">
-        <h3 className="font-cinzel text-red-500 text-sm mb-3 flex items-center gap-2">
+      <div className="dark-card rounded-[18px] p-5">
+        <h3 className="font-cinzel text-[#00f5ff] text-sm mb-3 flex items-center gap-2">
           <i className="fas fa-scroll" />
           قوانین گردونه
         </h3>
         <ul className="space-y-2 text-xs text-gray-500 font-vazir">
           <li className="flex items-start gap-2">
-            <i className="fas fa-chevron-left text-red-700 mt-0.5" />
+            <i className="fas fa-chevron-left text-[#00f5ff] mt-0.5" />
             هر چرخش با XP: ۲۰ XP از موجودی کسر می‌شود
           </li>
           <li className="flex items-start gap-2">
-            <i className="fas fa-chevron-left text-red-700 mt-0.5" />
+            <i className="fas fa-chevron-left text-[#00f5ff] mt-0.5" />
             هر چرخش با سکه: ۵۰۰ سکه از موجودی کسر می‌شود
           </li>
           <li className="flex items-start gap-2">
-            <i className="fas fa-chevron-left text-red-700 mt-0.5" />
+            <i className="fas fa-chevron-left text-[#00f5ff] mt-0.5" />
             هر چرخش با الماس: ۵ الماس از موجودی کسر می‌شود
           </li>
           <li className="flex items-start gap-2">
-            <i className="fas fa-chevron-left text-red-700 mt-0.5" />
+            <i className="fas fa-chevron-left text-[#00f5ff] mt-0.5" />
             نتیجه گردونه توسط سرور تعیین می‌شود و قطعی است
           </li>
         </ul>

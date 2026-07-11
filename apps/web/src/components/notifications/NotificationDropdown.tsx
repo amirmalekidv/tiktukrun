@@ -40,11 +40,11 @@ export default function NotificationDropdown({ onClose }: NotificationDropdownPr
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.95 }}
       // Use right-0 for RTL layout so dropdown opens to the left
-      className="absolute right-0 top-12 w-80 bg-[#0d0d0d] border border-red-900/30 rounded-2xl shadow-2xl z-50 overflow-hidden"
+      className="dark-card absolute right-0 top-12 z-50 w-80 overflow-hidden rounded-[18px] shadow-2xl"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800/50">
-        <h3 className="font-cinzel text-red-500 text-sm">اعلان‌ها</h3>
+      <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <h3 className="font-cinzel text-[#00f5ff] text-sm">اعلان‌ها</h3>
         <button
           onClick={markAllAsRead}
           className="text-xs text-gray-500 hover:text-gray-300 font-vazir transition-colors"
@@ -54,7 +54,7 @@ export default function NotificationDropdown({ onClose }: NotificationDropdownPr
       </div>
 
       {/* Notification list */}
-      <div className="max-h-80 overflow-y-auto divide-y divide-gray-900/50">
+      <div className="max-h-80 overflow-y-auto divide-y divide-white/10">
         {recent.length === 0 ? (
           <div className="p-6 text-center text-gray-600 font-vazir text-sm">
             <i className="fas fa-bell-slash text-2xl mb-2 block" />
@@ -68,11 +68,11 @@ export default function NotificationDropdown({ onClose }: NotificationDropdownPr
       </div>
 
       {/* Footer link */}
-      <div className="p-3 border-t border-gray-800/50">
+      <div className="p-3 border-t border-white/10">
         <Link
           href="/notifications"
           onClick={onClose}
-          className="block text-center text-xs text-red-400 hover:text-red-300 font-vazir transition-colors"
+          className="block text-center text-xs text-[#00f5ff] hover:text-white font-vazir transition-colors"
         >
           مشاهده همه اعلان‌ها
           <i className="fas fa-arrow-left mr-1 text-[10px]" />

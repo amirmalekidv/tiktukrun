@@ -6,7 +6,7 @@ export default function WheelArrow() {
       {/* Arrow pointer at top */}
       <polygon
         points="150,8 143,26 157,26"
-        fill="#dc2626"
+        fill="#00f5ff"
         filter="url(#arrowGlow)"
       />
       <polygon
@@ -15,7 +15,7 @@ export default function WheelArrow() {
         opacity="0.6"
       />
       {/* Arrow shaft */}
-      <rect x="148" y="22" width="4" height="12" fill="#dc2626" rx="1" />
+      <rect x="148" y="22" width="4" height="12" fill="#00f5ff" rx="1" />
 
       {/* Glow filter reference */}
       <defs>

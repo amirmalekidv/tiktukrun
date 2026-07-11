@@ -105,7 +105,7 @@ export default function BookingsPage() {
       </div>
 
       {/* Bookings list */}
-      <div className="dark-card rounded-2xl border border-red-900/20 bg-[#0d0d0d] divide-y divide-gray-900/50 overflow-hidden">
+      <div className="dark-card rounded-2xl border border-red-900/20 bg-white/[0.03] divide-y divide-gray-900/50 overflow-hidden">
         {isLoading ? (
           <div className="space-y-px">
             {[...Array(4)].map((_, i) => (

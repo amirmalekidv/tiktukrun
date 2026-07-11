@@ -11,15 +11,15 @@ export default function StoriesSection() {
   return (
     <section className="py-8">
       <div className="section-header mb-8">
-        <h2 className="font-cinzel font-bold text-2xl text-white text-center">
-          <span className="blood-text">داستان</span> شجاعان
+        <h2 className="font-cinzel font-black text-2xl text-white text-center">
+          <span className="gradient-text">داستان</span> شجاعان
         </h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {isLoading
           ? Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="dark-card rounded-2xl p-5 h-48 skeleton" />
+              <div key={i} className="dark-card rounded-[18px] p-5 h-48 skeleton" />
             ))
           : reviews.slice(0, 6).map((review) => (
               <ReviewCard key={review.id} review={review} />
@@ -28,7 +28,7 @@ export default function StoriesSection() {
 
       {!isLoading && reviews.length > 0 && (
         <div className="text-center mt-8">
-          <Link href="/stories" className="text-red-400 hover:text-red-300 text-sm transition-colors">
+          <Link href="/stories" className="text-[#00f5ff] hover:text-white text-sm transition-colors">
             مشاهده همه داستان‌ها
             <i className="fas fa-chevron-left mr-2 text-xs" />
           </Link>

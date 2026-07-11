@@ -21,7 +21,7 @@ export default function BadgesPossibleList({ badges }: BadgesPossibleListProps) 
   if (!badges || !badges.length) return null;
 
   return (
-    <div className="dark-card rounded-xl p-5 border border-gray-800/40 bg-[#0d0d0d]">
+    <div className="dark-card rounded-xl p-5 border border-gray-800/40 bg-white/[0.03]">
       <h3 className="font-cinzel text-gray-500 text-sm mb-4 flex items-center gap-2">
         <i className="fas fa-lock" />
         نشان‌های قابل کسب

@@ -13,12 +13,12 @@ export default function CommunityPageContent() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-cinzel text-2xl text-red-500">انجمن</h1>
+          <h1 className="font-cinzel text-2xl text-white"><span className="gradient-text">انجمن</span></h1>
           <p className="text-gray-500 font-vazir text-sm mt-1">تیم سازی و چت زنده</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="px-4 py-2 bg-red-900/40 border border-red-700/50 text-red-400 rounded-xl font-vazir text-sm hover:bg-red-800/50 transition-all"
+          className="btn-blood px-4 py-2 text-sm"
         >
           <i className="fas fa-plus ml-2" />
           ساخت تیم

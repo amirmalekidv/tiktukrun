@@ -122,11 +122,16 @@ function LoginForm() {
   }
 
   return (
-    <div className="dark-card rounded-2xl p-8 space-y-6">
+    <div className="dark-card rounded-[18px] p-8 space-y-6">
       {/* Logo */}
       <div className="text-center">
-        <Link href="/" className="inline-block mb-4">
-          <span className="font-cinzel font-black text-3xl text-white flicker">TIK TAK RUN</span>
+        <Link href="/" className="mb-4 inline-flex items-center justify-center gap-2">
+          <span className="grid h-11 w-11 place-items-center rounded-[11px] bg-gradient-to-br from-[#b026ff] to-[#00f5ff] text-xl text-white shadow-[0_0_20px_rgba(176,38,255,0.6)]">
+            ◈
+          </span>
+          <span className="font-cinzel font-black text-2xl text-white">
+            TIK TAK <span className="glow-teal">RUN</span>
+          </span>
         </Link>
         <h1 className="text-white font-bold text-xl mb-1">
           {phase === 'phone' ? 'ورود / ثبت‌نام' : 'تأیید شماره موبایل'}
@@ -217,7 +222,7 @@ function LoginForm() {
             </div>
             {DEMO_OTP_CODE && (
               <p className="text-gray-500 text-xs text-center mt-2">
-                کد demo: <span className="text-yellow-400 font-bold" dir="ltr">{DEMO_OTP_CODE}</span>
+                کد demo: <span className="text-[#00f5ff] font-bold" dir="ltr">{DEMO_OTP_CODE}</span>
               </p>
             )}
           </div>
@@ -227,7 +232,7 @@ function LoginForm() {
             {countdown > 0 ? (
               <p className="text-gray-400 text-sm">
                 ارسال مجدد کد در
-                <span className="text-red-400 font-bold mx-1 font-cinzel">
+                <span className="text-[#00f5ff] font-bold mx-1 font-cinzel">
                   {toPersianDigits(Math.floor(countdown / 60).toString().padStart(2, '0'))}:
                   {toPersianDigits((countdown % 60).toString().padStart(2, '0'))}
                 </span>
@@ -237,7 +242,7 @@ function LoginForm() {
               <button
                 onClick={handleResend}
                 disabled={isLoading}
-                className="text-red-400 hover:text-red-300 text-sm transition-colors"
+                className="text-[#00f5ff] hover:text-white text-sm transition-colors"
               >
                 <i className="fas fa-redo ml-1" />
                 ارسال مجدد کد
@@ -275,8 +280,8 @@ function LoginForm() {
 
       {/* Terms */}
       <p className="text-gray-500 text-xs text-center">
-        با ورود، <Link href="/terms" className="text-red-400 hover:text-red-300">قوانین و مقررات</Link> و{' '}
-        <Link href="/privacy" className="text-red-400 hover:text-red-300">حریم خصوصی</Link> را می‌پذیرید
+        با ورود، <Link href="/terms" className="text-[#00f5ff] hover:text-white">قوانین و مقررات</Link> و{' '}
+        <Link href="/privacy" className="text-[#00f5ff] hover:text-white">حریم خصوصی</Link> را می‌پذیرید
       </p>
     </div>
   )
@@ -285,7 +290,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="dark-card rounded-2xl p-8 h-96 skeleton" />
+      <div className="dark-card rounded-[18px] p-8 h-96 skeleton" />
     }>
       <LoginForm />
     </Suspense>

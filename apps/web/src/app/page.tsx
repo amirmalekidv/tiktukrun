@@ -26,7 +26,7 @@ export default function HomePage() {
       <GenreFilter />
 
       {/* Divider */}
-      <div className="h-px w-full max-w-7xl mx-auto bg-gradient-to-r from-transparent via-red-900/50 to-transparent my-4" />
+      <div className="h-px w-full max-w-7xl mx-auto bg-gradient-to-r from-transparent via-[#00f5ff]/40 to-transparent my-4" />
 
       {/* Weekly discounts */}
       <WeeklyDiscountSection />
@@ -35,7 +35,7 @@ export default function HomePage() {
       <GamesGrid />
 
       {/* Section strips */}
-      <div className="border-t border-red-950/40 my-4" />
+      <div className="border-t border-white/10 my-4" />
       <SectionStrip sectionKey="cinema-horror" title="سینمای ترس" icon="fas fa-film" />
       <SectionStrip sectionKey="board-games" title="بردگیم" icon="fas fa-chess" />
       <SectionStrip sectionKey="mafia" title="مافیا" icon="fas fa-user-secret" />
@@ -46,7 +46,7 @@ export default function HomePage() {
       <SectionStrip sectionKey="karaj" title="در کرج" icon="fas fa-map-marker-alt" />
 
       {/* Top players */}
-      <div className="border-t border-red-950/40 my-4" />
+      <div className="border-t border-white/10 my-4" />
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           <TopPlayersSection />
@@ -56,9 +56,9 @@ export default function HomePage() {
 
       {/* Bottom CTA */}
       <section className="relative py-20 mt-10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-950/30 via-black to-red-950/30" />
-        <div className="relative z-10 max-w-3xl mx-auto px-4 text-center">
-          <h2 className="font-cinzel font-black text-4xl text-white mb-4 flicker">
+        <div className="relative z-10 max-w-3xl mx-auto px-4">
+          <div className="dark-card rounded-[18px] p-8 text-center md:p-12">
+          <h2 className="font-cinzel font-black text-4xl text-white mb-4">
             آماده‌ای؟
           </h2>
           <p className="text-gray-300 text-lg mb-8">
@@ -73,6 +73,7 @@ export default function HomePage() {
               <i className="fas fa-user-plus ml-2" />
               ثبت‌نام رایگان
             </a>
+          </div>
           </div>
         </div>
       </section>

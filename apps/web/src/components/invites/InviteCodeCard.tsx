@@ -24,14 +24,14 @@ export default function InviteCodeCard({ code, shareLink }: InviteCodeCardProps)
     }
   };
   return (
-    <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d] text-center">
-      <i className="fas fa-ticket-alt text-4xl text-red-500 mb-4" />
+    <div className="dark-card rounded-[18px] p-6 text-center">
+      <i className="fas fa-ticket-alt text-4xl text-[#00f5ff] mb-4" />
       <h3 className="font-cinzel text-lg text-white mb-2">کد دعوت اختصاصی</h3>
-      <div className="bg-gray-900/60 border-2 border-dashed border-red-800/50 rounded-xl p-4 mb-4">
-        <span className="font-cinzel text-3xl tracking-[0.3em] text-red-400">{code || 'LOADING'}</span>
+      <div className="bg-white/[0.04] border-2 border-dashed border-[#00f5ff]/40 rounded-xl p-4 mb-4">
+        <span className="font-cinzel text-3xl text-[#00f5ff]">{code || 'LOADING'}</span>
       </div>
       <div className="flex gap-3">
-        <button onClick={() => copy(code, 'کد')} className="flex-1 py-2.5 bg-red-900/30 border border-red-700/40 text-red-400 rounded-xl font-vazir text-sm hover:bg-red-800/40"><i className="fas fa-copy ml-1" />کپی کد</button>
+        <button onClick={() => copy(code, 'کد')} className="btn-blood flex-1 py-2.5 text-sm"><i className="fas fa-copy ml-1" />کپی کد</button>
         <button onClick={() => copy(shareLink, 'لینک')} className="flex-1 py-2.5 border border-gray-700 text-gray-400 rounded-xl font-vazir text-sm hover:bg-gray-900"><i className="fas fa-share-alt ml-1" />کپی لینک</button>
       </div>
     </div>

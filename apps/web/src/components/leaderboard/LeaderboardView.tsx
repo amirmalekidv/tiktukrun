@@ -37,7 +37,7 @@ export default function LeaderboardView() {
         </div>
       ) : (
         <>
-          <div className="dark-card rounded-2xl p-4 border border-red-900/30 bg-[#0d0d0d]">
+          <div className="dark-card rounded-2xl p-4 border border-red-900/30 bg-white/[0.03]">
             <div className="mb-2 flex items-center justify-between px-2">
               <h3 className="text-sm text-gray-400 font-vazir">قهرمانان این بازه</h3>
               <span className="text-xs text-gray-600 font-vazir">
@@ -48,7 +48,7 @@ export default function LeaderboardView() {
           </div>
 
           {rest.length > 0 && (
-            <div className="dark-card rounded-2xl p-4 border border-red-900/20 bg-[#0d0d0d]">
+            <div className="dark-card rounded-2xl p-4 border border-red-900/20 bg-white/[0.03]">
               <h3 className="text-sm text-gray-500 mb-4 px-2 font-vazir">رتبه‌های بعدی</h3>
               {rest.map((entry, i) => (
                 <LeaderboardRow

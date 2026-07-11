@@ -54,7 +54,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* List */}
-      <div className="dark-card rounded-2xl p-6 border border-red-900/20 bg-[#0d0d0d]">
+      <div className="dark-card rounded-2xl p-6 border border-red-900/20 bg-white/[0.03]">
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(8)].map((_, i) => (

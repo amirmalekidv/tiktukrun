@@ -102,7 +102,7 @@ export default function ReportModal({ messageId, isOpen, onClose }: ReportModalP
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#0d0d0d] border border-red-900/50 rounded-2xl p-6 max-w-sm w-full"
+            className="bg-white/[0.03] border border-red-900/50 rounded-2xl p-6 max-w-sm w-full"
           >
             <h3 className="font-cinzel text-red-500 text-lg mb-4 flex items-center gap-2">
               <i className="fas fa-flag" />

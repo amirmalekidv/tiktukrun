@@ -36,7 +36,7 @@ export default function NewTeamPage() {
         <button onClick={() => router.back()} className="text-gray-500 hover:text-red-400 transition-colors"><i className="fas fa-arrow-right text-lg" /></button>
         <h1 className="font-cinzel text-2xl text-red-500">ساخت تیم جدید</h1>
       </div>
-      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d]">
+      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-white/[0.03]">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div><label className="text-xs text-gray-400 font-vazir mb-1.5 block">نام تیم *</label><input {...register('name')} className={ic} placeholder="نام تیم..." />{errors.name && <p className="text-xs text-red-500 font-vazir mt-1">{errors.name.message}</p>}</div>
           <div><label className="text-xs text-gray-400 font-vazir mb-1.5 block">توضیحات</label><textarea {...register('description')} className={`${ic} resize-none h-20`} /></div>

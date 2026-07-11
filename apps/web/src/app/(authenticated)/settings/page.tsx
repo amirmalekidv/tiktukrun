@@ -31,7 +31,7 @@ export default function SettingsPage() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-lg mx-auto space-y-6">
       <div><h1 className="font-cinzel text-2xl text-red-500">تنظیمات</h1><p className="text-gray-500 font-vazir text-sm mt-1">مدیریت حساب کاربری</p></div>
 
-      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d]">
+      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-white/[0.03]">
         <h2 className="font-cinzel text-sm text-red-400 mb-4"><i className="fas fa-bell ml-2" />تنظیمات اعلان</h2>
         <div className="space-y-3">{notifItems.map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between">
@@ -45,7 +45,7 @@ export default function SettingsPage() {
         <button onClick={saveNotifs} disabled={saving} className="w-full mt-4 py-2.5 bg-red-900/30 border border-red-700/40 text-red-400 rounded-xl font-vazir text-sm hover:bg-red-800/40">{saving ? 'ذخیره...' : 'ذخیره تنظیمات'}</button>
       </div>
 
-      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d]">
+      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-white/[0.03]">
         <h2 className="font-cinzel text-sm text-red-400 mb-4"><i className="fas fa-lock ml-2" />تغییر رمز عبور</h2>
         <div className="space-y-3">
           <input type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} className={ic} placeholder="رمز فعلی" dir="ltr" />
@@ -54,7 +54,7 @@ export default function SettingsPage() {
         <button onClick={changePw} disabled={saving} className="w-full mt-4 py-2.5 bg-red-900/30 border border-red-700/40 text-red-400 rounded-xl font-vazir text-sm hover:bg-red-800/40">تغییر رمز</button>
       </div>
 
-      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d]">
+      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-white/[0.03]">
         <h2 className="font-cinzel text-sm text-red-400 mb-4"><i className="fas fa-sign-out-alt ml-2" />خروج از حساب</h2>
         <button onClick={() => { if (typeof window !== 'undefined') { localStorage.removeItem('auth_token'); window.location.href = '/login'; } }}
           className="w-full py-2.5 border border-red-900/50 text-red-500 rounded-xl font-vazir text-sm hover:bg-red-900/20">خروج از حساب کاربری</button>

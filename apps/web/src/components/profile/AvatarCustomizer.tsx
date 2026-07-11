@@ -129,7 +129,7 @@ export default function AvatarCustomizer({
     <div className="grid lg:grid-cols-3 gap-6">
       {/* Preview */}
       <div className="lg:col-span-1">
-        <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d] flex flex-col items-center gap-6">
+        <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-white/[0.03] flex flex-col items-center gap-6">
           <h3 className="font-cinzel text-red-500 text-sm">پیش‌نمایش زنده</h3>
           <AvatarPreview config={config} selectedItems={selectedItems} size="lg" />
           <button
@@ -148,7 +148,7 @@ export default function AvatarCustomizer({
 
       {/* Item selector */}
       <div className="lg:col-span-2">
-        <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d]">
+        <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-white/[0.03]">
           {/* Tabs */}
           <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
             {TABS.map((tab) => (
@@ -213,7 +213,7 @@ export default function AvatarCustomizer({
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#0d0d0d] border border-red-900/50 rounded-2xl p-6 max-w-sm w-full text-center"
+              className="bg-white/[0.03] border border-red-900/50 rounded-2xl p-6 max-w-sm w-full text-center"
             >
               <i className="fas fa-gem text-4xl text-cyan-400 mb-4" />
               <h3 className="font-cinzel text-white text-lg mb-2">خرید آیتم</h3>

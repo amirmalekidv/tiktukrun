@@ -48,16 +48,16 @@ export default function LiveChatPanel({
 
   return (
     <div
-      className="dark-card rounded-2xl border border-red-900/30 bg-[#0d0d0d] flex flex-col"
+      className="dark-card rounded-[18px] flex flex-col"
       style={{ height: 500 }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800/50">
+      <div className="flex items-center justify-between p-4 border-b border-white/10">
         <div className="flex items-center gap-2">
           <div
             className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`}
           />
-          <h3 className="font-cinzel text-sm text-red-400">{title}</h3>
+          <h3 className="font-cinzel text-sm text-[#00f5ff]">{title}</h3>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-gray-500 font-vazir">
           <i className="fas fa-users text-green-600" />
@@ -68,7 +68,7 @@ export default function LiveChatPanel({
       {/* Messages */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-red-900/30"
+        className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[#00f5ff]/30"
       >
         {messages.length === 0 ? (
           <div className="h-full min-h-40 flex items-center justify-center text-center text-sm font-vazir text-gray-600">

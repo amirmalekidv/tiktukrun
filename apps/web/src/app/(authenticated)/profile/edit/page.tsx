@@ -81,7 +81,7 @@ export default function ProfileEditPage() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-lg mx-auto"
     >
-      <div className="dark-card rounded-2xl p-8 border border-red-900/30 bg-[#0d0d0d]">
+      <div className="dark-card rounded-2xl p-8 border border-red-900/30 bg-white/[0.03]">
         <div className="mb-6">
           <h1 className="font-cinzel text-2xl text-red-500">ویرایش پروفایل</h1>
           <p className="text-gray-500 font-vazir text-sm mt-1">

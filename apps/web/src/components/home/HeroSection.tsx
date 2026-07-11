@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
 
 const heroTexts = [
@@ -26,95 +27,68 @@ export default function HeroSection() {
   }, [])
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-bg-dark z-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-red-950/20 via-transparent to-red-950/20 z-10" />
-        {/* Animated grid */}
-        <div className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `linear-gradient(rgba(220,38,38,0.3) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(220,38,38,0.3) 1px, transparent 1px)`,
-            backgroundSize: '80px 80px',
-          }}
-        />
-      </div>
+    <section className="relative overflow-hidden pt-28 pb-16 md:pt-32">
+      <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="text-center lg:text-right">
+          <h1 className="font-cinzel text-5xl font-black leading-[1.05] text-white md:text-7xl">
+            TIK TAK
+            <br />
+            <span className={`gradient-text block transition-opacity duration-500 ${fade ? 'opacity-100' : 'opacity-0'}`}>
+              {heroTexts[textIndex]}
+            </span>
+          </h1>
 
-      {/* Floating particles */}
-      <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
-        {[
-          {l:'88%',t:'64%',d:0.3,dur:10.8},{l:'35%',t:'70%',d:4.1,dur:5.7},
-          {l:'67%',t:'35%',d:2.3,dur:13.9},{l:'17%',t:'76%',d:2.1,dur:11.8},
-          {l:'25%',t:'30%',d:2.8,dur:11.1},{l:'46%',t:'10%',d:4.1,dur:14.9},
-          {l:'3%', t:'12%',d:1.0,dur:14.2},{l:'21%',t:'13%',d:2.7,dur:8.7},
-          {l:'46%',t:'91%',d:1.8,dur:5.9},{l:'74%',t:'73%',d:3.1,dur:13.9},
-          {l:'30%',t:'48%',d:0.7,dur:10.4},{l:'84%',t:'93%',d:1.5,dur:11.9},
-        ].map((p, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-red-600 rounded-full opacity-60"
-            style={{
-              left: p.l, top: p.t,
-              animation: `fog ${p.dur}s ease-in-out infinite`,
-              animationDelay: `${p.d}s`,
-            }}
-          />
-        ))}
-      </div>
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-9 text-[#9aa3b2] lg:mx-0">
+            از اتاق فرار تا واقعیت مجازی، لیزرتگ، پینت‌بال و بازی‌های گروهی؛
+            تیک تاک ران همان تجربه‌ی نئونی و رقابتی است که برای رزرو، بازی و
+            ساختن خاطره با دوستانت نیاز داری.
+          </p>
 
-      {/* Content */}
-      <div className="relative z-20 text-center max-w-5xl mx-auto px-4 py-32">
-        {/* Pre-title */}
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <div className="h-px w-16 bg-gradient-to-r from-transparent to-red-600" />
-          <span className="text-red-500 font-cinzel text-sm tracking-[0.3em] uppercase">
-            پلتفرم سرگرمی
-          </span>
-          <div className="h-px w-16 bg-gradient-to-l from-transparent to-red-600" />
+          <div className="mt-7 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
+            <Link href="/games" className="btn-blood px-8 py-4 text-base">
+              <i className="fas fa-gamepad ml-2" />
+              شروع بازی
+            </Link>
+            <Link href="/stories" className="btn-ghost px-8 py-4 text-base">
+              <i className="fas fa-book-open ml-2 text-[#b026ff]" />
+              داستان‌های شجاعان
+            </Link>
+          </div>
+
+          <div className="mt-9 flex flex-wrap justify-center gap-7 lg:justify-start">
+            {[
+              { value: '4.8', label: 'امتیاز کاربران', cls: 'glow-teal' },
+              { value: '+12k', label: 'بازی انجام شده', cls: 'glow-purple' },
+              { value: '48+', label: 'تجربه فعال', cls: 'glow-pink' },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <div className={`font-cinzel text-3xl font-black ${stat.cls}`}>{stat.value}</div>
+                <div className="mt-1 text-xs text-[#9aa3b2]">{stat.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Main title */}
-        <h1 className="horror-text font-creepster text-6xl md:text-8xl lg:text-9xl mb-4 leading-none">
-          <span className={`block transition-all duration-400 ${fade ? 'opacity-100' : 'opacity-0'}`}>
-            {heroTexts[textIndex]}
-          </span>
-        </h1>
+        <div className="relative mx-auto grid place-items-center lg:mx-0">
+          <div className="relative h-[300px] w-[300px] rounded-full bg-[conic-gradient(from_0deg,#00f5ff,#b026ff,#ff00e5,#00f5ff)] p-1.5 shadow-[0_0_60px_rgba(176,38,255,0.4)] [animation:spin_14s_linear_infinite] md:h-[380px] md:w-[380px]">
+            <div className="h-full w-full overflow-hidden rounded-full border-[6px] border-[#05070a] [animation:spin_14s_linear_infinite_reverse]">
+              <Image
+                src="/images/hero.jpg"
+                alt="تجربه تیک تاک ران"
+                width={760}
+                height={760}
+                priority
+                className="h-full w-full object-cover"
+              />
+            </div>
+          </div>
 
-        {/* Subtitle */}
-        <h2 className="font-cinzel text-2xl md:text-3xl text-red-400 mb-6 flicker">
-          TIK TAK RUN
-        </h2>
-
-        {/* Description */}
-        <p className="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-          از اتاق فرار ترسناک تا واقعیت مجازی، از لیزرتگ تا سینمای هیجانی — 
-          <br className="hidden md:block" />
-          <span className="text-red-400 font-semibold">بهترین تجربه سرگرمی</span> را با دوستانت رزرو کن
-        </p>
-
-        {/* CTA buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link
-            href="/games"
-            className="btn-blood text-base px-8 py-4 rounded-xl"
-          >
-            <i className="fas fa-gamepad ml-2" />
-            ورود به قلمرو
-          </Link>
-          <Link
-            href="/stories"
-            className="btn-ghost text-base px-8 py-4 rounded-xl flex items-center gap-2"
-          >
-            <i className="fas fa-book-open ml-2 text-red-500" />
-            داستان‌های شجاعان
-          </Link>
-        </div>
-
-        {/* Scroll indicator */}
-        <div className="mt-16 flex flex-col items-center gap-2 text-gray-500 animate-bounce">
-          <span className="text-xs tracking-widest">کاوش کن</span>
-          <i className="fas fa-chevron-down text-red-600" />
+          <div className="absolute right-0 top-7 rounded-2xl border border-white/10 bg-[#0e121a] px-4 py-2 text-sm font-bold shadow-[0_8px_28px_rgba(0,0,0,0.5)] [animation:floaty_4s_ease-in-out_infinite] md:-right-4">
+            <span className="glow-teal">★ 4.8</span> رضایت
+          </div>
+          <div className="absolute bottom-8 left-0 rounded-2xl border border-white/10 bg-[#0e121a] px-4 py-2 text-sm font-bold shadow-[0_8px_28px_rgba(0,0,0,0.5)] [animation:floaty_4s_ease-in-out_infinite_1.5s] md:-left-6">
+            <span className="glow-pink">◈</span> رزرو آنلاین
+          </div>
         </div>
       </div>
     </section>

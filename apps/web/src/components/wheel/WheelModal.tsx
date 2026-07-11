@@ -41,7 +41,7 @@ export default function WheelModal({ prize, isOpen, onClose }: WheelModalProps) 
             exit={{ scale: 0.5, y: 40 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative bg-gradient-to-br from-[#1a0808] to-[#0d0d0d] border border-red-900/50 rounded-3xl p-8 max-w-sm w-full text-center overflow-hidden shadow-[0_0_60px_rgba(220,38,38,0.3)]"
+            className="dark-card relative max-w-sm w-full overflow-hidden rounded-[20px] p-8 text-center shadow-[0_0_60px_rgba(0,245,255,0.2)]"
           >
             {/* Background glow */}
             <div
@@ -109,7 +109,7 @@ export default function WheelModal({ prize, isOpen, onClose }: WheelModalProps) 
 
               <button
                 onClick={onClose}
-                className="w-full py-3 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-vazir font-bold rounded-xl transition-all mt-4"
+                className="btn-blood mt-4 w-full py-3 font-vazir font-bold"
               >
                 <i className="fas fa-check ml-2" />
                 متوجه شدم

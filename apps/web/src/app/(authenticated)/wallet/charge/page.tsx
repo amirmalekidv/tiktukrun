@@ -22,7 +22,7 @@ export default function ChargePage() {
         </div>
       </div>
 
-      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d]">
+      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-white/[0.03]">
         <ChargeForm onSuccess={() => router.push('/wallet')} />
       </div>
     </motion.div>

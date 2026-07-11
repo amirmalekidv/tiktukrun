@@ -20,15 +20,15 @@ export default function WalletCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="dark-card rounded-2xl p-6 border border-red-900/30 bg-gradient-to-br from-[#1a0a0a] to-[#0d0d0d] relative overflow-hidden"
+      className="dark-card rounded-[18px] p-6 relative overflow-hidden"
     >
       {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-48 h-48 bg-red-950/10 rounded-full -translate-y-16 translate-x-16 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-48 h-48 bg-[#00f5ff]/10 rounded-full -translate-y-16 translate-x-16 pointer-events-none blur-2xl" />
 
       <div className="relative">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-red-900/30 border border-red-800/50 flex items-center justify-center">
-            <i className="fas fa-dungeon text-red-500" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#b026ff] to-[#00f5ff] flex items-center justify-center shadow-[0_0_20px_rgba(0,245,255,0.32)]">
+            <i className="fas fa-wallet text-[#04121a]" />
           </div>
           <div>
             <h2 className="font-cinzel text-xl text-white">خزانه</h2>
@@ -47,14 +47,14 @@ export default function WalletCard({
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => router.push('/wallet/charge')}
-            className="flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-vazir text-sm rounded-xl transition-all shadow-[0_0_16px_rgba(220,38,38,0.3)]"
+            className="flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#00f5ff] to-[#00b3ff] text-[#04121a] font-vazir font-bold text-sm rounded-xl transition-all shadow-[0_0_20px_rgba(0,245,255,0.35)] hover:-translate-y-0.5"
           >
             <i className="fas fa-plus" />
             شارژ کیف
           </button>
           <button
             onClick={() => router.push('/wallet/convert')}
-            className="flex items-center justify-center gap-2 py-3 border border-red-800/50 text-red-400 hover:bg-red-900/20 font-vazir text-sm rounded-xl transition-all"
+            className="flex items-center justify-center gap-2 py-3 border border-[#b026ff]/45 text-[#b026ff] hover:bg-[#b026ff]/10 font-vazir text-sm rounded-xl transition-all"
           >
             <i className="fas fa-exchange-alt" />
             تبدیل XP

@@ -9,16 +9,16 @@ interface ReviewCardProps {
 
 export default function ReviewCard({ review, clampComment = true }: ReviewCardProps) {
   return (
-    <div className="dark-card rounded-2xl p-5 flex flex-col gap-3 h-full">
+    <div className="dark-card flex h-full flex-col gap-3 rounded-[18px] p-5">
       <div className="flex items-center gap-3">
         {review.user.avatar ? (
           <img
             src={review.user.avatar}
             alt={review.user.name || 'کاربر'}
-            className="w-10 h-10 rounded-full object-cover border border-red-800/40"
+            className="w-10 h-10 rounded-full object-cover border border-[#00f5ff]/35"
           />
         ) : (
-          <div className="w-10 h-10 rounded-full bg-red-900 flex items-center justify-center text-white font-bold">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ff00e5] to-[#b026ff] flex items-center justify-center text-white font-bold">
             {(review.user.name || 'ک').charAt(0)}
           </div>
         )}
@@ -37,7 +37,7 @@ export default function ReviewCard({ review, clampComment = true }: ReviewCardPr
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="text-red-400 text-xs">
+        <span className="text-[#00f5ff] text-xs">
           <i className="fas fa-gamepad ml-1" />
           {review.game.title}
         </span>
@@ -52,8 +52,8 @@ export default function ReviewCard({ review, clampComment = true }: ReviewCardPr
         &ldquo;{review.comment}&rdquo;
       </p>
 
-      <div className="flex items-center gap-2 text-gray-500 text-xs border-t border-red-950/40 pt-3">
-        <i className="fas fa-thumbs-up text-red-600" />
+      <div className="flex items-center gap-2 text-gray-500 text-xs border-t border-white/10 pt-3">
+        <i className="fas fa-thumbs-up text-[#00f5ff]" />
         <span>{toPersianDigits(review.helpful)} نفر این را مفید یافتند</span>
       </div>
     </div>

@@ -20,7 +20,7 @@ export default function ConvertPage() {
         </div>
       </div>
 
-      <div className="dark-card rounded-2xl p-6 border border-purple-900/30 bg-[#0d0d0d]">
+      <div className="dark-card rounded-2xl p-6 border border-purple-900/30 bg-white/[0.03]">
         <ConvertForm
           availableXp={(wallet as { xpBalance?: number } | null)?.xpBalance ?? 0}
           onSuccess={() => { mutate(); router.push('/wallet'); }}

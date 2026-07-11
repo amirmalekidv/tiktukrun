@@ -24,14 +24,14 @@ export default function TopPlayersSection() {
   return (
     <section className="py-8">
       <div className="section-header mb-8">
-        <h2 className="font-cinzel font-bold text-2xl text-white text-center">
-          <span className="blood-text">شجاعان</span> قلمرو
+        <h2 className="font-cinzel font-black text-2xl text-white text-center">
+          <span className="gradient-text">شجاعان</span> قلمرو
         </h2>
       </div>
 
-      <div className="dark-card rounded-2xl overflow-hidden">
+      <div className="dark-card overflow-hidden rounded-[18px]">
         {/* Period tabs */}
-        <div className="flex border-b border-red-950/60">
+        <div className="flex border-b border-white/10">
           {(Object.keys(periodLabels) as Period[]).map((p) => (
             <button
               key={p}
@@ -39,7 +39,7 @@ export default function TopPlayersSection() {
               className={`flex-1 py-3 text-sm font-medium transition-all ${
                 period === p
                   ? 'tab-active-dark text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-red-950/20'
+                  : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
               {periodLabels[p]}
@@ -71,8 +71,8 @@ export default function TopPlayersSection() {
                 return (
                   <div
                     key={u.id ?? `row-${i}`}
-                    className={`flex items-center gap-4 p-3 rounded-xl transition-all ${
-                      i === 0 ? 'bg-yellow-950/30 border border-yellow-700/20' : 'hover:bg-red-950/20'
+                    className={`flex items-center gap-4 rounded-xl border p-3 transition-all ${
+                      i === 0 ? 'border-[#ffd700]/25 bg-[#ffd700]/10' : 'border-transparent hover:border-white/10 hover:bg-white/[0.03]'
                     }`}
                   >
                     {/* Rank */}
@@ -88,7 +88,7 @@ export default function TopPlayersSection() {
                         className={`w-10 h-10 rounded-full object-cover ${i === 0 ? 'ring-2 ring-yellow-400' : ''}`}
                       />
                     ) : (
-                      <div className={`w-10 h-10 rounded-full bg-red-900 flex items-center justify-center text-white font-bold ${i === 0 ? 'ring-2 ring-yellow-400' : ''}`}>
+                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-[#ff00e5] to-[#b026ff] flex items-center justify-center text-white font-bold ${i === 0 ? 'ring-2 ring-[#ffd700]' : ''}`}>
                         {(name || 'ک').charAt(0)}
                       </div>
                     )}
@@ -102,7 +102,7 @@ export default function TopPlayersSection() {
                       </div>
                     </div>
                     {/* XP */}
-                    <div className={`text-sm font-bold font-cinzel ${i === 0 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    <div className={`text-sm font-bold font-cinzel ${i === 0 ? 'text-[#ffd700]' : 'text-[#00f5ff]'}`}>
                       {score.toLocaleString('fa-IR')} XP
                     </div>
                   </div>
@@ -111,8 +111,8 @@ export default function TopPlayersSection() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-red-950/40 p-4 text-center">
-          <Link href="/leaderboard" className="text-red-400 hover:text-red-300 text-sm transition-colors">
+        <div className="border-t border-white/10 p-4 text-center">
+          <Link href="/leaderboard" className="text-[#00f5ff] hover:text-white text-sm transition-colors">
             مشاهده جدول کامل
             <i className="fas fa-chevron-left mr-2 text-xs" />
           </Link>

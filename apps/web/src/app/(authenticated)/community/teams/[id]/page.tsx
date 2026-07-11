@@ -157,7 +157,7 @@ export default function TeamDetailPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      <div className="dark-card rounded-2xl border border-red-900/30 bg-[#0d0d0d] p-5">
+      <div className="dark-card rounded-2xl border border-red-900/30 bg-white/[0.03] p-5">
         <div className="flex items-start gap-4">
           <button
             onClick={() => router.push('/community')}
@@ -195,7 +195,7 @@ export default function TeamDetailPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
-        <div className="dark-card rounded-2xl border border-red-900/30 bg-[#0d0d0d] p-5">
+        <div className="dark-card rounded-2xl border border-red-900/30 bg-white/[0.03] p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-cinzel text-sm text-amber-400">
               <i className="fas fa-shield-halved ml-2" />

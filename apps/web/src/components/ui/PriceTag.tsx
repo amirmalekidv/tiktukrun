@@ -11,8 +11,8 @@ export default function PriceTag({ amount, className = '', size = 'md' }: PriceT
 
   return (
     <div className={`price-tag ${sizeClass} ${className}`}>
-      <span className="text-yellow-400 font-bold">{formatToman(amount)}</span>
-      <span className="text-yellow-600 text-xs font-normal mr-1">تومان</span>
+      <span className="font-bold">{formatToman(amount)}</span>
+      <span className="text-[#00f5ff]/70 text-xs font-normal mr-1">تومان</span>
     </div>
   )
 }

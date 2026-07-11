@@ -4,6 +4,7 @@ node_modules/
 .pnp.js
 .yarn/install-state.gz
 
+sample UI/
 # ─── Build outputs ────────────
 dist/
 build/

@@ -74,7 +74,7 @@ function BookingDetailContent() {
         </button>
         <h1 className="font-cinzel text-xl text-red-500">جزئیات رزرو</h1>
       </div>
-      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-[#0d0d0d] space-y-4">
+      <div className="dark-card rounded-2xl p-6 border border-red-900/30 bg-white/[0.03] space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-vazir text-white text-lg">{b.gameName ?? b.game?.title ?? 'رزرو'}</h2>
           <BookingStatusBadge status={b.status as never} />

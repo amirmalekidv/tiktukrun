@@ -51,8 +51,8 @@ export default function SectionPage({ params }: { params: { slug: string } }) {
         <div className="absolute inset-0 bg-gradient-to-b from-red-950/20 to-bg-dark" />
         <div className="absolute inset-0 opacity-5"
           style={{
-            backgroundImage: `linear-gradient(rgba(220,38,38,0.5) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(220,38,38,0.5) 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(rgba(0,245,255,0.5) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0,245,255,0.5) 1px, transparent 1px)`,
             backgroundSize: '60px 60px',
           }}
         />

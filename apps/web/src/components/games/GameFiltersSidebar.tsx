@@ -61,14 +61,14 @@ export default function GameFiltersSidebar({
   }
 
   return (
-    <div className="dark-card rounded-2xl overflow-hidden">
+    <div className="dark-card overflow-hidden rounded-[18px]">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-red-950/40">
+      <div className="flex items-center justify-between border-b border-white/10 p-4">
         <h3 className="font-cinzel font-bold text-white flex items-center gap-2">
-          <i className="fas fa-sliders-h text-red-500" />
+          <i className="fas fa-sliders-h text-[#00f5ff]" />
           فیلترها
         </h3>
-        <button onClick={resetFilters} className="text-red-400 hover:text-red-300 text-xs transition-colors">
+        <button onClick={resetFilters} className="text-[#00f5ff] hover:text-white text-xs transition-colors">
           پاک کردن همه
         </button>
       </div>
@@ -77,7 +77,7 @@ export default function GameFiltersSidebar({
         {/* Search */}
         <div>
           <label className="block text-gray-300 text-sm font-medium mb-2">
-            <i className="fas fa-search text-red-500 ml-1" />
+            <i className="fas fa-search text-[#00f5ff] ml-1" />
             جستجو
           </label>
           <input
@@ -93,7 +93,7 @@ export default function GameFiltersSidebar({
         {/* City */}
         <div>
           <label className="block text-gray-300 text-sm font-medium mb-2">
-            <i className="fas fa-map-marker-alt text-red-500 ml-1" />
+            <i className="fas fa-map-marker-alt text-[#00f5ff] ml-1" />
             شهر
           </label>
           <select
@@ -111,7 +111,7 @@ export default function GameFiltersSidebar({
         {/* Category */}
         <div>
           <label className="block text-gray-300 text-sm font-medium mb-2">
-            <i className="fas fa-th-large text-red-500 ml-1" />
+            <i className="fas fa-th-large text-[#00f5ff] ml-1" />
             دسته‌بندی
           </label>
           <div className="space-y-2">
@@ -122,7 +122,7 @@ export default function GameFiltersSidebar({
                 value=""
                 checked={filters.category === ''}
                 onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                className="accent-red-600"
+                className="accent-[#00f5ff]"
               />
               <span className="text-gray-300 text-sm group-hover:text-white transition-colors">همه</span>
             </label>
@@ -134,7 +134,7 @@ export default function GameFiltersSidebar({
                   value={cat}
                   checked={filters.category === cat}
                   onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                  className="accent-red-600"
+                  className="accent-[#00f5ff]"
                 />
                 <span className="text-gray-300 text-sm group-hover:text-white transition-colors">
                   {CATEGORY_FA[cat]}
@@ -147,7 +147,7 @@ export default function GameFiltersSidebar({
         {/* Genre */}
         <div>
           <label className="block text-gray-300 text-sm font-medium mb-2">
-            <i className="fas fa-theater-masks text-red-500 ml-1" />
+            <i className="fas fa-theater-masks text-[#00f5ff] ml-1" />
             ژانر
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -157,8 +157,8 @@ export default function GameFiltersSidebar({
                 onClick={() => setFilters({ ...filters, genre: filters.genre === genre ? '' : genre })}
                 className={`text-xs py-2 px-3 rounded-lg border transition-all ${
                   filters.genre === genre
-                    ? 'border-red-600 bg-red-900/30 text-red-300'
-                    : 'border-red-950/40 bg-transparent text-gray-400 hover:border-red-700/50'
+                    ? 'border-[#00f5ff] bg-[#00f5ff]/10 text-[#00f5ff]'
+                    : 'border-white/10 bg-transparent text-gray-400 hover:border-[#b026ff]/50'
                 }`}
               >
                 {GENRE_FA[genre]}
@@ -184,7 +184,7 @@ export default function GameFiltersSidebar({
                 max={5}
                 value={filters.fearMin}
                 onChange={(e) => setFilters({ ...filters, fearMin: Number(e.target.value) })}
-                className="w-full accent-red-600"
+                className="w-full accent-[#00f5ff]"
               />
             </div>
             <div>
@@ -198,7 +198,7 @@ export default function GameFiltersSidebar({
                 max={5}
                 value={filters.fearMax}
                 onChange={(e) => setFilters({ ...filters, fearMax: Number(e.target.value) })}
-                className="w-full accent-red-600"
+                className="w-full accent-[#00f5ff]"
               />
             </div>
           </div>
@@ -214,7 +214,7 @@ export default function GameFiltersSidebar({
         {/* Sort */}
         <div>
           <label className="block text-gray-300 text-sm font-medium mb-2">
-            <i className="fas fa-sort text-red-500 ml-1" />
+            <i className="fas fa-sort text-[#00f5ff] ml-1" />
             مرتب‌سازی
           </label>
           <select

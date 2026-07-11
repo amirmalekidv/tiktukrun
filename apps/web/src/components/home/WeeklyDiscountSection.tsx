@@ -16,16 +16,16 @@ export default function WeeklyDiscountSection() {
   return (
     <section className="max-w-7xl mx-auto px-4 py-12">
       <div className="section-header mb-8">
-        <h2 className="font-cinzel font-bold text-2xl text-white text-center">
-          <i className="fas fa-bolt text-yellow-400 ml-2" />
-          <span className="gradient-blood">تخفیف‌های هفتگی</span>
+        <h2 className="font-cinzel font-black text-2xl text-white text-center">
+          <i className="fas fa-bolt text-[#ffd700] ml-2" />
+          <span className="gradient-text">تخفیف‌های هفتگی</span>
         </h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {isLoading
           ? Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="dark-card rounded-xl h-48 skeleton" />
+              <div key={i} className="dark-card rounded-[18px] h-48 skeleton" />
             ))
             : games.map((game, idx) => {
               // Use deterministic discount based on game index to avoid hydration mismatch
@@ -38,9 +38,9 @@ export default function WeeklyDiscountSection() {
 
               return (
                 <Link key={game.id} href={`/games/${game.slug}`}>
-                  <article className="dark-card rounded-xl overflow-hidden group relative">
+                  <article className="dark-card group relative overflow-hidden rounded-[18px] transition-all hover:-translate-y-2 hover:border-[#00f5ff]/50">
                     {/* Discount badge */}
-                    <div className="absolute top-3 right-3 z-20 bg-yellow-500 text-black font-black text-sm px-3 py-1 rounded-full shadow-lg">
+                    <div className="absolute top-3 right-3 z-20 rounded-full bg-gradient-to-r from-[#ffd700] to-[#ff9d00] px-3 py-1 text-sm font-black text-black shadow-[0_0_18px_rgba(255,215,0,0.42)]">
                       {discount}٪ تخفیف
                     </div>
 
@@ -50,10 +50,10 @@ export default function WeeklyDiscountSection() {
                         alt={game.title}
                         fill
                         unoptimized={unoptimized}
-                        className="object-cover group-hover:scale-110 transition duration-500"
+                        className="object-cover transition duration-500 group-hover:scale-110"
                         sizes="(max-width: 768px) 100vw, 33vw"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#05070a] to-transparent" />
                     </div>
 
                     <div className="p-4">
@@ -62,7 +62,7 @@ export default function WeeklyDiscountSection() {
                         <FearMeter level={game.fearLevel} size="sm" />
                         <div className="text-left">
                           <div className="text-gray-500 text-xs line-through">{formatToman(originalPrice)} ت</div>
-                          <div className="text-yellow-400 font-bold text-sm">{formatToman(discountedPrice)} ت</div>
+                          <div className="price-tag text-sm">{formatToman(discountedPrice)} ت</div>
                         </div>
                       </div>
                     </div>
@@ -73,7 +73,7 @@ export default function WeeklyDiscountSection() {
       </div>
 
       <div className="text-center mt-6">
-        <Link href="/section/weekly-discount" className="btn-ghost text-sm py-2 px-6">
+        <Link href="/section/weekly-discount" className="btn-ghost px-6 py-2 text-sm">
           مشاهده همه تخفیف‌ها
           <i className="fas fa-arrow-left mr-2 text-xs" />
         </Link>

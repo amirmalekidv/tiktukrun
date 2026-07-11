@@ -5,7 +5,7 @@ import useSWR from 'swr';
 import { ticketsApi, type UserTicketListItem } from '@/lib/api/tickets';
 import { USE_MOCK } from '@/lib/http';
 
-const STATUS_COLORS: Record<string, string> = { open: '#dc2626', answered: '#22d3ee', closed: '#6b7280' };
+const STATUS_COLORS: Record<string, string> = { open: '#00f5ff', answered: '#22d3ee', closed: '#6b7280' };
 const DEMO: UserTicketListItem[] = [
   {
     id: 't1',

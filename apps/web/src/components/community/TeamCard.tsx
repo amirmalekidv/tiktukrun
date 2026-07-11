@@ -56,16 +56,16 @@ export default function TeamCard({
   return (
     <motion.div
       whileHover={{ scale: 1.01 }}
-      className="dark-card rounded-xl border border-red-900/30 bg-[#0d0d0d] p-4 hover:border-red-700/40 transition-all"
+      className="dark-card rounded-[18px] p-4 hover:border-[#00f5ff]/45 transition-all"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           {/* Team name */}
           <div className="flex items-center gap-2 mb-1">
-            <i className="fas fa-users text-red-500 text-xs flex-shrink-0" />
+            <i className="fas fa-users text-[#00f5ff] text-xs flex-shrink-0" />
             <Link
               href={`/community/teams/${team.id}`}
-              className="font-cinzel text-sm text-white hover:text-red-400 transition-colors truncate"
+              className="font-cinzel text-sm text-white hover:text-[#00f5ff] transition-colors truncate"
             >
               {team.name}
             </Link>
@@ -100,15 +100,15 @@ export default function TeamCard({
                 {maxMembers.toLocaleString('fa-IR')}
               </span>
             </div>
-            <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
                 className={`h-full rounded-full ${
                   isFull
-                    ? 'bg-red-600'
-                    : 'bg-gradient-to-r from-red-800 to-red-500'
+                    ? 'bg-[#ff5470]'
+                    : 'bg-gradient-to-r from-[#00f5ff] to-[#b026ff]'
                 }`}
               />
             </div>
@@ -123,7 +123,7 @@ export default function TeamCard({
             {canOpenTeamRoom && (
               <Link
                 href={`/community/teams/${team.id}`}
-                className="px-3 py-1.5 rounded-lg text-xs font-vazir border border-red-700/40 bg-red-900/30 text-red-300 hover:bg-red-800/40 transition-all"
+                className="px-3 py-1.5 rounded-lg text-xs font-vazir border border-[#00f5ff]/35 bg-[#00f5ff]/10 text-[#00f5ff] hover:bg-[#00f5ff]/15 transition-all"
               >
                 {memberActionText}
               </Link>
@@ -142,7 +142,7 @@ export default function TeamCard({
               ${
                 isFull
                   ? 'bg-gray-900 text-gray-600 border border-gray-800 cursor-not-allowed'
-                  : 'bg-red-900/40 border border-red-700/40 text-red-400 hover:bg-red-800/50 hover:border-red-600/60 cursor-pointer'
+                  : 'bg-[#00f5ff]/10 border border-[#00f5ff]/35 text-[#00f5ff] hover:bg-[#00f5ff]/15 hover:border-[#00f5ff]/60 cursor-pointer'
               }
             `}
           >

@@ -33,7 +33,7 @@ function PaymentResultContent() {
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="dark-card rounded-2xl p-8 border border-red-900/30 bg-[#0d0d0d] text-center max-w-sm w-full"
+        className="dark-card rounded-2xl p-8 border border-red-900/30 bg-white/[0.03] text-center max-w-sm w-full"
       >
         {status === 'loading' && (
           <>

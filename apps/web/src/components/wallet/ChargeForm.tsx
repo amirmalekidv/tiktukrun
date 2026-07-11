@@ -104,7 +104,7 @@ export default function ChargeForm({ onSuccess }: ChargeFormProps) {
       <button
         onClick={handleCharge}
         disabled={isLoading || !amount}
-        className="w-full py-4 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-vazir font-bold rounded-xl transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+        className="w-full py-4 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-vazir font-bold rounded-xl transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(0,245,255,0.3)]"
       >
         {isLoading ? (
           <><i className="fas fa-spinner fa-spin ml-2" />در حال پردازش شارژ آزمایشی...</>

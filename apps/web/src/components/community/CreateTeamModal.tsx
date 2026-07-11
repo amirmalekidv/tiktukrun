@@ -112,7 +112,7 @@ export default function CreateTeamModal({
   };
 
   const inputClass =
-    'w-full bg-gray-900/50 border border-red-900/30 rounded-xl px-4 py-3 text-gray-200 font-vazir text-sm focus:outline-none focus:border-red-600 transition-colors';
+    'input-gothic text-sm';
 
   return (
     <AnimatePresence>
@@ -129,9 +129,9 @@ export default function CreateTeamModal({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#0d0d0d] border border-red-900/50 rounded-2xl p-6 max-w-md w-full"
+            className="dark-card rounded-[18px] p-6 max-w-md w-full"
           >
-            <h2 className="font-cinzel text-red-500 text-xl mb-6 flex items-center gap-2">
+            <h2 className="font-cinzel text-[#00f5ff] text-xl mb-6 flex items-center gap-2">
               <i className="fas fa-users" />
               ساخت تیم جدید
             </h2>
@@ -179,7 +179,7 @@ export default function CreateTeamModal({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 py-3 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-vazir font-bold rounded-xl transition-all disabled:opacity-50"
+                  className="btn-blood flex-1 py-3 font-vazir font-bold disabled:opacity-50"
                 >
                   {isSubmitting ? <i className="fas fa-spinner fa-spin" /> : 'ساخت تیم'}
                 </button>

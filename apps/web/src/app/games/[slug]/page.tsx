@@ -47,9 +47,9 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
       <div className="max-w-7xl mx-auto px-4">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-          <Link href="/" className="hover:text-red-400 transition-colors">خانه</Link>
+          <Link href="/" className="hover:text-[#00f5ff] transition-colors">خانه</Link>
           <i className="fas fa-chevron-left text-xs" />
-          <Link href="/games" className="hover:text-red-400 transition-colors">بازی‌ها</Link>
+          <Link href="/games" className="hover:text-[#00f5ff] transition-colors">بازی‌ها</Link>
           <i className="fas fa-chevron-left text-xs" />
           <span className="text-gray-300">{game.title}</span>
         </nav>
@@ -77,7 +77,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
                     onClick={() => setTeaserOpen(true)}
                     className="absolute inset-0 flex items-center justify-center group"
                   >
-                    <div className="w-20 h-20 bg-red-700/80 backdrop-blur rounded-full flex items-center justify-center group-hover:bg-red-600 transition-all group-hover:scale-110">
+                    <div className="w-20 h-20 rounded-full bg-[#00f5ff]/80 text-[#04121a] backdrop-blur flex items-center justify-center transition-all group-hover:scale-110 group-hover:bg-[#00f5ff] shadow-[0_0_28px_rgba(0,245,255,0.45)]">
                       <i className="fas fa-play text-white text-2xl mr-1" />
                     </div>
                     <span className="absolute bottom-6 text-white text-sm bg-black/60 px-4 py-1 rounded-full">
@@ -96,7 +96,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
                 {/* Game title overlay */}
                 <div className="absolute bottom-4 left-4 right-4">
                   <h1 className="font-cinzel font-black text-3xl md:text-4xl text-white drop-shadow-lg">{game.title}</h1>
-                  {game.subtitle && <p className="text-red-300 mt-1">{game.subtitle}</p>}
+                  {game.subtitle && <p className="text-[#00f5ff] mt-1">{game.subtitle}</p>}
                 </div>
               </div>
 
@@ -108,7 +108,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
                       key={img.id}
                       onClick={() => setActiveImageIdx(idx)}
                       className={`flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all ${
-                        idx === activeImageIdx ? 'border-red-500' : 'border-transparent opacity-60 hover:opacity-100'
+                        idx === activeImageIdx ? 'border-[#00f5ff]' : 'border-transparent opacity-60 hover:opacity-100'
                       }`}
                     >
                       <img src={img.url} alt={img.alt || ''} className="w-full h-full object-cover" />
@@ -127,7 +127,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
                 { icon: 'fas fa-trophy', label: 'نرخ موفقیت', value: `${toPersianDigits(game.successRate)}٪` },
               ].map((stat) => (
                 <div key={stat.label} className="dark-card rounded-xl p-4 text-center">
-                  <i className={`${stat.icon} text-red-500 text-xl mb-2`} />
+                  <i className={`${stat.icon} text-[#00f5ff] text-xl mb-2`} />
                   <div className="font-bold text-white text-lg">{stat.value}</div>
                   <div className="text-gray-400 text-xs mt-1">{stat.label}</div>
                 </div>
@@ -139,7 +139,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
                        <div className="flex flex-wrap items-center gap-3 mb-4">
                 <span className="badge-blood">{CATEGORY_FA[game.category]}</span>
                 {game.tags?.map((tag) => (
-                  <span key={tag} className="text-xs bg-red-950/30 text-gray-400 border border-red-900/20 px-3 py-1 rounded-full">
+                  <span key={tag} className="text-xs bg-white/[0.03] text-gray-400 border border-white/10 px-3 py-1 rounded-full">
                     {tag}
                   </span>
                 ))}
@@ -149,11 +149,11 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
                   <div className="text-gray-400 text-xs mb-1">سطح ترس</div>
                   <FearMeter level={game.fearLevel} size="lg" showLabel />
                 </div>
-                <div className="border-r border-red-950/50 pr-4 mr-2">
+                <div className="border-r border-white/10 pr-4 mr-2">
                   <div className="text-gray-400 text-xs mb-1">امتیاز</div>
                   <StarRating rating={game.rating} totalReviews={game.totalReviews} showCount />
                 </div>
-                <div className="border-r border-red-950/50 pr-4 mr-2">
+                <div className="border-r border-white/10 pr-4 mr-2">
                   <div className="text-gray-400 text-xs mb-1">پسندیدن</div>
                   <LikeButton
                     gameId={game.id}
@@ -168,7 +168,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
             {/* Description */}
             <section className="dark-card rounded-2xl p-6">
               <h2 className="font-cinzel font-bold text-xl text-white mb-4 flex items-center gap-2">
-                <i className="fas fa-scroll text-red-500" />
+                <i className="fas fa-scroll text-[#00f5ff]" />
                 درباره بازی
               </h2>
               <p className="text-gray-300 leading-relaxed text-base">{game.description}</p>
@@ -179,17 +179,17 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
               <section
                 className="rounded-2xl p-6 scroll-bg relative overflow-hidden"
                 style={{
-                  background: 'linear-gradient(135deg, #1a0505 0%, #0a0000 50%, #1a0305 100%)',
-                  border: '1px solid rgba(220,38,38,0.2)',
+                  background: 'linear-gradient(135deg, rgba(14,18,26,0.82) 0%, rgba(5,7,10,0.95) 50%, rgba(176,38,255,0.12) 100%)',
+                  border: '1px solid rgba(0,245,255,0.16)',
                 }}
               >
                 <div className="absolute inset-0 opacity-5"
                   style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23dc2626' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300f5ff' fill-opacity='0.45'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
                   }}
                 />
                 <h2 className="font-cinzel font-bold text-xl text-white mb-4 relative z-10 flex items-center gap-2">
-                  <i className="fas fa-book-dead text-red-500" />
+                  <i className="fas fa-book-dead text-[#00f5ff]" />
                   داستان
                 </h2>
                 <p className="text-gray-300 leading-relaxed italic relative z-10">{game.scenario}</p>
@@ -199,25 +199,25 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
             {/* Branch info */}
             <section className="dark-card rounded-2xl p-6">
               <h2 className="font-cinzel font-bold text-xl text-white mb-4 flex items-center gap-2">
-                <i className="fas fa-map-marker-alt text-red-500" />
+                <i className="fas fa-map-marker-alt text-[#00f5ff]" />
                 آدرس و اطلاعات شعبه
               </h2>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <i className="fas fa-building text-red-600 mt-1 w-5" />
+                  <i className="fas fa-building text-[#00f5ff] mt-1 w-5" />
                   <div>
                     <div className="text-white font-medium">{game.branch.name}</div>
                     <div className="text-gray-400 text-sm">{game.branch.address}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <i className="fas fa-city text-red-600 w-5" />
+                  <i className="fas fa-city text-[#00f5ff] w-5" />
                   <span className="text-gray-300">{game.branch.city.name}</span>
                 </div>
                 {game.branch.phone && (
                   <div className="flex items-center gap-3">
-                    <i className="fas fa-phone text-red-600 w-5" />
-                    <a href={`tel:${game.branch.phone}`} className="text-gray-300 hover:text-red-400 transition-colors dir-ltr">
+                    <i className="fas fa-phone text-[#00f5ff] w-5" />
+                    <a href={`tel:${game.branch.phone}`} className="text-gray-300 hover:text-[#00f5ff] transition-colors dir-ltr">
                       {game.branch.phone}
                     </a>
                   </div>
@@ -236,7 +236,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
                   </div>
                 )}
                 {game.branch.lat && game.branch.lng && (
-                  <div className="mt-4 rounded-xl overflow-hidden border border-red-900/30">
+                  <div className="mt-4 rounded-xl overflow-hidden border border-white/10">
                     <iframe
                       src={`https://maps.google.com/maps?q=${game.branch.lat},${game.branch.lng}&z=15&output=embed`}
                       width="100%"
@@ -266,7 +266,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
                   )}
                   {game.warningText && (
                     <li className="flex items-start gap-2">
-                      <i className="fas fa-heart text-red-500 mt-0.5" />
+                      <i className="fas fa-heart text-[#ff00e5] mt-0.5" />
                       {game.warningText}
                     </li>
                   )}
@@ -281,7 +281,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
             {/* Reviews */}
             <section className="dark-card rounded-2xl p-6">
               <h2 className="font-cinzel font-bold text-xl text-white mb-6 flex items-center gap-2">
-                <i className="fas fa-comments text-red-500" />
+                <i className="fas fa-comments text-[#00f5ff]" />
                 نظرات ({toPersianDigits(game.totalReviews)})
               </h2>
 
@@ -290,12 +290,12 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
               ) : (
                 <div className="space-y-5">
                   {reviews.map((review) => (
-                    <div key={review.id} className="border-b border-red-950/30 pb-5 last:border-0">
+                    <div key={review.id} className="border-b border-white/10 pb-5 last:border-0">
                       <div className="flex items-center gap-3 mb-3">
                         {review.user.avatar ? (
                           <img src={review.user.avatar} alt={review.user.name || 'کاربر'} className="w-10 h-10 rounded-full object-cover" />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-red-900 flex items-center justify-center text-white">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ff00e5] to-[#b026ff] flex items-center justify-center text-white">
                             {(review.user.name || 'ک').charAt(0)}
                           </div>
                         )}
@@ -309,7 +309,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
                       </div>
                       <p className="text-gray-300 text-sm leading-relaxed">{review.comment}</p>
                       <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
-                        <button className="flex items-center gap-1 hover:text-red-400 transition-colors">
+                        <button className="flex items-center gap-1 hover:text-[#00f5ff] transition-colors">
                           <i className="fas fa-thumbs-up" />
                           مفید ({toPersianDigits(review.helpful)})
                         </button>
@@ -345,7 +345,7 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
           <div className="relative w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => setTeaserOpen(false)}
-              className="absolute -top-10 left-0 text-white hover:text-red-400 transition-colors"
+              className="absolute -top-10 left-0 text-white hover:text-[#00f5ff] transition-colors"
             >
               <i className="fas fa-times text-2xl" />
             </button>

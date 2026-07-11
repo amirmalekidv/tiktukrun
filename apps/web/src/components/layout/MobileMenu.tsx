@@ -45,13 +45,20 @@ export default function MobileMenu({ isOpen, onClose, menuItems, user, isAuthent
       />
 
       {/* Menu panel - slides from right (RTL) */}
-      <div className="absolute right-0 top-0 bottom-0 w-80 bg-bg-dark border-l border-red-900/40 shadow-xl shadow-black flex flex-col">
+      <div className="absolute right-0 top-0 bottom-0 w-80 bg-[#05070a]/95 border-l border-white/10 shadow-xl shadow-black flex flex-col backdrop-blur-xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-red-900/30">
-          <span className="font-cinzel font-black text-xl text-white flicker">TIK TAK RUN</span>
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-gradient-to-br from-[#b026ff] to-[#00f5ff] text-white shadow-[0_0_20px_rgba(176,38,255,0.45)]">
+              ◈
+            </span>
+            <span className="font-cinzel font-black text-lg text-white">
+              TIK TAK <span className="glow-teal">RUN</span>
+            </span>
+          </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-red-950/30 border border-red-800/30 text-gray-400 hover:text-white transition-colors"
+            className="p-2 rounded-lg bg-white/[0.04] border border-white/10 text-gray-400 hover:text-white transition-colors"
           >
             <i className="fas fa-times text-lg" />
           </button>
@@ -59,26 +66,26 @@ export default function MobileMenu({ isOpen, onClose, menuItems, user, isAuthent
 
         {/* User section */}
         {isAuthenticated && user ? (
-          <div className="p-4 border-b border-red-900/30">
+          <div className="p-4 border-b border-white/10">
             <div className="flex items-center gap-3">
               {user.avatar ? (
-                <img src={user.avatar} alt={user.name || 'کاربر'} className="w-12 h-12 rounded-full object-cover" />
+                <img src={user.avatar} alt={user.name || 'کاربر'} className="w-12 h-12 rounded-full object-cover ring-2 ring-[#00f5ff]/35" />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-red-800 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#ff00e5] to-[#b026ff] flex items-center justify-center ring-2 ring-[#00f5ff]/35">
                   <i className="fas fa-user text-white" />
                 </div>
               )}
               <div>
                 <div className="text-white font-medium">{user.name || maskMobile(user.mobile)}</div>
-                <div className="text-yellow-400 text-sm">
-                  <i className="fas fa-wallet ml-1" />
+                <div className="text-[#00f5ff] text-sm">
+                  <span className="ml-1">◈</span>
                   {formatToman(user.walletBalance)} تومان
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="p-4 border-b border-red-900/30">
+          <div className="p-4 border-b border-white/10">
             <Link
               href="/login"
               onClick={onClose}
@@ -98,9 +105,9 @@ export default function MobileMenu({ isOpen, onClose, menuItems, user, isAuthent
                 <Link
                   href={item.href}
                   onClick={onClose}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-200 hover:text-red-400 hover:bg-red-950/30 transition-all"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-200 hover:text-[#00f5ff] hover:bg-white/[0.04] transition-all"
                 >
-                  <i className="fas fa-chevron-left text-red-600 text-xs" />
+                  <i className="fas fa-chevron-left text-[#00f5ff] text-xs" />
                   <span className="font-medium">{item.label}</span>
                 </Link>
               </li>
@@ -109,21 +116,21 @@ export default function MobileMenu({ isOpen, onClose, menuItems, user, isAuthent
 
           {isAuthenticated && (
             <>
-              <div className="border-t border-red-900/30 mt-4 pt-4 px-3 space-y-1">
+              <div className="border-t border-white/10 mt-4 pt-4 px-3 space-y-1">
                 {authMenuItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={onClose}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-200 hover:text-red-400 hover:bg-red-950/30 transition-all"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-200 hover:text-[#00f5ff] hover:bg-white/[0.04] transition-all"
                   >
-                    <i className={`${item.icon} text-red-400 w-4`} />
+                    <i className={`${item.icon} text-[#00f5ff] w-4`} />
                     <span>{item.label}</span>
                   </Link>
                 ))}
                 <button
                   onClick={() => { onLogout(); onClose() }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-950/30 transition-all text-right"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[#ff5470] hover:bg-white/[0.04] transition-all text-right"
                 >
                   <i className="fas fa-sign-out-alt w-4" />
                   <span>خروج</span>
@@ -134,7 +141,7 @@ export default function MobileMenu({ isOpen, onClose, menuItems, user, isAuthent
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-red-900/30 text-center text-gray-500 text-xs">
+        <div className="p-4 border-t border-white/10 text-center text-gray-500 text-xs">
           © ۱۴۰۳ تیک تاک ران — همه حقوق محفوظ است
         </div>
       </div>

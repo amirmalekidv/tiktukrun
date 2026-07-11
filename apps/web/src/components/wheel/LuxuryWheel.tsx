@@ -36,7 +36,7 @@ function WheelSlice({ index, total, prize }: WheelSliceProps) {
       <path
         d={path}
         fill={`url(#${gradientId})`}
-        stroke="#1a0000"
+        stroke="#0a0d16"
         strokeWidth="1.5"
       />
 
@@ -48,7 +48,7 @@ function WheelSlice({ index, total, prize }: WheelSliceProps) {
           textAnchor="middle"
           fill="rgba(255,255,255,0.9)"
           fontSize="9"
-          fontFamily="Cinzel, serif"
+          fontFamily="Vazirmatn, sans-serif"
           fontWeight="bold"
         >
           {display.emoji}
@@ -57,9 +57,9 @@ function WheelSlice({ index, total, prize }: WheelSliceProps) {
           x="0"
           y="6"
           textAnchor="middle"
-          fill="rgba(255,200,200,0.8)"
+          fill="rgba(255,255,255,0.88)"
           fontSize="7"
-          fontFamily="Cinzel, serif"
+          fontFamily="Vazirmatn, sans-serif"
         >
           {sliceValue || prize.label.slice(0, 8)}
         </text>
@@ -71,7 +71,7 @@ function WheelSlice({ index, total, prize }: WheelSliceProps) {
         y1="150"
         x2={150 + 140 * Math.cos(((index * 360) / total - 90) * (Math.PI / 180))}
         y2={150 + 140 * Math.sin(((index * 360) / total - 90) * (Math.PI / 180))}
-        stroke="#3a0000"
+        stroke="rgba(255,255,255,0.45)"
         strokeWidth="1"
         opacity="0.6"
       />
@@ -95,7 +95,7 @@ function WheelLights({ count = 16, isSpinning = false }: WheelLightsProps) {
           cx={pos.x}
           cy={pos.y}
           r="3.5"
-          fill={i % 2 === 0 ? '#dc2626' : '#7f1d1d'}
+          fill={i % 2 === 0 ? '#ffffff' : '#00f5ff'}
           opacity={isSpinning ? (i % 2 === 0 ? 1 : 0.3) : 0.7}
         >
           {isSpinning && (
@@ -116,19 +116,19 @@ function WheelCenter() {
   return (
     <g>
       {/* Outer ring */}
-      <circle cx="150" cy="150" r="22" fill="#1a0000" stroke="#7f1d1d" strokeWidth="2" />
+      <circle cx="150" cy="150" r="22" fill="#0a0d16" stroke="#ffffff" strokeWidth="2" />
       {/* Inner circle */}
-      <circle cx="150" cy="150" r="16" fill="#0d0000" stroke="#dc2626" strokeWidth="1.5" />
-      {/* Skull text */}
+      <circle cx="150" cy="150" r="16" fill="#05070a" stroke="#00f5ff" strokeWidth="1.5" />
+      {/* Center mark */}
       <text
         x="150"
         y="156"
         textAnchor="middle"
-        fill="#dc2626"
+        fill="#00f5ff"
         fontSize="18"
-        fontFamily="serif"
+        fontFamily="Orbitron, sans-serif"
       >
-        💀
+        ◈
       </text>
     </g>
   );
@@ -163,7 +163,7 @@ export default function LuxuryWheel({ prizes, rotation, isSpinning }: LuxuryWhee
       <div
         className="absolute inset-0 rounded-full pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, rgba(220,38,38,0.15) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(0,245,255,0.22) 0%, transparent 70%)',
           animation: isSpinning ? 'pulse 0.5s infinite' : 'none',
         }}
       />
@@ -172,7 +172,7 @@ export default function LuxuryWheel({ prizes, rotation, isSpinning }: LuxuryWhee
         viewBox="0 0 300 300"
         className="w-full max-w-[340px]"
         style={{
-          filter: 'drop-shadow(0 0 30px rgba(220,38,38,0.4))',
+          filter: 'drop-shadow(0 0 34px rgba(0,245,255,0.48))',
         }}
       >
         <defs>
@@ -186,8 +186,8 @@ export default function LuxuryWheel({ prizes, rotation, isSpinning }: LuxuryWhee
         </defs>
 
         {/* Outer border rings */}
-        <circle cx="150" cy="150" r="148" fill="none" stroke="#7f1d1d" strokeWidth="3" />
-        <circle cx="150" cy="150" r="142" fill="none" stroke="#3a0000" strokeWidth="1" opacity="0.5" />
+        <circle cx="150" cy="150" r="148" fill="none" stroke="#ffffff" strokeWidth="3" />
+        <circle cx="150" cy="150" r="142" fill="none" stroke="#00f5ff" strokeWidth="1" opacity="0.55" />
 
         {/* LEDs (not rotating) */}
         <WheelLights count={16} isSpinning={isSpinning} />
@@ -220,8 +220,8 @@ export default function LuxuryWheel({ prizes, rotation, isSpinning }: LuxuryWhee
         <g filter="url(#wheelGlow)">
           <polygon
             points="150,8 144,28 156,28"
-            fill="#dc2626"
-            stroke="#ff0000"
+            fill="#ffffff"
+            stroke="#00f5ff"
             strokeWidth="1"
           />
         </g>

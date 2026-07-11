@@ -35,10 +35,10 @@ export default function AvatarItemCard({
       className={`
         relative rounded-xl border-2 p-3 cursor-pointer transition-all text-center
         ${isSelected || isActive
-          ? 'border-red-500 bg-red-900/20 shadow-[0_0_16px_rgba(220,38,38,0.3)]'
+          ? 'border-red-500 bg-red-900/20 shadow-[0_0_16px_rgba(0,245,255,0.3)]'
           : isLocked
           ? 'border-gray-700/50 bg-gray-900/30 opacity-70'
-          : 'border-red-900/30 bg-[#0d0d0d] hover:border-red-700/50'
+          : 'border-red-900/30 bg-white/[0.03] hover:border-red-700/50'
         }
       `}
     >

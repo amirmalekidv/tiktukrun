@@ -80,15 +80,15 @@ export default function LikeButton({
       aria-pressed={liked}
       className={`inline-flex items-center rounded-full font-bold border transition-all ${sizing} ${
         liked
-          ? 'bg-red-700/30 border-red-600 text-red-300'
-          : 'bg-gray-900/50 border-red-900/30 text-gray-300 hover:border-red-600 hover:text-red-400'
+          ? 'bg-[#ff00e5]/15 border-[#ff00e5]/50 text-[#ff00e5]'
+          : 'bg-white/[0.04] border-white/10 text-gray-300 hover:border-[#00f5ff]/50 hover:text-[#00f5ff]'
       } ${busy ? 'opacity-70 cursor-wait' : ''}`}
       title={liked ? 'لغو پسند' : 'پسندیدن این بازی'}
     >
       <i
         className={`${liked ? 'fas' : 'far'} fa-heart transition-transform ${
           bump ? 'scale-150' : 'scale-100'
-        } ${liked ? 'text-red-500' : ''}`}
+        } ${liked ? 'text-[#ff00e5]' : ''}`}
       />
       <span>{toPersianDigits(count)}</span>
     </button>

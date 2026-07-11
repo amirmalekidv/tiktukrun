@@ -21,7 +21,7 @@ const TYPE_CONFIG = {
 };
 
 const CURRENCY_ICONS = {
-  toman: { icon: 'fa-coins', color: '#dc2626' },
+  toman: { icon: 'fa-coins', color: '#00f5ff' },
   diamonds: { icon: 'fa-gem', color: '#22d3ee' },
   coins: { icon: 'fa-circle', color: '#f59e0b' },
   xp: { icon: 'fa-bolt', color: '#8b5cf6' },
@@ -45,7 +45,7 @@ export default function TransactionItem({
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.03 }}
-      className="flex items-center gap-4 py-3 border-b border-gray-900/60 last:border-b-0"
+      className="flex items-center gap-4 py-3 border-b border-white/10 last:border-b-0"
     >
       {/* Icon */}
       <div
@@ -72,7 +72,7 @@ export default function TransactionItem({
       <div className="text-right">
         <div
           className={`font-cinzel font-bold text-sm flex items-center gap-1 ${
-            isIn ? 'text-green-500' : 'text-red-500'
+            isIn ? 'text-[#2ee6a0]' : 'text-[#ff5470]'
           }`}
         >
           {isIn ? '+' : '-'}

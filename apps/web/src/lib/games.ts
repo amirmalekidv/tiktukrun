@@ -6,6 +6,7 @@ export const GAME_COVER_PLACEHOLDER = '/placeholder-game.svg'
 
 export function shouldBypassImageOptimization(src?: string | null): boolean {
   if (!src) return false
+  if (src.toLowerCase().includes('/uploads/')) return true
   return src.startsWith('/') && src.toLowerCase().endsWith('.svg')
 }
 
@@ -34,7 +35,6 @@ const CATEGORY_ENUM_TO_SLUG: Record<GameCategory, string> = {
 export function resolveMediaUrl(path?: string | null): string | undefined {
   if (!path) return undefined
   if (path.startsWith('http://') || path.startsWith('https://')) return path
-  if (process.env.NODE_ENV === 'production' && path.startsWith('/uploads/')) return path
   const root = getApiRoot()
   return `${root}${path.startsWith('/') ? path : `/${path}`}`
 }

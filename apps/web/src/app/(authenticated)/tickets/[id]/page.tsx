@@ -7,7 +7,7 @@ import { ticketsApi, type UserTicketDetail } from '@/lib/api/tickets';
 import { USE_MOCK } from '@/lib/http';
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  open: { label: 'باز', color: '#dc2626' },
+  open: { label: 'باز', color: '#00f5ff' },
   answered: { label: 'پاسخ داده شده', color: '#22d3ee' },
   closed: { label: 'بسته شده', color: '#6b7280' },
 };
@@ -110,7 +110,7 @@ export default function TicketDetailPage() {
       </div>
 
       {/* Ticket card */}
-      <div className="dark-card rounded-2xl p-5 border border-red-900/30 bg-[#0d0d0d] space-y-4">
+      <div className="dark-card rounded-2xl p-5 border border-red-900/30 bg-white/[0.03] space-y-4">
         {/* Original message */}
         <div className="p-4 bg-red-950/20 rounded-xl border border-red-900/20 text-sm text-gray-300 font-vazir leading-relaxed">
           <p className="text-xs text-gray-600 mb-2">🙋 شما</p>

@@ -4,7 +4,6 @@ import { Providers } from './providers'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import FogEffect from '@/components/layout/FogEffect'
-import BloodDrip from '@/components/layout/BloodDrip'
 import { Toaster } from 'react-hot-toast'
 
 export const metadata: Metadata = {
@@ -34,27 +33,23 @@ export default function RootLayout({
     <html lang="fa" dir="rtl" suppressHydrationWarning>
       <head>
         <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Creepster&family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
         <link
           href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"
           rel="stylesheet"
         />
-        <meta name="theme-color" content="#0a0000" />
+        <meta name="theme-color" content="#05070a" />
       </head>
       <body className="bg-bg-dark min-h-screen relative font-fa antialiased">
         {/* Fixed background */}
-        <div className="fixed inset-0 bg-bg-dark -z-10" />
         <div className="vignette" />
         
-        {/* Fog effect */}
+        {/* Neon starfield */}
         <FogEffect />
         
         <Providers>
-          {/* Blood drip top */}
-          <BloodDrip />
-          
           {/* Navbar */}
           <Navbar />
           
@@ -72,12 +67,13 @@ export default function RootLayout({
             toastOptions={{
               duration: 4000,
               style: {
-                background: '#1a0505',
+                background: '#0e121a',
                 color: '#fff',
-                border: '1px solid #dc2626',
+                border: '1px solid rgba(0,245,255,0.35)',
                 fontFamily: 'Vazirmatn, sans-serif',
                 direction: 'rtl',
-                borderRadius: '8px',
+                borderRadius: '12px',
+                boxShadow: '0 14px 40px rgba(0,0,0,0.5)',
               },
               success: {
                 iconTheme: {
@@ -87,7 +83,7 @@ export default function RootLayout({
               },
               error: {
                 iconTheme: {
-                  primary: '#dc2626',
+                  primary: '#00f5ff',
                   secondary: '#fff',
                 },
               },

@@ -48,7 +48,7 @@ export default function AvatarPreview({
         )}
 
         <div
-          className={`${SIZES[size]} rounded-full border-4 border-red-800 overflow-hidden relative bg-gradient-to-br ${bg} shadow-[0_0_30px_rgba(220,38,38,0.3)]`}
+          className={`${SIZES[size]} rounded-full border-4 border-red-800 overflow-hidden relative bg-gradient-to-br ${bg} shadow-[0_0_30px_rgba(0,245,255,0.3)]`}
         >
           {/* Base skull icon */}
           <div className="w-full h-full flex items-center justify-center">
@@ -56,7 +56,7 @@ export default function AvatarPreview({
               className="fas fa-skull text-red-300"
               style={{
                 fontSize: size === 'lg' ? '3rem' : size === 'md' ? '2rem' : '1.25rem',
-                filter: 'drop-shadow(0 0 8px rgba(220,38,38,0.6))',
+                filter: 'drop-shadow(0 0 8px rgba(0,245,255,0.6))',
               }}
             />
           </div>
@@ -81,7 +81,7 @@ export default function AvatarPreview({
 
           {/* Effect badge */}
           {effectIcon && (
-            <div className="absolute bottom-2 right-2 text-lg drop-shadow-[0_0_8px_rgba(220,38,38,0.7)]">
+            <div className="absolute bottom-2 right-2 text-lg drop-shadow-[0_0_8px_rgba(0,245,255,0.7)]">
               {effectIcon}
             </div>
           )}

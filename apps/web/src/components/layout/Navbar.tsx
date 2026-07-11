@@ -8,19 +8,19 @@ import { formatToman, maskMobile } from '@/lib/utils'
 import MobileMenu from './MobileMenu'
 
 const menuItems = [
-  { label: 'قلمرو', href: '/games' },
+  { label: 'اتاق فرارها', href: '/games' },
   { label: 'تجربه‌ها', href: '/section/featured' },
-  { label: 'داستان‌ها', href: '/stories' },
-  { label: 'شجاعان', href: '/leaderboard' },
+  { label: 'نظرات و تجربه پلیر', href: '/stories' },
+  { label: 'پلیر های برتر', href: '/leaderboard' },
   { label: 'گردونه', href: '/wheel' },
-  { label: 'انجمن', href: '/community' },
+  { label: 'چت آنلاین', href: '/community' },
 ]
 
 const authDropdownItems = [
   { label: 'پروفایل', href: '/profile', icon: 'fas fa-user', iconClassName: 'text-red-400' },
   { label: 'کیف پول', href: '/wallet', icon: 'fas fa-wallet', iconClassName: 'text-yellow-400' },
   { label: 'رزروهای من', href: '/bookings', icon: 'fas fa-calendar-check', iconClassName: 'text-red-400' },
-  { label: 'انجمن', href: '/community', icon: 'fas fa-users', iconClassName: 'text-red-400' },
+  { label: 'چت آنلاین', href: '/community', icon: 'fas fa-users', iconClassName: 'text-red-400' },
   { label: 'دعوت', href: '/invites', icon: 'fas fa-user-plus', iconClassName: 'text-red-400' },
   { label: 'پشتیبانی', href: '/tickets', icon: 'fas fa-headset', iconClassName: 'text-red-400' },
   { label: 'اعلان‌ها', href: '/notifications', icon: 'fas fa-bell', iconClassName: 'text-red-400' },
@@ -48,18 +48,20 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-500 ${
           scrolled
-            ? 'bg-black/95 backdrop-blur-md border-b border-red-900/50 shadow-lg shadow-red-950/50'
-            : 'bg-gradient-to-b from-black/80 to-transparent'
+            ? 'border-white/10 bg-[#05070a]/90 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-2xl'
+            : 'border-white/10 bg-[#05070a]/70 backdrop-blur-xl'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 h-[72px] flex items-center gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-            <span className="text-2xl heartbeat inline-block">⏳</span>
-            <span className="font-cinzel font-black text-xl tracking-wider flicker text-white">
-              TIK TAK RUN
+            <span className="grid h-10 w-10 place-items-center rounded-[11px] bg-gradient-to-br from-[#b026ff] to-[#00f5ff] text-xl text-white shadow-[0_0_20px_rgba(176,38,255,0.6)]">
+              ◈
+            </span>
+            <span className="font-cinzel font-black text-lg text-white">
+              TIK TAK <span className="glow-teal">RUN</span>
             </span>
           </Link>
 
@@ -71,8 +73,8 @@ export default function Navbar() {
                   href={item.href}
                   className={`px-3 py-2 rounded-lg text-sm font-fa font-medium transition-all duration-300 ${
                     pathname === item.href || pathname.startsWith(item.href + '/')
-                      ? 'text-red-400 bg-red-950/40'
-                      : 'text-gray-300 hover:text-red-400 hover:bg-red-950/20'
+                      ? 'text-[#00f5ff] bg-white/[0.04] shadow-[inset_0_0_14px_rgba(0,245,255,0.16)]'
+                      : 'text-[#9aa3b2] hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
                   {item.label}
@@ -88,10 +90,10 @@ export default function Navbar() {
                 {/* Wallet pill */}
                 <Link
                   href="/wallet"
-                  className="hidden md:flex items-center gap-2 bg-yellow-900/30 border border-yellow-700/40 rounded-full px-3 py-1.5 transition-all hover:border-yellow-500/60 hover:bg-yellow-900/40"
+                  className="hidden md:flex items-center gap-2 rounded-full border border-[#00f5ff]/30 bg-white/[0.04] px-3 py-1.5 transition-all hover:border-[#00f5ff]/60"
                 >
-                  <i className="fas fa-wallet text-yellow-400 text-xs" />
-                  <span className="text-yellow-300 text-xs font-bold">
+                  <span className="glow-teal text-xs">◈</span>
+                  <span className="text-[#00f5ff] text-xs font-bold">
                     {formatToman(user.walletBalance)} ت
                   </span>
                 </Link>
@@ -100,16 +102,16 @@ export default function Navbar() {
                 <div className="relative">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2 bg-red-950/30 border border-red-800/40 rounded-full px-2 py-1.5 hover:border-red-600/60 transition-all"
+                    className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] py-1.5 pl-3 pr-1.5 transition-all hover:border-[#00f5ff]/45"
                   >
                     {user.avatar ? (
                       <img
                         src={user.avatar}
                         alt={user.name || 'کاربر'}
-                        className="w-7 h-7 rounded-full object-cover"
+                        className="w-8 h-8 rounded-full object-cover ring-2 ring-[#00f5ff]/35"
                       />
                     ) : (
-                      <div className="w-7 h-7 rounded-full bg-red-800 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff00e5] to-[#b026ff] flex items-center justify-center ring-2 ring-[#00f5ff]/35">
                         <i className="fas fa-user text-xs text-white" />
                       </div>
                     )}
@@ -120,25 +122,25 @@ export default function Navbar() {
                   </button>
 
                   {userMenuOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-52 dark-card rounded-xl border border-red-900/40 shadow-xl shadow-black/80 overflow-hidden z-50">
+                    <div className="absolute right-0 top-full mt-2 w-52 dark-card rounded-xl overflow-hidden z-50">
                       {authDropdownItems.map((item) => (
                         <Link
                           key={item.href}
                           href={item.href}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-red-950/40 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04] transition-colors"
                           onClick={() => setUserMenuOpen(false)}
                         >
                           <i className={`${item.icon} ${item.iconClassName} w-4`} />
                           <span className="text-sm text-gray-200">{item.label}</span>
                         </Link>
                       ))}
-                      <div className="border-t border-red-900/30 mt-1">
+                      <div className="border-t border-white/10 mt-1">
                         <button
                           onClick={() => { logout(); setUserMenuOpen(false) }}
-                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-950/40 transition-colors text-right"
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04] transition-colors text-right"
                         >
-                          <i className="fas fa-sign-out-alt text-red-500 w-4" />
-                          <span className="text-sm text-red-400">خروج</span>
+                          <i className="fas fa-sign-out-alt text-[#ff5470] w-4" />
+                          <span className="text-sm text-[#ff5470]">خروج</span>
                         </button>
                       </div>
                     </div>
@@ -157,7 +159,7 @@ export default function Navbar() {
 
             {/* Mobile hamburger */}
             <button
-              className="lg:hidden p-2 rounded-lg bg-red-950/30 border border-red-800/30 text-gray-300 hover:text-white transition-colors"
+              className="lg:hidden p-2 rounded-lg bg-white/[0.04] border border-white/10 text-gray-300 hover:text-white transition-colors"
               onClick={() => setMobileOpen(true)}
               aria-label="منو"
             >

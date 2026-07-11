@@ -110,21 +110,21 @@ export function getTextPosition(
 }
 
 /**
- * Slice gradient colors (horror theme)
+ * Slice gradient colors (neon theme)
  */
 export function getSliceColors(index: number): {
   start: string;
   end: string;
 } {
   const palettes = [
-    { start: '#7f1d1d', end: '#450a0a' }, // deep red
-    { start: '#991b1b', end: '#3b0a0a' }, // crimson
-    { start: '#1a1a2e', end: '#0d0d1a' }, // dark blue
-    { start: '#16213e', end: '#0a0a1a' }, // midnight
-    { start: '#6b1a1a', end: '#3d0000' }, // blood
-    { start: '#1f1f1f', end: '#0a0a0a' }, // dark gray
-    { start: '#4a0e0e', end: '#2d0000' }, // maroon
-    { start: '#2d1b33', end: '#1a0a20' }, // dark purple
+    { start: '#00f5ff', end: '#0086cc' },
+    { start: '#b026ff', end: '#6d1ad6' },
+    { start: '#ff00e5', end: '#d1009e' },
+    { start: '#ffd700', end: '#ff9d00' },
+    { start: '#2ee6a0', end: '#1ba877' },
+    { start: '#2b3346', end: '#0e121a' },
+    { start: '#ff5470', end: '#d63b52' },
+    { start: '#00b3ff', end: '#005f9e' },
   ];
   return palettes[index % palettes.length];
 }

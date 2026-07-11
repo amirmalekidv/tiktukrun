@@ -50,7 +50,7 @@ export default function CancelBookingDialog({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#0d0d0d] border border-red-900/50 rounded-2xl p-6 max-w-sm w-full"
+            className="bg-white/[0.03] border border-red-900/50 rounded-2xl p-6 max-w-sm w-full"
           >
             <div className="text-center mb-6">
               <div className="w-16 h-16 rounded-full bg-red-900/30 border-2 border-red-700 flex items-center justify-center mx-auto mb-4">

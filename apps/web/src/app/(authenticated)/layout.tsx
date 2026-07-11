@@ -26,7 +26,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]" dir="rtl">
+    <div className="min-h-screen bg-transparent" dir="rtl">
       <main className="max-w-7xl mx-auto px-4 pb-8 pt-24 md:pt-28">
         {children}
       </main>

@@ -38,7 +38,7 @@ export default function BadgesList({
 }: BadgesListProps) {
   if (!badges.length) {
     return (
-      <div className="dark-card rounded-xl p-6 border border-red-900/20 bg-[#0d0d0d] text-center">
+      <div className="dark-card rounded-xl p-6 border border-red-900/20 bg-white/[0.03] text-center">
         <i className="fas fa-medal text-4xl text-gray-700 mb-3 block" />
         <p className="text-gray-500 text-sm font-vazir">هنوز نشانی کسب نشده است</p>
       </div>
@@ -46,7 +46,7 @@ export default function BadgesList({
   }
 
   return (
-    <div className="dark-card rounded-xl p-5 border border-red-900/20 bg-[#0d0d0d]">
+    <div className="dark-card rounded-xl p-5 border border-red-900/20 bg-white/[0.03]">
       <h3 className="font-cinzel text-red-500 text-sm mb-4 flex items-center gap-2">
         <i className="fas fa-medal" />
         {title}

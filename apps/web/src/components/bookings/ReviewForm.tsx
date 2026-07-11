@@ -15,7 +15,7 @@ export default function ReviewForm({ bookingId, onSuccess }: Props) {
     finally { setLoading(false); }
   };
   return (
-    <div className="dark-card rounded-2xl p-5 border border-red-900/30 bg-[#0d0d0d]">
+    <div className="dark-card rounded-2xl p-5 border border-red-900/30 bg-white/[0.03]">
       <h3 className="font-cinzel text-red-500 text-sm mb-4"><i className="fas fa-star ml-2" />ثبت نظر</h3>
       <div className="flex gap-2 mb-4">{[1,2,3,4,5].map(s => (
         <button key={s} onClick={() => setRating(s)} className={`text-2xl transition-all ${s <= rating ? 'text-yellow-400' : 'text-gray-700'}`}>★</button>

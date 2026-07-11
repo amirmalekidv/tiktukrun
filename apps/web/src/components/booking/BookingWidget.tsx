@@ -20,9 +20,9 @@ export default function BookingWidget({ game }: BookingWidgetProps) {
   }
 
   return (
-    <div className="dark-card rounded-2xl p-6 space-y-5">
+    <div className="dark-card rounded-[18px] p-6 space-y-5">
       {/* Header */}
-      <div className="text-center border-b border-red-950/40 pb-4">
+      <div className="text-center border-b border-white/10 pb-4">
         <h3 className="font-cinzel font-bold text-white text-lg mb-1">رزرو آنلاین</h3>
         <p className="text-gray-400 text-xs">سریع، آسان، مطمئن</p>
       </div>
@@ -30,13 +30,13 @@ export default function BookingWidget({ game }: BookingWidgetProps) {
       {/* Players counter */}
       <div>
         <label className="block text-gray-300 text-sm font-medium mb-3">
-          <i className="fas fa-users text-red-500 ml-1" />
+          <i className="fas fa-users text-[#00f5ff] ml-1" />
           تعداد بازیکن
         </label>
-        <div className="flex items-center justify-between bg-red-950/20 border border-red-900/30 rounded-xl p-1">
+        <div className="flex items-center justify-between bg-white/[0.03] border border-white/10 rounded-xl p-1">
           <button
             onClick={() => setPlayers(Math.max(game.minPlayers, players - 1))}
-            className="w-10 h-10 rounded-lg bg-red-900/40 text-white font-bold hover:bg-red-800/60 transition-all disabled:opacity-40"
+            className="w-10 h-10 rounded-lg bg-[#b026ff]/25 text-white font-bold hover:bg-[#b026ff]/40 transition-all disabled:opacity-40"
             disabled={players <= game.minPlayers}
           >
             −
@@ -47,7 +47,7 @@ export default function BookingWidget({ game }: BookingWidgetProps) {
           </div>
           <button
             onClick={() => setPlayers(Math.min(game.maxPlayers, players + 1))}
-            className="w-10 h-10 rounded-lg bg-red-900/40 text-white font-bold hover:bg-red-800/60 transition-all disabled:opacity-40"
+            className="w-10 h-10 rounded-lg bg-[#b026ff]/25 text-white font-bold hover:bg-[#b026ff]/40 transition-all disabled:opacity-40"
             disabled={players >= game.maxPlayers}
           >
             +
@@ -60,7 +60,7 @@ export default function BookingWidget({ game }: BookingWidgetProps) {
       </div>
 
       {/* Price preview */}
-      <div className="space-y-2 bg-black/30 rounded-xl p-4 border border-red-950/20">
+      <div className="space-y-2 bg-white/[0.03] rounded-xl p-4 border border-white/10">
         <div className="flex justify-between text-sm">
           <span className="text-gray-400">قیمت پایه</span>
           <span className="text-gray-200">{formatToman(game.basePrice)} ت</span>
@@ -71,7 +71,7 @@ export default function BookingWidget({ game }: BookingWidgetProps) {
             <span className="text-gray-200">{formatToman(game.pricePerPlayer * players)} ت</span>
           </div>
         )}
-        <div className="border-t border-red-950/40 pt-2 flex justify-between">
+        <div className="border-t border-white/10 pt-2 flex justify-between">
           <span className="text-gray-300 font-medium">مجموع</span>
           <PriceTag amount={totalPrice} size="lg" />
         </div>
@@ -81,11 +81,11 @@ export default function BookingWidget({ game }: BookingWidgetProps) {
       {/* Quick info */}
       <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
         <div className="flex items-center gap-1">
-          <i className="fas fa-clock text-red-600 w-4" />
+          <i className="fas fa-clock text-[#00f5ff] w-4" />
           {toPersianDigits(game.duration)} دقیقه
         </div>
         <div className="flex items-center gap-1">
-          <i className="fas fa-map-marker-alt text-red-600 w-4" />
+          <i className="fas fa-map-marker-alt text-[#00f5ff] w-4" />
           {game.branch.city.name}
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function BookingWidget({ game }: BookingWidgetProps) {
           امکان لغو تا ۲۴ ساعت قبل
         </div>
         <div className="flex items-center gap-2">
-          <i className="fas fa-headset text-red-500 w-4" />
+          <i className="fas fa-headset text-[#00f5ff] w-4" />
           پشتیبانی ۲۴/۷
         </div>
       </div>

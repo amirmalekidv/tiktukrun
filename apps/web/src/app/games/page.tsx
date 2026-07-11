@@ -40,9 +40,10 @@ function GamesContent() {
     <>
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Page header */}
-        <div className="mb-8">
-          <h1 className="font-cinzel font-black text-3xl md:text-4xl text-white mb-2">
-            <span className="blood-text">قلمرو</span> بازی‌ها
+        <div className="mb-8 text-center lg:text-right">
+          <span className="font-cinzel text-xs font-bold text-[#00f5ff] glow-teal">EXPLORE</span>
+          <h1 className="mt-3 font-cinzel font-black text-3xl md:text-4xl text-white mb-2">
+            <span className="gradient-text">قلمرو</span> بازی‌ها
           </h1>
           <p className="text-gray-400">
             {isLoading ? '...' : `${toPersianDigits(total)} بازی یافت شد`}
@@ -63,10 +64,10 @@ function GamesContent() {
             <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
               {/* Mobile filter toggle */}
               <button
-                className="lg:hidden flex items-center gap-2 bg-red-950/30 border border-red-800/30 rounded-lg px-4 py-2 text-sm text-gray-300 hover:border-red-600/50 transition-all"
+                className="lg:hidden flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-gray-300 transition-all hover:border-[#00f5ff]/50"
                 onClick={() => setMobileFilterOpen(true)}
               >
-                <i className="fas fa-sliders-h text-red-500" />
+                <i className="fas fa-sliders-h text-[#00f5ff]" />
                 فیلتر
               </button>
 
@@ -76,7 +77,7 @@ function GamesContent() {
               </span>
 
               {/* View mode */}
-              <div className="flex items-center gap-2 bg-red-950/20 border border-red-950/40 rounded-lg p-1">
+              <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] p-1">
                 <button
                   onClick={() => setViewMode('grid')}
                   className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'tab-active-dark' : 'text-gray-400 hover:text-white'}`}
@@ -136,7 +137,7 @@ function GamesContent() {
                         key={pageNum}
                         onClick={() => setPage(pageNum)}
                         className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
-                          page === pageNum ? 'tab-active-dark' : 'text-gray-400 hover:text-white hover:bg-red-950/30'
+                          page === pageNum ? 'tab-active-dark' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
                         }`}
                       >
                         {toPersianDigits(pageNum)}
@@ -163,8 +164,8 @@ function GamesContent() {
       {mobileFilterOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setMobileFilterOpen(false)} />
-          <div className="absolute right-0 top-0 bottom-0 w-80 bg-bg-dark overflow-y-auto">
-            <div className="p-4 flex items-center justify-between border-b border-red-900/30">
+          <div className="absolute right-0 top-0 bottom-0 w-80 bg-[#05070a]/95 overflow-y-auto backdrop-blur-xl">
+            <div className="p-4 flex items-center justify-between border-b border-white/10">
               <h3 className="font-cinzel font-bold text-white">فیلترها</h3>
               <button onClick={() => setMobileFilterOpen(false)} className="text-gray-400 hover:text-white">
                 <i className="fas fa-times text-xl" />
@@ -184,12 +185,12 @@ export default function GamesPage() {
   return (
     <div className="min-h-screen pt-20">
       {/* Hero banner */}
-      <div className="relative py-12 mb-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-red-950/20 to-transparent" />
+      <div className="relative py-12 mb-4 overflow-hidden border-b border-white/10">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#00f5ff]/10 to-transparent" />
         <div className="absolute inset-0"
           style={{
-            backgroundImage: `linear-gradient(rgba(220,38,38,0.1) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(220,38,38,0.1) 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(rgba(0,245,255,0.1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(176,38,255,0.1) 1px, transparent 1px)`,
             backgroundSize: '60px 60px',
           }}
         />

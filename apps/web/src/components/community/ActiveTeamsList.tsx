@@ -121,7 +121,7 @@ function TeamSection({
   onJoin: (teamId: string) => void;
 }) {
   return (
-    <div className="dark-card rounded-2xl p-5 border border-red-900/30 bg-[#0d0d0d]">
+    <div className="dark-card rounded-[18px] p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className={`font-cinzel text-sm ${accentClassName}`}>
           <i className={`${icon} ml-2`} />
@@ -219,7 +219,7 @@ export default function ActiveTeamsList() {
         {[...Array(2)].map((_, i) => (
           <div
             key={i}
-            className="dark-card rounded-2xl p-5 border border-red-900/30 bg-[#0d0d0d]"
+            className="dark-card rounded-[18px] p-5"
           >
             <div className="space-y-3">
               {[...Array(2)].map((__, j) => (
@@ -250,7 +250,7 @@ export default function ActiveTeamsList() {
       <TeamSection
         title="تیم‌های در حال عضوگیری"
         icon="fas fa-users"
-        accentClassName="text-red-500"
+        accentClassName="text-[#00f5ff]"
         count={activeTeams.length}
         emptyText="هیچ تیمی برای عضویت وجود ندارد"
         teams={activeTeams}
