@@ -126,8 +126,13 @@ function LoginForm() {
       {/* Logo */}
       <div className="text-center">
         <Link href="/" className="mb-4 inline-flex items-center justify-center gap-2">
-          <span className="grid h-11 w-11 place-items-center rounded-[11px] bg-gradient-to-br from-[#b026ff] to-[#00f5ff] text-xl text-white shadow-[0_0_20px_rgba(176,38,255,0.6)]">
-            ◈
+          <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-[11px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.18)]">
+            <img
+              src="/tiktakrun-logo.svg"
+              alt=""
+              aria-hidden="true"
+              className="h-9 w-9 object-contain"
+            />
           </span>
           <span className="font-cinzel font-black text-2xl text-white">
             TIK TAK <span className="glow-teal">RUN</span>

@@ -49,8 +49,13 @@ export default function MobileMenu({ isOpen, onClose, menuItems, user, isAuthent
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-gradient-to-br from-[#b026ff] to-[#00f5ff] text-white shadow-[0_0_20px_rgba(176,38,255,0.45)]">
-              ◈
+            <span className="grid h-9 w-9 place-items-center overflow-hidden rounded-[11px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.16)]">
+              <img
+                src="/tiktakrun-logo.svg"
+                alt=""
+                aria-hidden="true"
+                className="h-7 w-7 object-contain"
+              />
             </span>
             <span className="font-cinzel font-black text-lg text-white">
               TIK TAK <span className="glow-teal">RUN</span>

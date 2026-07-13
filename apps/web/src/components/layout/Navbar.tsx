@@ -9,7 +9,7 @@ import MobileMenu from './MobileMenu'
 
 const menuItems = [
   { label: 'اتاق فرارها', href: '/games' },
-  { label: 'تجربه‌ها', href: '/section/featured' },
+  { label: 'برترین‌ها', href: '/section/featured' },
   { label: 'نظرات و تجربه پلیر', href: '/stories' },
   { label: 'پلیر های برتر', href: '/leaderboard' },
   { label: 'گردونه', href: '/wheel' },
@@ -57,8 +57,13 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 h-[72px] flex items-center gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-            <span className="grid h-10 w-10 place-items-center rounded-[11px] bg-gradient-to-br from-[#b026ff] to-[#00f5ff] text-xl text-white shadow-[0_0_20px_rgba(176,38,255,0.6)]">
-              ◈
+            <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-[11px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.18)]">
+              <img
+                src="/tiktakrun-logo.svg"
+                alt=""
+                aria-hidden="true"
+                className="h-8 w-8 object-contain"
+              />
             </span>
             <span className="font-cinzel font-black text-lg text-white">
               TIK TAK <span className="glow-teal">RUN</span>

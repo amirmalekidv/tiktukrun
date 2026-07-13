@@ -5,7 +5,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'TIK TAK RUN — پنل مدیریت',
   description: 'داشبورد مدیریت پلتفرم سرگرمی TIK TAK RUN',
-  icons: { icon: '/favicon.ico' },
+  icons: {
+    icon: [{ url: '/tiktakrun-logo.svg', type: 'image/svg+xml' }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

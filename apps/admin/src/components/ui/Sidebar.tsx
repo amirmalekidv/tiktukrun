@@ -212,8 +212,13 @@ export default function Sidebar({ collapsed }: { collapsed?: boolean }) {
       {/* Logo */}
       <div className="p-4 border-b border-slate-800 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Zap className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_0_18px_rgba(255,255,255,0.12)]">
+            <img
+              src="/tiktakrun-logo.svg"
+              alt=""
+              aria-hidden="true"
+              className="h-8 w-8 object-contain"
+            />
           </div>
           {!collapsed && (
             <div>

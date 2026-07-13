@@ -72,9 +72,13 @@ export default function LoginPage() {
       {/* Logo */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #dc2626, #7c3aed)' }}>
-            <i className="fas fa-hourglass-half text-2xl text-white" />
+          <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.14)]">
+            <img
+              src="/tiktakrun-logo.svg"
+              alt=""
+              aria-hidden="true"
+              className="h-10 w-10 object-contain"
+            />
           </div>
           <div>
             <h1 className="font-cinzel text-2xl font-bold text-white tracking-widest">

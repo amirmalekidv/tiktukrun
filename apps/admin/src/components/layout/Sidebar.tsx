@@ -149,9 +149,13 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-4 border-b border-red-900/30">
         <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #dc2626, #7c3aed)' }}>
-            <i className="fas fa-hourglass-half text-white text-sm" />
+          <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center flex-shrink-0 shadow-[0_0_16px_rgba(255,255,255,0.12)]">
+            <img
+              src="/tiktakrun-logo.svg"
+              alt=""
+              aria-hidden="true"
+              className="h-7 w-7 object-contain"
+            />
           </div>
           <div>
             <h1 className="font-cinzel text-sm font-bold text-white tracking-widest leading-tight">

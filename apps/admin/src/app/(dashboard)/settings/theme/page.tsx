@@ -39,8 +39,8 @@ const defaults: ThemeSettings = {
   fontFamilyEn: 'Inter',
   fontSize: 'md',
   
-  logoUrl: '/logo.png',
-  faviconUrl: '/favicon.ico',
+  logoUrl: '/tiktakrun-logo.svg',
+  faviconUrl: '/tiktakrun-logo.svg',
   loginBgUrl: '',
   
   borderRadius: 'lg',
@@ -230,11 +230,11 @@ export default function ThemeSettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm text-slate-400 mb-1">آدرس لوگو</label>
-              <input {...register('logoUrl')} className="input-field w-full" placeholder="/logo.png" />
+              <input {...register('logoUrl')} className="input-field w-full" placeholder="/tiktakrun-logo.svg" />
             </div>
             <div>
               <label className="block text-sm text-slate-400 mb-1">آدرس فاوآیکن</label>
-              <input {...register('faviconUrl')} className="input-field w-full" placeholder="/favicon.ico" />
+              <input {...register('faviconUrl')} className="input-field w-full" placeholder="/tiktakrun-logo.svg" />
             </div>
             <div>
               <label className="block text-sm text-slate-400 mb-1">تصویر پس‌زمینه صفحه ورود</label>

@@ -142,10 +142,11 @@ export default function GameCard({ game, variant = 'default' }: GameCardProps) {
                 <span className="text-[#00f5ff]/70 text-xs mr-1">تومان</span>
               </div>
             </div>
-            <button className="btn-blood flex-shrink-0 px-4 py-2 text-sm">
+            {/* NOTE: avoid nested interactive elements inside <Link> for reliable navigation */}
+            <div className="btn-blood flex-shrink-0 px-4 py-2 text-sm" role="presentation">
               <i className="fas fa-calendar-plus ml-1 text-xs" />
               رزرو
-            </button>
+            </div>
           </div>
         </div>
       </article>

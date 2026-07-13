@@ -26,7 +26,7 @@ import helmet from 'helmet';
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
 import { AppModule } from './app.module';
-import { getStorageRoot } from './common/utils/storage-path';
+import { getStorageReadRoots } from './common/utils/storage-path';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -117,11 +117,14 @@ async function bootstrap() {
 
   // ─── Static files (uploads) ───────────────────────────────────────────────
   // Keep the public uploads mount aligned with where services write files.
-  // Docker: STORAGE_PATH=/storage/uploads (bind-mounted). Local: <cwd>/storage/uploads.
-  app.useStaticAssets(getStorageRoot(), {
-    prefix: '/uploads/',
-    maxAge: '30d',
-  });
+  // Docker: STORAGE_PATH=/storage/uploads (bind-mounted).
+  // Local: root storage/uploads, with legacy API-local uploads served as a fallback.
+  for (const uploadsRoot of getStorageReadRoots()) {
+    app.useStaticAssets(uploadsRoot, {
+      prefix: '/uploads/',
+      maxAge: '30d',
+    });
+  }
 
   // ─── Socket.io Adapter ────────────────────────────────────────────────────
   const redisAdapter = new RedisIoAdapter(app);
