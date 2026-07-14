@@ -19,7 +19,13 @@ import {
 import { nanoid } from 'nanoid';
 import { TransactionType, CurrencyType } from '@prisma/client';
 import { parsePagination, buildPaginatedResponse } from '../../../common/helpers/pagination.helper';
-import { v4 as uuid } from 'uuid';
+import {
+  BranchScopeContext,
+  applyBranchFilter,
+  assertResourceInBranchScope,
+  isBranchManagerRole,
+  resolveBranchFilter,
+} from '../../../common/helpers/branch-scope.helper';
 
 @Injectable()
 export class BookingsAdminService {
@@ -32,23 +38,16 @@ export class BookingsAdminService {
     private notif:    NotificationsService,
   ) {}
 
-  async findAll(
-    query:      BookingQueryDto,
-    userRole:   UserRole,
-    branchId?:  string,
-  ) {
+  async findAll(query: BookingQueryDto, scope: BranchScopeContext) {
     const { skip, take, page, limit } = parsePagination(query);
     const where: any = {};
 
-    // BRANCH_MANAGER می‌تواند فقط شعبه خودش را ببیند
-    if (userRole === UserRole.BRANCH_MANAGER && branchId) {
-      where.branchId = branchId;
-    }
+    applyBranchFilter(where, scope);
 
     if (query.status)   where.status   = query.status;
     if (query.userId)   where.userId   = query.userId;
     if (query.gameId)   where.gameId   = query.gameId;
-    if (query.branchId && userRole !== UserRole.BRANCH_MANAGER) {
+    if (query.branchId && !isBranchManagerRole(scope.role)) {
       where.branchId = query.branchId;
     }
 
@@ -83,8 +82,11 @@ export class BookingsAdminService {
     return buildPaginatedResponse(items, total, page, limit);
   }
 
-  async getCalendar(branchId?: string, from?: string, to?: string) {
-    // [QA Fix 2026-05-25] Defaults: full-month window if not provided; branchId optional & Int
+  async getCalendar(
+    branchFilter?: string | { in: string[] },
+    from?: string,
+    to?: string,
+  ) {
     const now = new Date();
     const start = from ? new Date(from) : new Date(now.getFullYear(), now.getMonth(), 1);
     const end = to ? new Date(to) : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
@@ -92,8 +94,8 @@ export class BookingsAdminService {
       slotDateTime: { gte: start, lte: end },
       status: { in: ['PENDING', 'CONFIRMED'] },
     };
-    if (branchId !== undefined && branchId !== null && branchId !== '') {
-      where.branchId = branchId;
+    if (branchFilter !== undefined && branchFilter !== null && branchFilter !== '') {
+      where.branchId = branchFilter;
     }
     const bookings = await this.prisma.booking.findMany({
       where,
@@ -104,7 +106,6 @@ export class BookingsAdminService {
       orderBy: { slotDateTime: 'asc' },
     });
 
-    // گروه‌بندی بر اساس تاریخ
     const calendar: Record<string, any[]> = {};
     for (const b of bookings as any[]) {
       const dateKey = b.slotDateTime.toISOString().split('T')[0];
@@ -117,10 +118,10 @@ export class BookingsAdminService {
       });
     }
 
-    return { branchId, from: start.toISOString(), to: end.toISOString(), calendar };
+    return { branchId: branchFilter, from: start.toISOString(), to: end.toISOString(), calendar };
   }
 
-  async findOne(id: string, userRole: UserRole, branchId?: string) {
+  async findOne(id: string, scope: BranchScopeContext) {
     const booking = await this.prisma.booking.findUnique({
       where:   { id },
       include: {
@@ -132,9 +133,7 @@ export class BookingsAdminService {
     });
     if (!booking) throw new NotFoundException('رزرو یافت نشد');
 
-    if (userRole === UserRole.BRANCH_MANAGER && branchId !== booking.branchId) {
-      throw new NotFoundException('رزرو یافت نشد');
-    }
+    assertResourceInBranchScope(booking.branchId, scope, 'رزرو یافت نشد');
 
     return booking;
   }
@@ -142,10 +141,9 @@ export class BookingsAdminService {
   async updateStatus(
     id:   string,
     dto:  AdminUpdateBookingStatusDto,
-    userRole: UserRole,
-    branchId?: string,
+    scope: BranchScopeContext,
   ) {
-    const booking = await this.findOne(id, userRole, branchId);
+    const booking = await this.findOne(id, scope);
     this.sm.assertTransition(booking.status as any, dto.status as any);
 
     const data: any = {
@@ -159,12 +157,10 @@ export class BookingsAdminService {
 
     const updated = await this.prisma.booking.update({ where: { id }, data });
 
-    // اگر COMPLETED، اعطای جوایز
     if (dto.status === 'COMPLETED') {
       await this.rewards.awardBookingCompletion(id, booking.userId);
     }
 
-    // اطلاع‌رسانی
     const notifType = {
       CONFIRMED: NotificationType.BOOKING_CONFIRMED,
       CANCELLED: NotificationType.BOOKING_CANCELLED,
@@ -184,11 +180,9 @@ export class BookingsAdminService {
     return updated;
   }
 
-  async refund(id: string, dto: RefundBookingDto, userRole: UserRole, branchId?: string) {
-    const booking = await this.findOne(id, userRole, branchId);
+  async refund(id: string, dto: RefundBookingDto, scope: BranchScopeContext) {
+    const booking = await this.findOne(id, scope);
 
-    // طبق state machine فقط COMPLETED → REFUNDED مجاز است
-    // برای CONFIRMED → ابتدا باید complete شود سپس refund
     this.sm.assertTransition(booking.status as any, 'REFUNDED');
 
     const amount = Math.round(dto.amount);
@@ -199,7 +193,6 @@ export class BookingsAdminService {
         data:  { status: 'REFUNDED', cancelReason: dto.reason },
       });
 
-      // افزایش موجودی کیف پول کاربر و ثبت تراکنش استرداد
       const wallet = await tx.wallet.upsert({
         where:  { userId: booking.userId },
         create: { userId: booking.userId, tomanBalance: amount },
@@ -231,8 +224,8 @@ export class BookingsAdminService {
     return { success: true, data: { refundAmount: amount } };
   }
 
-  async complete(id: string, userRole: UserRole, branchId?: string) {
-    const booking = await this.findOne(id, userRole, branchId);
+  async complete(id: string, scope: BranchScopeContext) {
+    const booking = await this.findOne(id, scope);
     this.sm.assertTransition(booking.status as any, 'COMPLETED');
 
     await this.prisma.booking.update({
@@ -247,12 +240,10 @@ export class BookingsAdminService {
   async ratePlayer(
     bookingId: string,
     dto:       RatePlayerDto,
-    userRole:  UserRole,
-    branchId?: string,
+    scope:     BranchScopeContext,
   ) {
-    const booking = await this.findOne(bookingId, userRole, branchId);
+    const booking = await this.findOne(bookingId, scope);
 
-    // XP delta (مثبت یا منفی)
     await this.prisma.userProfile.update({
       where: { userId: booking.userId },
       data:  { xp: { increment: dto.xpDelta } },
@@ -264,7 +255,7 @@ export class BookingsAdminService {
         toUserId:   booking.userId,
         bookingId,
         xpChange:   dto.xpDelta,
-        reason:     dto.reason ?? `rated by ${userRole}`,
+        reason:     dto.reason ?? `rated by ${scope.role}`,
       },
     });
 
@@ -272,17 +263,13 @@ export class BookingsAdminService {
     return record;
   }
 
-  async exportExcel(query: BookingQueryDto, userRole: UserRole, branchId?: string) {
+  async exportExcel(query: BookingQueryDto, scope: BranchScopeContext) {
     const pageSize = 100;
     let page = 1;
     const rows: any[] = [];
 
     while (true) {
-      const result = await this.findAll(
-        { ...query, limit: pageSize, page },
-        userRole,
-        branchId,
-      );
+      const result = await this.findAll({ ...query, limit: pageSize, page }, scope);
       const batch = (result as any).data as any[];
       rows.push(...batch);
       const totalPages = (result as any).pagination?.totalPages ?? 1;
@@ -308,15 +295,7 @@ export class BookingsAdminService {
     return csv;
   }
 
-  // ─── Manual booking creation (admin / POS) ─────────────────────────────────
-  // Records a booking on behalf of a customer (walk-in / phone). Branch managers
-  // may only create bookings for games in their own branch. Payment is recorded
-  // as already settled with the chosen method.
-  async adminCreate(
-    dto: AdminCreateBookingDto,
-    userRole: UserRole,
-    branchId?: string,
-  ) {
+  async adminCreate(dto: AdminCreateBookingDto, scope: BranchScopeContext) {
     const user = await this.prisma.user.findUnique({ where: { id: dto.userId } });
     if (!user) throw new NotFoundException('کاربر یافت نشد');
 
@@ -324,10 +303,11 @@ export class BookingsAdminService {
     if (!game) throw new NotFoundException('بازی یافت نشد');
     if (!game.isActive) throw new BadRequestException('این بازی فعال نیست');
 
-    // Branch managers can only book games in their own branch.
-    if (userRole === UserRole.BRANCH_MANAGER && branchId && game.branchId !== branchId) {
-      throw new BadRequestException('شما فقط می‌توانید برای بازی‌های شعبه خود رزرو ثبت کنید');
-    }
+    assertResourceInBranchScope(
+      game.branchId,
+      scope,
+      'شما فقط می‌توانید برای بازی‌های شعبه خود رزرو ثبت کنید',
+    );
 
     const slotDt = new Date(dto.slotDateTime);
     if (Number.isNaN(slotDt.getTime())) {

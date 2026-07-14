@@ -75,12 +75,15 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       roles[0] ??
       UserRole.CUSTOMER;
 
+    const branchIds = user.managedBranches.map((b) => b.id);
+
     const requestUser: CurrentUserPayload = {
       id: user.id,
       mobile: user.mobile,
       roles,
       role: primaryRole,
-      branchId: user.managedBranches[0]?.id,
+      branchId: branchIds[0],
+      branchIds,
       sessionId,
     };
 

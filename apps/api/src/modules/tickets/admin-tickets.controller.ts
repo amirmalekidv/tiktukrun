@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { toBranchScope } from '../../common/helpers/branch-scope.helper';
 import { IsString, IsOptional, IsEnum } from 'class-validator';
 
 class UpdateTicketDto {
@@ -58,8 +59,7 @@ export class AdminTicketsController {
       { status, priority, assigneeId, branchId },
       Number(page),
       Number(limit),
-      user?.role,
-      user?.branchId,
+      user ? toBranchScope(user) : undefined,
     );
     return { success: true, ...result };
   }
@@ -73,8 +73,11 @@ export class AdminTicketsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'جزئیات تیکت' })
-  async findOne(@Param('id') id: string) {
-    const data = await this.ticketsService.findOneAdmin(id);
+  async findOne(@Param('id') id: string, @CurrentUser() user?: any) {
+    const data = await this.ticketsService.findOneAdmin(
+      id,
+      user ? toBranchScope(user) : undefined,
+    );
     return { success: true, data };
   }
 

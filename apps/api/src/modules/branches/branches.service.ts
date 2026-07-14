@@ -4,6 +4,12 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBranchDto, UpdateBranchDto } from './dto/branch.dto';
+import {
+  BranchScopeContext,
+  applyBranchFilter,
+  assertResourceInBranchScope,
+  isBranchManagerRole,
+} from '../../common/helpers/branch-scope.helper';
 
 @Injectable()
 export class BranchesService {
@@ -53,16 +59,48 @@ export class BranchesService {
 
   // ─── Admin ─────────────────────────────────────────────────────────────────
 
-  async findAll(cityId?: string, isActive?: boolean) {
+  async findAllAdmin(
+    scope: BranchScopeContext,
+    cityId?: string,
+    isActive?: boolean,
+  ) {
     const cid = this.toId(cityId);
+    const where: Record<string, unknown> = {
+      ...(cid !== undefined ? { cityId: cid } : {}),
+      ...(isActive !== undefined ? { isActive } : {}),
+    };
+
+    applyBranchFilter(where, scope, 'id');
+
     return this.prisma.branch.findMany({
-      where: {
-        ...(cid !== undefined ? { cityId: cid } : {}),
-        ...(isActive !== undefined ? { isActive } : {}),
+      where,
+      include: {
+        city: true,
+        manager: { select: { id: true, fullName: true, mobile: true } },
+        _count: { select: { games: true, bookings: true } },
       },
-      include: { city: true },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async findOneAdmin(id: string | number, scope: BranchScopeContext) {
+    const bid = this.requireId(id);
+    const branch = await this.prisma.branch.findUnique({
+      where:   { id: bid },
+      include: {
+        city: true,
+        manager: { select: { id: true, fullName: true, mobile: true } },
+        games: {
+          include: { category: true },
+          orderBy: { createdAt: 'desc' },
+        },
+        _count: { select: { bookings: true } },
+      },
+    });
+    if (!branch) throw new NotFoundException('شعبه یافت نشد');
+
+    assertResourceInBranchScope(branch.id, scope, 'شعبه یافت نشد');
+    return branch;
   }
 
   async findOne(id: string | number) {
@@ -90,7 +128,50 @@ export class BranchesService {
         ...(managerId !== undefined ? { managerId } : {}),
         isActive:  dto.isActive ?? true,
       },
-      include: { city: true },
+      include: {
+        city: true,
+        manager: { select: { id: true, fullName: true, mobile: true } },
+      },
+    });
+  }
+
+  async updateAdmin(
+    id: string | number,
+    dto: UpdateBranchDto,
+    scope: BranchScopeContext,
+  ) {
+    const bid = this.requireId(id);
+    await this.findOneAdmin(bid, scope);
+
+    if (isBranchManagerRole(scope.role)) {
+      const allowed: UpdateBranchDto = {
+        name: dto.name,
+        address: dto.address,
+        phone: dto.phone,
+        lat: dto.lat,
+        lng: dto.lng,
+      };
+      return this.prisma.branch.update({
+        where: { id: bid },
+        data: allowed,
+        include: {
+          city: true,
+          manager: { select: { id: true, fullName: true, mobile: true } },
+        },
+      });
+    }
+
+    const data: any = { ...dto };
+    if (data.cityId !== undefined) data.cityId = this.toId(data.cityId);
+    if (data.managerId !== undefined) data.managerId = this.toId(data.managerId);
+
+    return this.prisma.branch.update({
+      where:   { id: bid },
+      data,
+      include: {
+        city: true,
+        manager: { select: { id: true, fullName: true, mobile: true } },
+      },
     });
   }
 

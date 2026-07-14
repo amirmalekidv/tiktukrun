@@ -4,11 +4,12 @@ import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { BRANCH_OPS_ROLES } from '../../common/constants/admin-roles';
 
 @ApiTags('Admin - Analytics')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN', 'SUPER_ADMIN', 'MARKETING')
+@Roles(...BRANCH_OPS_ROLES, 'SUPPORT', 'MARKETING')
 @Controller('admin/analytics')
 export class AdminAnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}

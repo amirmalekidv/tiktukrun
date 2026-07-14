@@ -14,7 +14,7 @@ import {
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
-import { CurrentUserPayload, UserRole } from '@tiktakrun/shared-types';
+import { CurrentUserPayload } from '@tiktakrun/shared-types';
 import { getStorageDir } from '../../common/utils/storage-path';
 
 import { GamesService }      from './services/games.service';
@@ -28,6 +28,8 @@ import { CurrentUser }     from '../../common/decorators/current-user.decorator'
 import { JwtAuthGuard }    from '../../common/guards/jwt-auth.guard';
 import { RolesGuard }      from '../../common/guards/roles.guard';
 import { Roles }           from '../../common/decorators/roles.decorator';
+import { toBranchScope } from '../../common/helpers/branch-scope.helper';
+import { BRANCH_OPS_ROLES, PLATFORM_ADMIN_ROLES } from '../../common/constants/admin-roles';
 
 // ─── Multer config ─────────────────────────────────────────────────────────────
 const multerStorage = diskStorage({
@@ -93,7 +95,7 @@ export class GamesController {
 
 // ─── Admin Games Controller ────────────────────────────────────────────────────
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.BRANCH_MANAGER)
+@Roles(...BRANCH_OPS_ROLES)
 @Controller('admin/games')
 export class GamesAdminController {
   constructor(private readonly svc: GamesAdminService) {}
@@ -103,7 +105,7 @@ export class GamesAdminController {
     @Query() query: any,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.svc.findAll(query, user.role, user.branchId);
+    return this.svc.findAll(query, toBranchScope(user));
   }
 
   @Get(':id')
@@ -111,10 +113,10 @@ export class GamesAdminController {
     @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.svc.findOne(id, user.role, user.branchId);
+    return this.svc.findOne(id, toBranchScope(user));
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @Post()
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -138,7 +140,7 @@ export class GamesAdminController {
     return this.svc.create(dto, files);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @Patch(':id')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -185,25 +187,25 @@ export class GamesAdminController {
     return this.svc.deleteImage(gameId, imageId);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @Post(':id/toggle-featured')
   toggleFeatured(@Param('id') id: string) {
     return this.svc.toggleFeatured(id);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @Post(':id/toggle-active')
   toggleActive(@Param('id') id: string) {
     return this.svc.toggleActive(id);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @Delete(':id')
   softDelete(@Param('id') id: string) {
     return this.svc.softDelete(id);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @Patch(':id/weekly-discount')
   setWeeklyDiscount(@Param('id') id: string, @Body() dto: WeeklyDiscountDto) {
     return this.svc.setWeeklyDiscount(id, dto);
@@ -214,7 +216,7 @@ export class GamesAdminController {
     return this.svc.recomputeRank(id);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @Patch(':id/tier')
   setTier(@Param('id') id: string, @Body('tier') tier: string) {
     return this.svc.setTier(id, tier);

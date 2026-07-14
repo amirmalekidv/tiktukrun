@@ -13,6 +13,7 @@ export interface AdminUser {
   roles: AdminRole[]
   permissions: string[]
   branch?: string
+  branchIds?: string[]
   lastLoginAt?: string
   createdAt: string
 }

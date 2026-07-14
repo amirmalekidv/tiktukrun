@@ -13,6 +13,7 @@ import { SettingsService } from '../../settings/settings.service';
 // سلوت‌های روزانه: ساعت ۹ تا ۲۳ با فاصله ۱ ساعت
 const SLOT_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 const TEHRAN_TZ  = 'Asia/Tehran';
+const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
 const GAME_PUBLIC_INCLUDE = {
   category: true,
@@ -126,8 +127,12 @@ export class GamesService {
 
   // ─── Game by slug ─────────────────────────────────────────────────────────────
   async findBySlug(slug: string) {
+    const where = OBJECT_ID_REGEX.test(slug)
+      ? { isActive: true, OR: [{ slug }, { id: slug }] }
+      : { slug, isActive: true };
+
     const game = await this.prisma.game.findFirst({
-      where:   { slug, isActive: true },
+      where,
       include: GAME_FULL_INCLUDE,
     });
     if (!game) throw new NotFoundException('بازی یافت نشد');

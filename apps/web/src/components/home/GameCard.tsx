@@ -13,15 +13,17 @@ import { GAME_COVER_PLACEHOLDER, shouldBypassImageOptimization } from '@/lib/gam
 interface GameCardProps {
   game: Game
   variant?: 'default' | 'horizontal'
+  href?: string
 }
 
-export default function GameCard({ game, variant = 'default' }: GameCardProps) {
+export default function GameCard({ game, variant = 'default', href }: GameCardProps) {
   const coverImage = game.coverImage || game.images[0]?.url || GAME_COVER_PLACEHOLDER
   const unoptimized = shouldBypassImageOptimization(coverImage)
+  const targetHref = href || `/games/${game.slug || game.id}`
 
   if (variant === 'horizontal') {
     return (
-      <Link href={`/games/${game.slug}`}>
+      <Link href={targetHref}>
         <article className="dark-card group flex cursor-pointer gap-0 overflow-hidden rounded-[18px] transition-all hover:-translate-y-1 hover:border-[#00f5ff]/50">
           <div className="relative w-40 flex-shrink-0 overflow-hidden">
             <Image
@@ -56,7 +58,7 @@ export default function GameCard({ game, variant = 'default' }: GameCardProps) {
   }
 
   return (
-    <Link href={`/games/${game.slug}`}>
+    <Link href={targetHref}>
       <article className="dark-card group flex h-full cursor-pointer flex-col overflow-hidden rounded-[18px] transition-all hover:-translate-y-2 hover:border-[#00f5ff]/50 hover:shadow-[0_14px_40px_rgba(0,245,255,0.18)]">
         {/* Image container */}
         <div className="relative h-[190px] flex-shrink-0 overflow-hidden">

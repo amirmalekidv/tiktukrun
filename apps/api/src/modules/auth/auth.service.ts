@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { JwtPayload, Role } from '@tiktakrun/shared-types';
+import { JwtPayload, Role, DEFAULT_ROLE_PERMISSIONS, PERMISSIONS } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { OtpService } from './otp.service';
@@ -253,7 +253,10 @@ export class AuthService {
   async validateAdmin(mobile: string, password: string) {
     const user = await this.prisma.user.findUnique({
       where: { mobile },
-      include: { roleAssignments: true },
+      include: {
+        roleAssignments: true,
+        managedBranches: { select: { id: true, name: true } },
+      },
     });
 
     if (!user || !user.passwordHash) return null;
@@ -261,11 +264,18 @@ export class AuthService {
     const isValid = await compareHash(password, user.passwordHash);
     if (!isValid) return null;
 
-    // [QA Fix 2026-05-25] Schema enum: SUPER_ADMIN (not SUPERADMIN), no OPERATOR (use BRANCH_MANAGER + MARKETING)
     const adminRoles: any[] = ['SUPER_ADMIN', 'ADMIN', 'BRANCH_MANAGER', 'SUPPORT', 'MARKETING'];
     const isAdmin = user.roleAssignments.some((r: any) => adminRoles.includes(r.role));
 
     if (!isAdmin) return null;
+
+    const roles = user.roleAssignments.map((r: any) => r.role);
+    const isBranchOnly =
+      roles.includes('BRANCH_MANAGER') &&
+      !roles.some((r: string) => ['SUPER_ADMIN', 'ADMIN'].includes(r));
+    if (isBranchOnly && user.managedBranches.length === 0) {
+      return null;
+    }
 
     return user;
   }
@@ -414,7 +424,9 @@ export class AuthService {
   /** Shape user for admin panel clients (roles, permissions, display name). */
   private formatAdminUser(user: any) {
     const roles = (user.roleAssignments ?? []).map((r: { role: string }) => r.role);
-    const { passwordHash, roleAssignments, ...rest } = user;
+    const branchIds = (user.managedBranches ?? []).map((b: { id: string }) => b.id);
+    const branchNames = (user.managedBranches ?? []).map((b: { name: string }) => b.name);
+    const { passwordHash, roleAssignments, managedBranches, ...rest } = user;
     return {
       id: rest.id,
       name: rest.fullName ?? '',
@@ -423,6 +435,8 @@ export class AuthService {
       avatar: rest.avatarUrl ?? undefined,
       roles,
       permissions: this.getPermissions(roles),
+      branchIds,
+      branch: branchNames[0] ?? undefined,
       createdAt:
         rest.createdAt instanceof Date ? rest.createdAt.toISOString() : rest.createdAt,
       lastLoginAt:
@@ -430,18 +444,16 @@ export class AuthService {
     };
   }
 
-  private getPermissions(roles: any[]): string[] {
-    const permissions: string[] = [];
-    // [QA Fix 2026-05-25] Use schema enum literals: SUPER_ADMIN, ADMIN, BRANCH_MANAGER, SUPPORT, MARKETING, CUSTOMER
+  private getPermissions(roles: string[]): string[] {
     if (roles.includes('SUPER_ADMIN')) {
-      permissions.push('*');
-    } else {
-      if (roles.includes('ADMIN')) permissions.push('admin:*');
-      if (roles.includes('BRANCH_MANAGER')) permissions.push('bookings:*', 'users:read', 'branches:manage');
-      if (roles.includes('MARKETING')) permissions.push('campaigns:*', 'segments:*');
-      if (roles.includes('SUPPORT')) permissions.push('users:read', 'support:*');
-      if (roles.includes('CUSTOMER')) permissions.push('profile:*', 'bookings:create');
+      return ['*', ...PERMISSIONS];
     }
-    return permissions;
+    const set = new Set<string>();
+    for (const role of roles) {
+      for (const p of DEFAULT_ROLE_PERMISSIONS[role] ?? []) {
+        set.add(p);
+      }
+    }
+    return Array.from(set);
   }
 }

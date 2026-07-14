@@ -5,6 +5,8 @@ import { Plus, Search, MapPin, Trash2, Edit, CheckCircle, XCircle, RefreshCw } f
 import { SectionHeader, StatsCard, FilterBar, ConfirmDialog, EmptyState } from '@/components/ui';
 import { persianNum } from '@/lib/utils/format';
 import { branchesApi, citiesApi } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
+import { can } from '@/lib/permissions';
 import toast from 'react-hot-toast';
 
 interface AdminBranch {
@@ -15,6 +17,8 @@ interface AdminBranch {
   isActive: boolean;
   cityId: string;
   city?: { id: string; name: string } | null;
+  manager?: { id: string; fullName?: string | null; mobile?: string | null } | null;
+  _count?: { games?: number; bookings?: number };
   games?: unknown[];
   bookings?: unknown[];
 }
@@ -28,6 +32,8 @@ function unwrap<T = any>(res: any): T {
 }
 
 export default function BranchesPage() {
+  const user = useAuthStore((s) => s.user);
+  const canWrite = can(user, 'branches.write');
   const [branches, setBranches] = useState<AdminBranch[]>([]);
   const [cities, setCities] = useState<CityOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,9 +100,11 @@ export default function BranchesPage() {
             <button onClick={load} className="btn-secondary" title="بارگذاری مجدد">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <Link href="/branches/new" className="btn-primary">
-              <Plus className="w-4 h-4" /> شعبه جدید
-            </Link>
+            {canWrite && (
+              <Link href="/branches/new" className="btn-primary">
+                <Plus className="w-4 h-4" /> شعبه جدید
+              </Link>
+            )}
           </div>
         }
       />
@@ -130,9 +138,10 @@ export default function BranchesPage() {
                   <p className="text-slate-400 text-sm">{branch.city?.name ?? '—'}</p>
                 </div>
                 <button
-                  onClick={() => handleToggle(branch)}
-                  className={`badge ${branch.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}
-                  title="تغییر وضعیت"
+                  onClick={() => canWrite && handleToggle(branch)}
+                  disabled={!canWrite}
+                  className={`badge ${branch.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} ${!canWrite ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  title={canWrite ? 'تغییر وضعیت' : undefined}
                 >
                   {branch.isActive ? 'فعال' : 'غیرفعال'}
                 </button>
@@ -142,24 +151,31 @@ export default function BranchesPage() {
                   <MapPin className="w-4 h-4 flex-shrink-0" />{branch.address}
                 </p>
                 {branch.phone && <p className="text-slate-400 font-mono">{branch.phone}</p>}
+                {branch.manager && (
+                  <p className="text-slate-500 text-xs">
+                    مالک: {branch.manager.fullName || branch.manager.mobile || '—'}
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-2 p-3 bg-slate-700/30 rounded-xl mb-4">
                 <div className="text-center">
-                  <p className="text-white font-bold text-xl">{persianNum(branch.games?.length ?? 0)}</p>
+                  <p className="text-white font-bold text-xl">{persianNum(branch._count?.games ?? branch.games?.length ?? 0)}</p>
                   <p className="text-slate-500 text-xs">بازی</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-white font-bold text-xl">{persianNum(branch.bookings?.length ?? 0)}</p>
+                  <p className="text-white font-bold text-xl">{persianNum(branch._count?.bookings ?? branch.bookings?.length ?? 0)}</p>
                   <p className="text-slate-500 text-xs">رزرو</p>
                 </div>
               </div>
               <div className="flex gap-2">
                 <Link href={`/branches/${branch.id}`} className="btn-secondary flex-1 justify-center text-sm">
-                  <Edit className="w-3.5 h-3.5" /> ویرایش
+                  <Edit className="w-3.5 h-3.5" /> {canWrite ? 'ویرایش' : 'مشاهده'}
                 </Link>
-                <button onClick={() => setDeleteId(branch.id)} className="btn-danger px-3">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {canWrite && (
+                  <button onClick={() => setDeleteId(branch.id)} className="btn-danger px-3">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           ))}

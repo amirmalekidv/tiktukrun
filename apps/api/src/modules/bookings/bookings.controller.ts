@@ -10,7 +10,7 @@ import {
   Res,
   HttpStatus,
 } from '@nestjs/common';
-import { CurrentUserPayload, UserRole } from '@tiktakrun/shared-types';
+import { CurrentUserPayload } from '@tiktakrun/shared-types';
 import { Response } from 'express';
 import { BookingsService }      from './services/bookings.service';
 import { BookingsAdminService } from './services/bookings-admin.service';
@@ -28,7 +28,11 @@ import { CurrentUser }  from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard }   from '../../common/guards/roles.guard';
 import { Roles }        from '../../common/decorators/roles.decorator';
-import { resolveBranchScope } from '../../common/helpers/branch-scope.helper';
+import {
+  toBranchScope,
+  resolveBranchFilter,
+} from '../../common/helpers/branch-scope.helper';
+import { BRANCH_OPS_ROLES, PLATFORM_ADMIN_ROLES } from '../../common/constants/admin-roles';
 
 // ─── User Bookings ───────────────────────────────────────────────────────────
 @UseGuards(JwtAuthGuard)
@@ -80,7 +84,7 @@ export class BookingsController {
 
 // ─── Admin Bookings ───────────────────────────────────────────────────────────
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.BRANCH_MANAGER)
+@Roles(...BRANCH_OPS_ROLES)
 @Controller('admin/bookings')
 export class BookingsAdminController {
   constructor(private readonly svc: BookingsAdminService) {}
@@ -90,7 +94,7 @@ export class BookingsAdminController {
     @Query() query: BookingQueryDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.svc.findAll(query, user.role, user.branchId);
+    return this.svc.findAll(query, toBranchScope(user));
   }
 
   @Get('calendar')
@@ -100,12 +104,8 @@ export class BookingsAdminController {
     @Query('to') to: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const scopedBranch = resolveBranchScope(
-      user.role,
-      user.branchId,
-      branchId,
-    );
-    return this.svc.getCalendar(scopedBranch, from, to);
+    const branchFilter = resolveBranchFilter(toBranchScope(user), branchId);
+    return this.svc.getCalendar(branchFilter, from, to);
   }
 
   @Get('export')
@@ -114,7 +114,7 @@ export class BookingsAdminController {
     @CurrentUser() user: CurrentUserPayload,
     @Res() res: Response,
   ) {
-    const csv = await this.svc.exportExcel(query, user.role, user.branchId);
+    const csv = await this.svc.exportExcel(query, toBranchScope(user));
     res
       .status(HttpStatus.OK)
       .setHeader('Content-Type', 'text/csv; charset=utf-8')
@@ -127,7 +127,7 @@ export class BookingsAdminController {
     @Body() dto: AdminCreateBookingDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const data = await this.svc.adminCreate(dto, user.role, user.branchId);
+    const data = await this.svc.adminCreate(dto, toBranchScope(user));
     return { success: true, data };
   }
 
@@ -136,7 +136,7 @@ export class BookingsAdminController {
     @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.svc.findOne(id, user.role, user.branchId);
+    return this.svc.findOne(id, toBranchScope(user));
   }
 
   @Patch(':id/status')
@@ -145,17 +145,17 @@ export class BookingsAdminController {
     @Body() dto: AdminUpdateBookingStatusDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.svc.updateStatus(id, dto, user.role, user.branchId);
+    return this.svc.updateStatus(id, dto, toBranchScope(user));
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @Post(':id/refund')
   refund(
     @Param('id') id: string,
     @Body() dto: RefundBookingDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.svc.refund(id, dto, user.role, user.branchId);
+    return this.svc.refund(id, dto, toBranchScope(user));
   }
 
   @Post(':id/complete')
@@ -163,16 +163,15 @@ export class BookingsAdminController {
     @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.svc.complete(id, user.role, user.branchId);
+    return this.svc.complete(id, toBranchScope(user));
   }
 
-  @Roles(UserRole.BRANCH_MANAGER)
   @Post(':id/rate-player')
   ratePlayer(
     @Param('id') id: string,
     @Body() dto: RatePlayerDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.svc.ratePlayer(id, dto, user.role, user.branchId);
+    return this.svc.ratePlayer(id, dto, toBranchScope(user));
   }
 }

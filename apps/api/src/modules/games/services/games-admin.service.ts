@@ -9,6 +9,12 @@ import { GameImageService } from './game-image.service';
 import { CreateGameDto, UpdateGameDto, WeeklyDiscountDto } from '../dto/create-game.dto';
 import { parsePagination, buildPaginatedResponse } from '../../../common/helpers/pagination.helper';
 import { slugify } from '../../../common/helpers/slugify.helper';
+import {
+  BranchScopeContext,
+  applyBranchFilter,
+  assertResourceInBranchScope,
+  isBranchManagerRole,
+} from '../../../common/helpers/branch-scope.helper';
 
 /**
  * Map a numeric difficulty (legacy 1..5 from DTO) or string to the
@@ -47,19 +53,15 @@ export class GamesAdminService {
     private imageService: GameImageService,
   ) {}
 
-  async findAll(
-    query: any,
-    userRole: UserRole,
-    userBranchId?: string,
-  ) {
+  async findAll(query: any, scope: BranchScopeContext) {
     const { skip, take, page, limit } = parsePagination(query);
     const where: any = {};
 
-    if (userRole === UserRole.BRANCH_MANAGER && userBranchId) {
-      where.branchId = userBranchId;
-    }
+    applyBranchFilter(where, scope);
 
-    if (query.branchId)   where.branchId   = query.branchId;
+    if (query.branchId && !isBranchManagerRole(scope.role)) {
+      where.branchId = query.branchId;
+    }
     if (query.categoryId) where.categoryId = query.categoryId;
     if (query.isActive !== undefined) {
       where.isActive = query.isActive === 'true';
@@ -79,7 +81,7 @@ export class GamesAdminService {
     return buildPaginatedResponse(items, total, page, limit);
   }
 
-  async findOne(id: string, userRole: UserRole, userBranchId?: string) {
+  async findOne(id: string, scope: BranchScopeContext) {
     const game = await this.prisma.game.findUnique({
       where:   { id },
       include: {
@@ -92,9 +94,7 @@ export class GamesAdminService {
     });
     if (!game) throw new NotFoundException('بازی یافت نشد');
 
-    if (userRole === UserRole.BRANCH_MANAGER && userBranchId !== game.branchId) {
-      throw new NotFoundException('بازی یافت نشد');
-    }
+    assertResourceInBranchScope(game.branchId, scope, 'بازی یافت نشد');
 
     // Stats
     const revenue = await this.prisma.payment.aggregate({
@@ -185,7 +185,7 @@ export class GamesAdminService {
       });
     }
 
-    return this.findOne(game.id, UserRole.ADMIN);
+    return this.findOne(game.id, { role: UserRole.ADMIN });
   }
 
   async update(
@@ -238,7 +238,7 @@ export class GamesAdminService {
       await this.addImages(id, files.gallery);
     }
 
-    return this.findOne(id, UserRole.ADMIN);
+    return this.findOne(id, { role: UserRole.ADMIN });
   }
 
   async addImages(

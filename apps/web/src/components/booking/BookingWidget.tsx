@@ -14,9 +14,10 @@ export default function BookingWidget({ game }: BookingWidgetProps) {
   const router = useRouter()
   const [players, setPlayers] = useState(game.minPlayers)
   const totalPrice = game.basePrice + (game.pricePerPlayer || 0) * players
+  const gameIdentifier = game.slug || game.id
 
   const handleBooking = () => {
-    router.push(`/games/${game.slug}/booking?players=${players}`)
+    router.push(`/games/${gameIdentifier}/booking?players=${players}`)
   }
 
   return (

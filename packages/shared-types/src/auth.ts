@@ -13,7 +13,10 @@ export interface AuthenticatedUser {
   mobile: string;
   roles: UserRole[];
   role: UserRole;
+  /** Primary / first managed branch (backward compatible) */
   branchId?: string;
+  /** All branches this user manages (venue owners) */
+  branchIds?: string[];
   sessionId: string;
 }
 

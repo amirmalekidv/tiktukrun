@@ -40,7 +40,7 @@ export const notificationsApi = {
 //   Branch detail (with games+category) comes from the public BranchesController GET /branches/:id.
 export const branchesApi = {
   getAll: (p?: Record<string, unknown>) => apiClient.get<ApiResponse<Branch[]>>('/admin/branches', { params: p }),
-  getById: (id: string) => apiClient.get<ApiResponse<Branch>>(`/branches/${id}`),
+  getById: (id: string) => apiClient.get<ApiResponse<Branch>>(`/admin/branches/${id}`),
   create: (d: Partial<Branch>) => apiClient.post<ApiResponse<Branch>>('/admin/branches', d),
   update: (id: string, d: Partial<Branch>) => apiClient.patch<ApiResponse<Branch>>(`/admin/branches/${id}`, d),
   delete: (id: string) => apiClient.delete(`/admin/branches/${id}`),

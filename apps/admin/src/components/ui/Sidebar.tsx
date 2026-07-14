@@ -9,79 +9,91 @@ import {
   Percent, Trophy, Settings, Shield, ClipboardList,
   ChevronDown, ChevronLeft, Zap, Globe
 } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
+import { can } from '@/lib/permissions';
+import type { AdminUser } from '@/types';
 
-const navGroups = [
+type NavChild = { href: string; label: string; permission?: string };
+type NavItemDef = {
+  href?: string;
+  label: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  permission?: string;
+  children?: NavChild[];
+};
+
+const navGroups: { title: string; items: NavItemDef[] }[] = [
   {
     title: 'CRM',
     items: [
-      { href: '/customers', label: 'مشتریان', icon: User },
-      { href: '/segments', label: 'سگمنت‌ها', icon: Globe },
-      { href: '/pipeline', label: 'پایپ‌لاین', icon: TrendingUp },
-      { href: '/campaigns', label: 'کمپین‌ها', icon: Zap },
+      { href: '/customers', label: 'مشتریان', icon: User, permission: 'customers.view' },
+      { href: '/segments', label: 'سگمنت‌ها', icon: Globe, permission: 'segments.view' },
+      { href: '/pipeline', label: 'پایپ‌لاین', icon: TrendingUp, permission: 'pipeline.view' },
+      { href: '/campaigns', label: 'کمپین‌ها', icon: Zap, permission: 'campaigns.view' },
     ],
   },
   {
     title: 'عملیاتی',
     items: [
-      { href: '/dashboard', label: 'داشبورد', icon: LayoutDashboard },
+      { href: '/dashboard', label: 'داشبورد', icon: LayoutDashboard, permission: 'dashboard.view' },
       {
         label: 'رزروها', icon: CalendarDays,
         children: [
-          { href: '/bookings', label: 'لیست رزروها' },
-          { href: '/bookings/calendar', label: 'تقویم رزروها' },
-          { href: '/bookings/new', label: 'رزرو دستی' },
-        ]
+          { href: '/bookings', label: 'لیست رزروها', permission: 'bookings.view' },
+          { href: '/bookings/calendar', label: 'تقویم رزروها', permission: 'bookings.view' },
+          { href: '/bookings/new', label: 'رزرو دستی', permission: 'bookings.write' },
+        ],
       },
       {
         label: 'بازی‌ها', icon: Gamepad2,
         children: [
-          { href: '/games', label: 'لیست بازی‌ها' },
-          { href: '/games/new', label: 'بازی جدید' },
-        ]
+          { href: '/games', label: 'لیست بازی‌ها', permission: 'games.view' },
+          { href: '/games/new', label: 'بازی جدید', permission: 'games.write' },
+        ],
       },
       {
         label: 'شعب و مکان', icon: Building2,
         children: [
-          { href: '/branches', label: 'شعب' },
-          { href: '/cities', label: 'شهرها' },
-          { href: '/categories', label: 'دسته‌بندی‌ها' },
-        ]
+          { href: '/branches', label: 'شعب', permission: 'branches.view' },
+          { href: '/cities', label: 'شهرها', permission: 'branches.write' },
+          { href: '/categories', label: 'دسته‌بندی‌ها', permission: 'games.write' },
+        ],
       },
-      { href: '/reviews', label: 'نظرات', icon: Star },
-      { href: '/comments', label: 'نظرات بازی‌ها', icon: MessageSquare },
+      { href: '/reviews', label: 'نظرات', icon: Star, permission: 'games.write' },
+      { href: '/comments', label: 'نظرات بازی‌ها', icon: MessageSquare, permission: 'games.view' },
       {
         label: 'چت زنده', icon: MessageSquare,
         children: [
-          { href: '/chats', label: 'مانیتور چت' },
-          { href: '/chats/reported', label: 'گزارش‌شده‌ها' },
-          { href: '/chats/stats', label: 'آمار چت' },
-        ]
+          { href: '/chats', label: 'مانیتور چت', permission: 'chats.view' },
+          { href: '/chats/reported', label: 'گزارش‌شده‌ها', permission: 'chats.view' },
+          { href: '/chats/stats', label: 'آمار چت', permission: 'chats.view' },
+        ],
       },
       {
         label: 'تیکت‌ها', icon: Ticket,
         children: [
-          { href: '/tickets', label: 'لیست تیکت‌ها' },
-          { href: '/tickets/stats', label: 'آمار تیکت‌ها' },
-        ]
+          { href: '/tickets', label: 'لیست تیکت‌ها', permission: 'tickets.view' },
+          { href: '/tickets/stats', label: 'آمار تیکت‌ها', permission: 'tickets.view' },
+        ],
       },
-    ]
+    ],
   },
   {
     title: 'مالی',
     items: [
-      { href: '/transactions', label: 'تراکنش‌ها', icon: CreditCard },
-      { href: '/payments', label: 'پرداخت‌ها (ZarinPal)', icon: Banknote },
+      { href: '/transactions', label: 'تراکنش‌ها', icon: CreditCard, permission: 'finance.view' },
+      { href: '/payments', label: 'پرداخت‌ها (ZarinPal)', icon: Banknote, permission: 'finance.view' },
       {
         label: 'گزارش‌ها', icon: BarChart3,
         children: [
-          { href: '/reports/financial', label: 'گزارش مالی' },
-          { href: '/reports/games', label: 'گزارش بازی‌ها' },
-          { href: '/reports/cohort', label: 'تحلیل Cohort' },
-          { href: '/reports/heatmap', label: 'Heatmap فعالیت' },
-        ]
+          { href: '/reports/financial', label: 'گزارش مالی', permission: 'reports.view' },
+          { href: '/reports/games', label: 'گزارش بازی‌ها', permission: 'reports.view' },
+          { href: '/reports/cohort', label: 'تحلیل Cohort', permission: 'reports.view' },
+          { href: '/reports/heatmap', label: 'Heatmap فعالیت', permission: 'reports.view' },
+        ],
       },
-      { href: '/backup', label: 'پشتیبان‌گیری', icon: Database },
-    ]
+      { href: '/backup', label: 'پشتیبان‌گیری', icon: Database, permission: 'backup.view' },
+    ],
   },
   {
     title: 'گیمیفیکیشن',
@@ -89,24 +101,24 @@ const navGroups = [
       {
         label: 'گردونه شانس', icon: Gift,
         children: [
-          { href: '/wheel/prizes', label: 'جوایز گردونه' },
-          { href: '/wheel/spins', label: 'تاریخچه چرخش' },
-          { href: '/wheel/stats', label: 'آمار گردونه' },
-        ]
+          { href: '/wheel/prizes', label: 'جوایز گردونه', permission: 'gamification.view' },
+          { href: '/wheel/spins', label: 'تاریخچه چرخش', permission: 'gamification.view' },
+          { href: '/wheel/stats', label: 'آمار گردونه', permission: 'gamification.view' },
+        ],
       },
-      { href: '/badges', label: 'بج‌ها', icon: Award },
-      { href: '/levels', label: 'لول‌ها و XP', icon: TrendingUp },
-      { href: '/avatars', label: 'آواتارها', icon: User },
+      { href: '/badges', label: 'بج‌ها', icon: Award, permission: 'gamification.view' },
+      { href: '/levels', label: 'لول‌ها و XP', icon: TrendingUp, permission: 'gamification.view' },
+      { href: '/avatars', label: 'آواتارها', icon: User, permission: 'gamification.view' },
       {
         label: 'تخفیف‌ها', icon: Percent,
         children: [
-          { href: '/discounts/codes', label: 'کدهای تخفیف' },
-          { href: '/discounts/auto', label: 'تخفیف خودکار' },
-          { href: '/discounts/usages', label: 'تاریخچه استفاده' },
-        ]
+          { href: '/discounts/codes', label: 'کدهای تخفیف', permission: 'discounts.view' },
+          { href: '/discounts/auto', label: 'تخفیف خودکار', permission: 'discounts.view' },
+          { href: '/discounts/usages', label: 'تاریخچه استفاده', permission: 'discounts.view' },
+        ],
       },
-      { href: '/monthly', label: 'برندگان ماهانه', icon: Trophy },
-    ]
+      { href: '/monthly', label: 'برندگان ماهانه', icon: Trophy, permission: 'monthly.view' },
+    ],
   },
   {
     title: 'تنظیمات و سیستم',
@@ -114,47 +126,56 @@ const navGroups = [
       {
         label: 'تنظیمات', icon: Settings,
         children: [
-          { href: '/settings/general', label: 'عمومی' },
-          { href: '/settings/financial', label: 'مالی' },
-          { href: '/settings/chat', label: 'چت' },
-          { href: '/settings/security', label: 'امنیت' },
-          { href: '/settings/gamification', label: 'گیمیفیکیشن' },
-          { href: '/settings/payments', label: 'پرداخت' },
-          { href: '/settings/sms', label: 'SMS' },
-          { href: '/settings/theme', label: 'تم' },
-        ]
+          { href: '/settings/general', label: 'عمومی', permission: 'settings.view' },
+          { href: '/settings/financial', label: 'مالی', permission: 'settings.view' },
+          { href: '/settings/chat', label: 'چت', permission: 'settings.view' },
+          { href: '/settings/security', label: 'امنیت', permission: 'settings.view' },
+          { href: '/settings/gamification', label: 'گیمیفیکیشن', permission: 'settings.view' },
+          { href: '/settings/payments', label: 'پرداخت', permission: 'settings.view' },
+          { href: '/settings/sms', label: 'SMS', permission: 'settings.view' },
+          { href: '/settings/theme', label: 'تم', permission: 'settings.view' },
+        ],
       },
       {
         label: 'نقش‌ها و دسترسی', icon: Shield,
         children: [
-          { href: '/roles', label: 'نقش‌ها' },
-          { href: '/staff', label: 'کاربران ادمین' },
-        ]
+          { href: '/roles', label: 'نقش‌ها', permission: 'roles.read' },
+          { href: '/staff', label: 'کاربران ادمین', permission: 'staff.read' },
+        ],
       },
-      { href: '/audit', label: 'لاگ‌های سیستم', icon: ClipboardList },
-    ]
+      { href: '/audit', label: 'لاگ‌های سیستم', icon: ClipboardList, permission: 'audit.read' },
+    ],
   },
 ];
 
-interface NavItemProps {
-  item: {
-    href?: string;
-    label: string;
-    icon?: React.ComponentType<{ className?: string }>;
-    children?: { href: string; label: string }[];
-  };
-  depth?: number;
+function userCan(user: AdminUser | null, permission?: string): boolean {
+  if (!permission) return true;
+  return can(user, permission);
 }
 
-function NavItem({ item, depth = 0 }: NavItemProps) {
+function filterNavItems(items: NavItemDef[], user: AdminUser | null): NavItemDef[] {
+  return items
+    .map((item) => {
+      if (item.children) {
+        const children = item.children.filter((c) => userCan(user, c.permission));
+        if (children.length === 0) return null;
+        return { ...item, children };
+      }
+      if (!userCan(user, item.permission)) return null;
+      return item;
+    })
+    .filter(Boolean) as NavItemDef[];
+}
+
+function NavItem({ item }: { item: NavItemDef }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(() => {
     if (!item.children) return false;
-    return item.children.some(c => pathname.startsWith(c.href));
+    return item.children.some((c) => pathname.startsWith(c.href));
   });
 
   if (item.children) {
-    const isActiveGroup = item.children.some(c => pathname.startsWith(c.href));
+    const isActiveGroup = item.children.some((c) => pathname.startsWith(c.href));
     return (
       <div>
         <button
@@ -207,9 +228,17 @@ function NavItem({ item, depth = 0 }: NavItemProps) {
 }
 
 export default function Sidebar({ collapsed }: { collapsed?: boolean }) {
+  const user = useAuthStore((s) => s.user);
+
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: filterNavItems(group.items, user),
+    }))
+    .filter((group) => group.items.length > 0);
+
   return (
     <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-slate-900 border-l border-slate-800 flex flex-col h-screen sticky top-0 overflow-hidden transition-all duration-300`}>
-      {/* Logo */}
       <div className="p-4 border-b border-slate-800 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_0_18px_rgba(255,255,255,0.12)]">
@@ -223,15 +252,16 @@ export default function Sidebar({ collapsed }: { collapsed?: boolean }) {
           {!collapsed && (
             <div>
               <h1 className="text-white font-black text-lg leading-none">TIK TAK RUN</h1>
-              <p className="text-slate-500 text-xs mt-0.5">Command Center</p>
+              <p className="text-slate-500 text-xs mt-0.5">
+                {user?.branch ? user.branch : 'Command Center'}
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-        {navGroups.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.title}>
             {!collapsed && (
               <p className="text-slate-600 text-xs font-bold uppercase tracking-widest mb-2 px-3">
@@ -247,7 +277,6 @@ export default function Sidebar({ collapsed }: { collapsed?: boolean }) {
         ))}
       </nav>
 
-      {/* Footer */}
       <div className="p-3 border-t border-slate-800 flex-shrink-0">
         <Link
           href="/"

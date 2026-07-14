@@ -18,6 +18,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { BRANCH_OPS_ROLES } from '../../common/constants/admin-roles';
 
 class AddCommentDto {
   @IsString()
@@ -115,7 +116,7 @@ export class GameInteractionController {
 // ─── Admin moderation ───────────────────────────────────────────────────────────
 @ApiTags('Admin Game Comments')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.BRANCH_MANAGER)
+@Roles(...BRANCH_OPS_ROLES)
 @Controller('admin/games/comments')
 export class GameCommentsAdminController {
   constructor(private readonly svc: GameInteractionService) {}

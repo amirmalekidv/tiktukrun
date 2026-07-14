@@ -30,7 +30,7 @@ const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'ادمین',
   SUPPORT: 'پشتیبانی',
   MARKETING: 'بازاریابی',
-  BRANCH_MANAGER: 'مدیر شعبه',
+  BRANCH_MANAGER: 'مالک شعبه',
   CUSTOMER: 'کاربر عادی',
 };
 

@@ -43,7 +43,7 @@ export function getRoleLabel(role: AdminRole | string): string {
   const map: Record<string, string> = {
     SUPER_ADMIN: 'مدیر ارشد',
     ADMIN: 'مدیر',
-    BRANCH_MANAGER: 'مدیر شعبه',
+    BRANCH_MANAGER: 'مالک شعبه',
     SUPPORT: 'پشتیبانی',
     MARKETING: 'بازاریابی',
     CUSTOMER: 'مشتری',

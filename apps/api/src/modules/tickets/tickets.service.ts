@@ -7,6 +7,11 @@ import {
 import { NotificationType } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import {
+  BranchScopeContext,
+  applyBranchFilter,
+  assertResourceInBranchScope,
+} from '../../common/helpers/branch-scope.helper';
 
 function generateTicketCode(): string {
   const num = Math.floor(100000 + Math.random() * 900000);
@@ -152,15 +157,14 @@ export class TicketsService {
     filter: any,
     page = 1,
     limit = 20,
-    userRole?: string,
-    branchId?: string,
+    scope?: BranchScopeContext,
   ) {
     const where: any = {};
     if (filter.status) where.status = filter.status;
     if (filter.priority) where.priority = filter.priority;
     if (filter.assigneeId) where.assigneeId = filter.assigneeId;
-    if (userRole === 'BRANCH_MANAGER' && branchId) {
-      where.branchId = branchId;
+    if (scope) {
+      applyBranchFilter(where, scope);
     } else if (filter.branchId) {
       where.branchId = filter.branchId;
     }
@@ -182,7 +186,7 @@ export class TicketsService {
     return { data, total };
   }
 
-  async findOneAdmin(id: string) {
+  async findOneAdmin(id: string, scope?: BranchScopeContext) {
     const ticket = await this.prisma.ticket.findUnique({
       where: { id },
       include: {
@@ -197,6 +201,9 @@ export class TicketsService {
       },
     });
     if (!ticket) throw new NotFoundException('تیکت یافت نشد');
+    if (scope && ticket.branchId) {
+      assertResourceInBranchScope(ticket.branchId, scope, 'تیکت یافت نشد');
+    }
     return ticket;
   }
 

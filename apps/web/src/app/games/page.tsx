@@ -183,19 +183,7 @@ function GamesContent() {
 
 export default function GamesPage() {
   return (
-    <div className="min-h-screen pt-20">
-      {/* Hero banner */}
-      <div className="relative py-12 mb-4 overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#00f5ff]/10 to-transparent" />
-        <div className="absolute inset-0"
-          style={{
-            backgroundImage: `linear-gradient(rgba(0,245,255,0.1) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(176,38,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: '60px 60px',
-          }}
-        />
-      </div>
-
+    <div className="min-h-screen pt-24 pb-20">
       <Suspense fallback={
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
