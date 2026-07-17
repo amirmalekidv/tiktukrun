@@ -72,6 +72,13 @@ export class CreateGameDto {
   @Type(() => Number) @IsNumber()
   pricePerPerson: number;
 
+  @IsOptional()
+  @Transform(({ value }) => (value === undefined || value === null || value === '' ? undefined : Number(value)))
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  siteRank?: number;
+
   @IsOptional() @IsArray() @IsString({ each: true })
   @Transform(({ value }) => {
     if (Array.isArray(value)) return value;
@@ -148,7 +155,11 @@ export class UpdateGameDto {
   @IsOptional() @Type(() => Number) @IsNumber()
   pricePerPerson?: number;
 
-  @IsOptional() @Type(() => Number) @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => (value === undefined || value === null || value === '' ? undefined : Number(value)))
+  @IsNumber()
+  @Min(0)
+  @Max(5)
   siteRank?: number;
 
   @IsOptional() @IsArray() @IsString({ each: true })

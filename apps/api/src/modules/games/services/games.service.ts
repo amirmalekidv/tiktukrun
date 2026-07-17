@@ -7,12 +7,14 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { GameQueryDto, GameSortBy } from '../dto/game-query.dto';
 import { parsePagination, buildPaginatedResponse } from '../../../common/helpers/pagination.helper';
-import { DateTime } from 'luxon';
 import { SettingsService } from '../../settings/settings.service';
+import { LandingSectionsService } from '../../landing-sections/landing-sections.service';
+import {
+  attachAvailableSlotCounts,
+  buildAvailabilitySlots,
+  getAvailabilityDayStart,
+} from '../utils/availability';
 
-// سلوت‌های روزانه: ساعت ۹ تا ۲۳ با فاصله ۱ ساعت
-const SLOT_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
-const TEHRAN_TZ  = 'Asia/Tehran';
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
 const GAME_PUBLIC_INCLUDE = {
@@ -40,6 +42,7 @@ export class GamesService {
   constructor(
     private prisma: PrismaService,
     private settings: SettingsService,
+    private landingSections: LandingSectionsService,
   ) {}
 
   // ─── Build Prisma where ──────────────────────────────────────────────────────
@@ -105,6 +108,36 @@ export class GamesService {
     }
   }
 
+  private async getMaxConcurrent() {
+    return Math.max(
+      1,
+      Number(await this.settings.get('booking.maxConcurrent', '1')) || 1,
+    );
+  }
+
+  private async withAvailableSlots<T extends { id: string; durationMinutes: number }>(games: T[]) {
+    if (games.length === 0) return [];
+
+    const dayStart = getAvailabilityDayStart();
+    const gameIds = [...new Set(games.map((game) => game.id))];
+    const [maxConcurrent, existingBookings] = await Promise.all([
+      this.getMaxConcurrent(),
+      this.prisma.booking.findMany({
+        where: {
+          gameId: { in: gameIds },
+          slotDateTime: {
+            gte: dayStart.toJSDate(),
+            lte: dayStart.endOf('day').toJSDate(),
+          },
+          status: { in: ['PENDING' as any, 'CONFIRMED' as any] },
+        },
+        select: { gameId: true, slotDateTime: true },
+      }),
+    ]);
+
+    return attachAvailableSlotCounts(games, existingBookings, maxConcurrent, dayStart);
+  }
+
   // ─── Public findMany ─────────────────────────────────────────────────────────
   async findMany(query: GameQueryDto) {
     const { skip, take, page, limit } = parsePagination(query);
@@ -122,7 +155,12 @@ export class GamesService {
       this.prisma.game.count({ where }),
     ]);
 
-    return buildPaginatedResponse(items, total, page, limit);
+    return buildPaginatedResponse(
+      await this.withAvailableSlots(items),
+      total,
+      page,
+      limit,
+    );
   }
 
   // ─── Game by slug ─────────────────────────────────────────────────────────────
@@ -144,7 +182,10 @@ export class GamesService {
       include: { images: { take: 1 }, category: true, branch: true },
     });
 
-    return { ...game, similarGames: similar };
+    const [gameWithSlots] = await this.withAvailableSlots([game]);
+    const similarWithSlots = await this.withAvailableSlots(similar);
+
+    return { ...gameWithSlots, similarGames: similarWithSlots };
   }
 
   // ─── Featured hero ────────────────────────────────────────────────────────────
@@ -155,11 +196,19 @@ export class GamesService {
       include: GAME_PUBLIC_INCLUDE,
     });
     if (!game) throw new NotFoundException('بازی ویژه یافت نشد');
-    return game;
+    const [gameWithSlots] = await this.withAvailableSlots([game]);
+    return gameWithSlots;
   }
 
   // ─── By section ──────────────────────────────────────────────────────────────
   async findBySection(section: string) {
+    const dbSection = await this.prisma.landingSection.findUnique({
+      where: { key: section },
+    });
+    if (dbSection?.isActive) {
+      return this.landingSections.resolveGames(dbSection);
+    }
+
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
 
     const sectionWhereMap: Record<string, any> = {
@@ -199,33 +248,37 @@ export class GamesService {
         });
         const ids = topGameIds.map((g: any) => g.gameId);
         if (ids.length === 0) {
-          return this.prisma.game.findMany({
+          const games = await this.prisma.game.findMany({
             where:   { isActive: true },
             include: GAME_PUBLIC_INCLUDE,
             take: 10,
             orderBy,
           });
+          return this.withAvailableSlots(games);
         }
-        return this.prisma.game.findMany({
+        const games = await this.prisma.game.findMany({
           where:   { id: { in: ids }, isActive: true },
           include: GAME_PUBLIC_INCLUDE,
         });
+        return this.withAvailableSlots(games);
       } catch (e) {
-        return this.prisma.game.findMany({
+        const games = await this.prisma.game.findMany({
           where: { isActive: true },
           include: GAME_PUBLIC_INCLUDE,
           take: 10,
           orderBy,
         });
+        return this.withAvailableSlots(games);
       }
     }
 
-    return this.prisma.game.findMany({
+    const games = await this.prisma.game.findMany({
       where:   { ...sectionWhere, isActive: true },
       take:    20,
       orderBy,
       include: GAME_PUBLIC_INCLUDE,
     });
+    return this.withAvailableSlots(games);
   }
 
   // ─── Availability ─────────────────────────────────────────────────────────────
@@ -235,15 +288,12 @@ export class GamesService {
     });
     if (!game) throw new NotFoundException('بازی یافت نشد');
 
-    const dayStart = DateTime.fromISO(dateStr, { zone: TEHRAN_TZ }).startOf('day');
+    const dayStart = getAvailabilityDayStart(dateStr);
     if (!dayStart.isValid) {
       throw new BadRequestException('تاریخ نامعتبر است');
     }
     const dayEnd   = dayStart.endOf('day');
-    const maxConcurrent = Math.max(
-      1,
-      Number(await this.settings.get('booking.maxConcurrent', '1')) || 1,
-    );
+    const maxConcurrent = await this.getMaxConcurrent();
 
     // رزروهای موجود آن روز
     const existingBookings = await this.prisma.booking.findMany({
@@ -255,39 +305,10 @@ export class GamesService {
         },
         status: { in: ['PENDING' as any, 'CONFIRMED' as any] },
       },
-      select: { slotDateTime: true, playersCount: true, status: true },
+      select: { slotDateTime: true },
     });
 
-    const slots = SLOT_HOURS.map((hour) => {
-      const slotTime   = dayStart.set({ hour, minute: 0, second: 0, millisecond: 0 });
-      const slotJSDate = slotTime.toJSDate();
-      const slotEndTime = slotTime.plus({ minutes: game.durationMinutes });
-
-      const bookingsInSlot = existingBookings.filter(
-        (b) => Math.abs(b.slotDateTime.getTime() - slotJSDate.getTime()) < 1000,
-      );
-
-      const bookedCount = bookingsInSlot.length;
-      // مقایسه با timezone یکسان (Asia/Tehran)
-      const remainingSlots = Math.max(0, maxConcurrent - bookedCount);
-      const available   = remainingSlots > 0 && slotTime > DateTime.now().setZone(TEHRAN_TZ);
-      const slotId = slotJSDate.toISOString();
-
-      return {
-        id:            slotId,
-        slotDateTime:  slotId,
-        startTime:     slotTime.toFormat('HH:mm'),
-        endTime:       slotEndTime.toFormat('HH:mm'),
-        hour,
-        price:         Number(game.pricePerPerson),
-        available,
-        isAvailable:   available,
-        bookedCount,
-        remainingSlots,
-        availableCapacity: remainingSlots,
-        totalCapacity: maxConcurrent,
-      };
-    });
+    const slots = buildAvailabilitySlots(game, existingBookings, maxConcurrent, dayStart);
 
     return {
       gameId,

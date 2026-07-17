@@ -238,6 +238,54 @@ textarea {
   box-shadow: 0 14px 40px rgba(0, 245, 255, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+.carousel-swiper {
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.carousel-swiper .game-card-link,
+.carousel-swiper .game-card-link * {
+  -webkit-user-drag: none;
+}
+
+.carousel-swiper.is-dragging,
+.carousel-swiper.is-dragging * {
+  cursor: grabbing !important;
+}
+
+.carousel-swiper.is-dragging .game-card-surface,
+.carousel-swiper.is-dragging .game-card-surface * {
+  transition-duration: 0ms !important;
+}
+
+.carousel-swiper.is-dragging .game-card-link:hover .game-card-surface,
+.carousel-swiper.is-dragging .game-card-link:focus-within .game-card-surface {
+  border-color: rgba(246, 196, 83, 0.45) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  transform: translateY(0) !important;
+}
+
+.carousel-swiper.is-dragging .game-card-link:hover img,
+.carousel-swiper.is-dragging .game-card-link:focus-within img {
+  transform: none !important;
+}
+
+.carousel-swiper.is-dragging .game-card-hover-panel {
+  opacity: 0 !important;
+  transform: translateY(1rem) !important;
+}
+
+.carousel-swiper.is-dragging .game-card-quick-meta {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+.section-carousel-viewport {
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
 .gothic-card::before {
   content: "";
   position: absolute;

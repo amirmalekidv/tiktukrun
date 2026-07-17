@@ -51,9 +51,16 @@ const DEFAULT_SETTINGS: Record<string, { value: string; group: string; descripti
   'gamification.coinsPerReview': { value: '10', group: 'gamification' },
   'gamification.monthly_rewards': {
     value: JSON.stringify({
+      raffle: {
+        enabled: true,
+        eligiblePoolSize: 10,
+        minScore: 1,
+        strategy: 'WEIGHTED_TOP_PLAYERS',
+      },
+      raffleWinner: { xp: 300, coins: 1500 },
       topPlayer: { xp: 500, coins: 2000, freeTicket: true },
       topTeam: { coins: 5000, discountPercent: 20 },
-      topGame: { xp: 200, coins: 1000 },
+      topGame: { title: 'بازی منتخب ماه' },
     }),
     group: 'gamification',
     description: 'جوایز ماهانه پیش‌فرض',

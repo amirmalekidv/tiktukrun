@@ -38,7 +38,17 @@ export default function GameDetailPage({ params }: { params: { slug: string } })
     notFound()
   }
 
-  const allImages = game.images.length > 0 ? game.images : [{ id: '0', url: game.coverImage || GAME_COVER_PLACEHOLDER, alt: game.title, isPrimary: true }]
+  const galleryImages = game.images ?? []
+  const allImages = game.coverImage
+    ? [
+        { id: 'cover', url: game.coverImage, alt: game.title, isPrimary: true },
+        ...galleryImages
+          .filter((img) => img.url !== game.coverImage)
+          .map((img) => ({ ...img, isPrimary: false })),
+      ]
+    : galleryImages.length > 0
+      ? galleryImages
+      : [{ id: '0', url: GAME_COVER_PLACEHOLDER, alt: game.title, isPrimary: true }]
   const activeImage = allImages[activeImageIdx]?.url || game.coverImage || GAME_COVER_PLACEHOLDER
   const unoptimizedHero = shouldBypassImageOptimization(activeImage)
 

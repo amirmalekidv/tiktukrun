@@ -1,11 +1,8 @@
 import HeroSection from '@/components/home/HeroSection'
+import BannerCarousel from '@/components/home/BannerCarousel'
 import StatsRow from '@/components/home/StatsRow'
 import CategoryFilter from '@/components/home/CategoryFilter'
-import CityFilter from '@/components/home/CityFilter'
-import GenreFilter from '@/components/home/GenreFilter'
-import GamesGrid from '@/components/home/GamesGrid'
-import WeeklyDiscountSection from '@/components/home/WeeklyDiscountSection'
-import SectionStrip from '@/components/home/SectionStrip'
+import LandingSections from '@/components/home/LandingSections'
 import TopPlayersSection from '@/components/home/TopPlayersSection'
 import StoriesSection from '@/components/home/StoriesSection'
 
@@ -18,32 +15,17 @@ export default function HomePage() {
       {/* Stats */}
       <StatsRow />
 
+      {/* Auto-scrolling landing banner */}
+      <BannerCarousel />
+
       {/* Categories */}
       <CategoryFilter />
-
-      {/* City + Genre filters */}
-      <CityFilter />
-      <GenreFilter />
 
       {/* Divider */}
       <div className="h-px w-full max-w-7xl mx-auto bg-gradient-to-r from-transparent via-[#00f5ff]/40 to-transparent my-4" />
 
-      {/* Weekly discounts */}
-      <WeeklyDiscountSection />
-
-      {/* Featured games grid */}
-      <GamesGrid />
-
-      {/* Section strips */}
-      <div className="border-t border-white/10 my-4" />
-      <SectionStrip sectionKey="cinema-horror" title="سینمای ترس" icon="fas fa-film" />
-      <SectionStrip sectionKey="board-games" title="بردگیم" icon="fas fa-chess" />
-      <SectionStrip sectionKey="mafia" title="مافیا" icon="fas fa-user-secret" />
-      <SectionStrip sectionKey="lasertag" title="لیزرتگ" icon="fas fa-crosshairs" />
-      <SectionStrip sectionKey="vr" title="واقعیت مجازی" icon="fas fa-vr-cardboard" />
-      <SectionStrip sectionKey="paintball" title="پینت‌بال" icon="fas fa-paint-roller" />
-      <SectionStrip sectionKey="tehran" title="در تهران" icon="fas fa-city" />
-      <SectionStrip sectionKey="karaj" title="در کرج" icon="fas fa-map-marker-alt" />
+      {/* Landing page sections (carousel rails) */}
+      <LandingSections />
 
       {/* Top players */}
       <div className="border-t border-white/10 my-4" />

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { mockApi, USE_MOCK } from '../mock-admin-api'
+import { getAccessToken } from '../auth'
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(
   /\/api\/v1\/?$/,
@@ -11,6 +12,14 @@ const authHttp = axios.create({
   baseURL: `${API_URL}/api/v1`,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
+})
+
+authHttp.interceptors.request.use((config) => {
+  const token = getAccessToken()
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
 })
 
 function unwrap<T>(res: { data: T & { data?: T } }): T {

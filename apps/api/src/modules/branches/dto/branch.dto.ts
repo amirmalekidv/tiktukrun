@@ -3,8 +3,9 @@ import {
   IsBoolean,
   IsOptional,
   IsNumber,
+  Min,
+  Max,
   MinLength,
-  IsPhoneNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -25,13 +26,17 @@ export class CreateBranchDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(-90)
+  @Max(90)
   @Type(() => Number)
-  lat?: number;
+  lat?: number | null;
 
   @IsOptional()
   @IsNumber()
+  @Min(-180)
+  @Max(180)
   @Type(() => Number)
-  lng?: number;
+  lng?: number | null;
 
   @IsOptional()
   @IsString()
@@ -62,13 +67,17 @@ export class UpdateBranchDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(-90)
+  @Max(90)
   @Type(() => Number)
-  lat?: number;
+  lat?: number | null;
 
   @IsOptional()
   @IsNumber()
+  @Min(-180)
+  @Max(180)
   @Type(() => Number)
-  lng?: number;
+  lng?: number | null;
 
   @IsOptional()
   @IsString()

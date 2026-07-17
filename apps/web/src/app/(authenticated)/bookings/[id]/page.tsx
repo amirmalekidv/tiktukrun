@@ -60,6 +60,7 @@ function BookingDetailContent() {
     game?: { title?: string };
     scheduledAt?: string;
     slotDateTime?: string;
+    teamName?: string;
     totalAmount?: number;
     review?: { id?: string } | null;
   };
@@ -96,6 +97,12 @@ function BookingDetailContent() {
             کد رزرو:
             <span className="text-gray-600 mr-2 text-xs">{b.code ?? b.id}</span>
           </div>
+          {b.teamName && (
+            <div className="text-gray-500 col-span-2">
+              نام تیم:
+              <span className="text-gray-300 mr-2">{b.teamName}</span>
+            </div>
+          )}
         </div>
         {(b.status === 'PENDING' || b.status === 'CONFIRMED') && (
           <button

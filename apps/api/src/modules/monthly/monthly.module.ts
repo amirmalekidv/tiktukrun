@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { AdminMonthlyController } from './admin-monthly.controller';
+import { AdminMonthlyController, MonthlyController } from './admin-monthly.controller';
 import { MonthlyService } from './monthly.service';
 import { GamificationModule } from '../gamification/gamification.module';
 
 // ScheduleModule.forRoot() is registered once in AppModule
 @Module({
   imports: [GamificationModule],
-  controllers: [AdminMonthlyController],
+  controllers: [MonthlyController, AdminMonthlyController],
   providers: [MonthlyService],
   exports: [MonthlyService],
 })

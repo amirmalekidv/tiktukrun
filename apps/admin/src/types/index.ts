@@ -61,6 +61,7 @@ export interface Booking {
   status: BookingStatus
   scheduledAt: string
   participants: number
+  teamName?: string
   totalAmount: number
   paidAmount: number
   createdAt: string

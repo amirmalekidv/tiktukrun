@@ -16,10 +16,10 @@ export function formatToman(amount: number | null | undefined): string {
 }
 
 /**
- * Format fear level as skull emojis
+ * Format fear level as a percentage
  */
 export function formatFearLevel(level: number): string {
-  return '💀'.repeat(Math.max(0, Math.min(5, level)))
+  return formatFearPercentage(level)
 }
 
 /**
@@ -40,6 +40,19 @@ export function toPersianDigits(n: number | string | null | undefined): string {
   if (n === null || n === undefined) return ''
   const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
   return String(n).replace(/\d/g, (d) => persianDigits[parseInt(d)])
+}
+
+/**
+ * Format fear level from the 0-5 scale as a percentage
+ */
+export function formatFearPercentage(level: number | null | undefined): string {
+  const numericLevel = Number(level)
+  const safeLevel = Number.isFinite(numericLevel)
+    ? Math.max(0, Math.min(5, numericLevel))
+    : 0
+  const percentage = Math.round((safeLevel / 5) * 100)
+
+  return `${toPersianDigits(percentage)}%`
 }
 
 /**

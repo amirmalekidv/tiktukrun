@@ -63,6 +63,7 @@ export interface CreateBookingRequest {
   gameId: number;
   slotDateTime: string;
   playersCount: number;
+  teamName?: string;
   paymentMethod: PaymentMethod;
   discountCode?: string;
   note?: string;

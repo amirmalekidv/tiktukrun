@@ -163,7 +163,9 @@ export class BranchesService {
 
     const data: any = { ...dto };
     if (data.cityId !== undefined) data.cityId = this.toId(data.cityId);
-    if (data.managerId !== undefined) data.managerId = this.toId(data.managerId);
+    if (Object.prototype.hasOwnProperty.call(data, 'managerId')) {
+      data.managerId = data.managerId ? this.toId(data.managerId) : null;
+    }
 
     return this.prisma.branch.update({
       where:   { id: bid },
@@ -180,7 +182,9 @@ export class BranchesService {
     await this.findOne(bid);
     const data: any = { ...dto };
     if (data.cityId !== undefined) data.cityId = this.toId(data.cityId);
-    if (data.managerId !== undefined) data.managerId = this.toId(data.managerId);
+    if (Object.prototype.hasOwnProperty.call(data, 'managerId')) {
+      data.managerId = data.managerId ? this.toId(data.managerId) : null;
+    }
     return this.prisma.branch.update({
       where:   { id: bid },
       data,

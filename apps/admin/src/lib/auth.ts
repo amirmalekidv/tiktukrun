@@ -51,15 +51,18 @@ export function getAdminUser(): unknown | null {
 export function parseJwt(token: string): Record<string, unknown> | null {
   try {
     const base64 = token.split('.')[1]
-    const decoded = atob(base64.replace(/-/g, '+').replace(/_/g, '/'))
+    if (!base64) return null
+    const normalized = base64.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=')
+    const decoded = atob(padded)
     return JSON.parse(decoded)
   } catch {
     return null
   }
 }
 
-export function isTokenExpired(token: string): boolean {
+export function isTokenExpired(token: string, skewMs = 0): boolean {
   const payload = parseJwt(token)
   if (!payload || !payload.exp) return true
-  return Date.now() >= (payload.exp as number) * 1000
+  return Date.now() + skewMs >= (payload.exp as number) * 1000
 }

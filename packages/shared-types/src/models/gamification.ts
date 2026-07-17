@@ -174,10 +174,10 @@ export interface UserLevelInfo {
 
 /**
  * ماه‌نامه برندگان — ساختار polymorphic
- * هر رکورد فقط یکی از سه FK را دارد بر اساس type:
- *   TOP_PLAYER → winnerUserId
- *   TOP_TEAM   → winnerTeamId
- *   TOP_GAME   → winnerGameId
+ * هر رکورد فقط یکی از FKها را دارد بر اساس type:
+ *   TOP_PLAYER / RAFFLE_WINNER → winnerUserId
+ *   TOP_TEAM                  → winnerTeamId
+ *   TOP_GAME                  → winnerGameId
  */
 export interface MonthlyWinner {
   id: number;
@@ -185,7 +185,7 @@ export interface MonthlyWinner {
   month: number;
   type: MonthlyWinnerType;
 
-  /** شناسه کاربر برنده — فقط برای TOP_PLAYER */
+  /** شناسه کاربر برنده — برای TOP_PLAYER و RAFFLE_WINNER */
   winnerUserId?: number | null;
   /** شناسه تیم برنده — فقط برای TOP_TEAM */
   winnerTeamId?: number | null;

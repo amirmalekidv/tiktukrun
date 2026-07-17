@@ -7,6 +7,7 @@ import { persianNum } from '@/lib/utils/format';
 import { branchesApi, citiesApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { can } from '@/lib/permissions';
+import { isPlatformAdmin } from '@/lib/route-permissions';
 import toast from 'react-hot-toast';
 
 interface AdminBranch {
@@ -34,6 +35,7 @@ function unwrap<T = any>(res: any): T {
 export default function BranchesPage() {
   const user = useAuthStore((s) => s.user);
   const canWrite = can(user, 'branches.write');
+  const canManageBranches = isPlatformAdmin(user);
   const [branches, setBranches] = useState<AdminBranch[]>([]);
   const [cities, setCities] = useState<CityOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ export default function BranchesPage() {
             <button onClick={load} className="btn-secondary" title="بارگذاری مجدد">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            {canWrite && (
+            {canManageBranches && (
               <Link href="/branches/new" className="btn-primary">
                 <Plus className="w-4 h-4" /> شعبه جدید
               </Link>
@@ -138,10 +140,10 @@ export default function BranchesPage() {
                   <p className="text-slate-400 text-sm">{branch.city?.name ?? '—'}</p>
                 </div>
                 <button
-                  onClick={() => canWrite && handleToggle(branch)}
-                  disabled={!canWrite}
-                  className={`badge ${branch.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} ${!canWrite ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  title={canWrite ? 'تغییر وضعیت' : undefined}
+                  onClick={() => canManageBranches && handleToggle(branch)}
+                  disabled={!canManageBranches}
+                  className={`badge ${branch.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} ${!canManageBranches ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  title={canManageBranches ? 'تغییر وضعیت' : undefined}
                 >
                   {branch.isActive ? 'فعال' : 'غیرفعال'}
                 </button>
@@ -171,7 +173,7 @@ export default function BranchesPage() {
                 <Link href={`/branches/${branch.id}`} className="btn-secondary flex-1 justify-center text-sm">
                   <Edit className="w-3.5 h-3.5" /> {canWrite ? 'ویرایش' : 'مشاهده'}
                 </Link>
-                {canWrite && (
+                {canManageBranches && (
                   <button onClick={() => setDeleteId(branch.id)} className="btn-danger px-3">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

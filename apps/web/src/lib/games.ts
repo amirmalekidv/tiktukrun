@@ -49,15 +49,59 @@ function mapImages(raw: unknown): GameImage[] {
   }))
 }
 
+function putCoverFirst(coverImage: string | undefined, images: GameImage[], title: string): GameImage[] {
+  if (!coverImage) return images
+
+  const existingCover = images.find((img) => img.url === coverImage)
+  const cover = existingCover
+    ? { ...existingCover, alt: existingCover.alt || title, isPrimary: true }
+    : { id: 'cover', url: coverImage, alt: title, isPrimary: true }
+
+  return [
+    cover,
+    ...images
+      .filter((img) => img.url !== coverImage)
+      .map((img) => ({ ...img, isPrimary: false })),
+  ]
+}
+
+function toOptionalNumber(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined
+  const num = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(num) ? num : undefined
+}
+
+function normalizeBranch(rawBranch: unknown, branchId: unknown): Game['branch'] {
+  const branch = (rawBranch && typeof rawBranch === 'object' ? rawBranch : {}) as Record<string, unknown>
+  const city = (branch.city && typeof branch.city === 'object' ? branch.city : {}) as Record<string, unknown>
+
+  return {
+    id: String(branch.id ?? branchId ?? ''),
+    name: String(branch.name ?? ''),
+    address: String(branch.address ?? ''),
+    phone: branch.phone ? String(branch.phone) : undefined,
+    lat: toOptionalNumber(branch.lat),
+    lng: toOptionalNumber(branch.lng),
+    city: {
+      id: String(city.id ?? ''),
+      name: String(city.name ?? ''),
+      slug: String(city.slug ?? ''),
+    },
+  }
+}
+
 /** Map API game document → web Game type expected by UI components. */
 export function normalizeGame(raw: Record<string, unknown>): Game {
   const categoryObj = raw.category as { slug?: string } | undefined
   const categorySlug = categoryObj?.slug ?? ''
-  const branch = raw.branch as Game['branch']
+  const branch = normalizeBranch(raw.branch, raw.branchId)
+  const title = String(raw.title ?? '')
+  const coverImage = resolveMediaUrl(raw.coverImage as string | undefined)
+  const images = mapImages(raw.images)
 
   return {
     id: String(raw.id),
-    title: String(raw.title ?? ''),
+    title,
     slug: String(raw.slug ?? ''),
     subtitle: raw.subtitle as string | undefined,
     description: String(raw.description ?? ''),
@@ -71,15 +115,10 @@ export function normalizeGame(raw: Record<string, unknown>): Game {
     duration: Number(raw.durationMinutes ?? raw.duration ?? 60),
     basePrice: Number(raw.pricePerPerson ?? raw.basePrice ?? 0),
     pricePerPlayer: Number(raw.pricePerPerson ?? raw.pricePerPlayer ?? 0),
-    coverImage: resolveMediaUrl(raw.coverImage as string | undefined),
-    images: mapImages(raw.images),
+    coverImage,
+    images: putCoverFirst(coverImage, images, title),
     teaserUrl: resolveMediaUrl(raw.teaserUrl as string | undefined),
-    branch: branch ?? {
-      id: String(raw.branchId ?? ''),
-      name: '',
-      address: '',
-      city: { id: '', name: '', slug: '' },
-    },
+    branch,
     rating: Number(raw.siteRank ?? raw.userRankCached ?? raw.rating ?? 0),
     totalReviews: Number(raw.totalReviews ?? 0),
     successRate: Number(raw.successRate ?? 0),
@@ -93,6 +132,7 @@ export function normalizeGame(raw: Record<string, unknown>): Game {
     likesCount: Number(raw.likesCount ?? 0),
     commentsCount: Number(raw.commentsCount ?? 0),
     likedByMe: raw.likedByMe as boolean | undefined,
+    availableSlots: raw.availableSlots == null ? undefined : Number(raw.availableSlots),
     createdAt: String(raw.createdAt ?? ''),
   }
 }

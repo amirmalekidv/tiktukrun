@@ -11,7 +11,6 @@ export const api: AxiosInstance = axios.create({
   baseURL: `${API_URL}/api/v1/admin`,
   timeout: 15000,
   headers: {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
 })

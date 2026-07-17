@@ -9,9 +9,12 @@ import {
   normalizeGame,
   normalizeGameList,
   parsePaginatedGames,
+  resolveMediaUrl,
 } from './games'
 import type {
   Game,
+  LandingSection,
+  LandingBanner,
   City,
   Availability,
   DiscountValidation,
@@ -165,6 +168,47 @@ export async function getGamesBySection(section: string): Promise<Game[]> {
   return normalizeGameList(data.data ?? data)
 }
 
+export async function getLandingSections(): Promise<LandingSection[]> {
+  const { data } = await httpClient.get('/landing-sections')
+  const raw = data.data ?? data
+  if (!Array.isArray(raw)) return []
+  return raw.map((section) => ({
+    ...section,
+    games: normalizeGameList(section.games ?? []),
+  }))
+}
+
+export async function getLandingSection(key: string): Promise<LandingSection | null> {
+  try {
+    const { data } = await httpClient.get(`/landing-sections/${key}`)
+    const raw = data.data ?? data
+    if (!raw) return null
+    return {
+      ...raw,
+      games: normalizeGameList(raw.games ?? []),
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function getLandingBanners(): Promise<LandingBanner[]> {
+  const { data } = await httpClient.get('/landing-banners')
+  const raw = data.data ?? data
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((banner) => banner?.imageUrl)
+    .map((banner) => ({
+      id: String(banner.id ?? ''),
+      title: banner.title ?? null,
+      altText: banner.altText ?? null,
+      href: banner.href ?? null,
+      imageUrl: resolveMediaUrl(banner.imageUrl) ?? '',
+      displayOrder: Number(banner.displayOrder ?? 0),
+      isActive: Boolean(banner.isActive ?? true),
+    }))
+}
+
 // ==================== AVAILABILITY ====================
 export async function getAvailability(gameId: string, date: string): Promise<Availability> {
   const { data } = await httpClient.get(`/games/availability/${gameId}`, { params: { date } })
@@ -212,6 +256,7 @@ export async function createBooking(params: {
   slotDateTime?: string
   players?: number
   playersCount?: number
+  teamName?: string
   discountCode?: string
   paymentMethod: string
 }): Promise<{
@@ -227,6 +272,7 @@ export async function createBooking(params: {
     gameId: params.gameId,
     slotDateTime: params.slotDateTime ?? params.slotId,
     playersCount: params.playersCount ?? params.players,
+    teamName: params.teamName,
     discountCode: params.discountCode,
     paymentMethod: params.paymentMethod,
   }

@@ -172,6 +172,7 @@ async function checkMonthlyWinnerIntegrity(): Promise<void> {
 
     const violations = winners.filter((winner) => {
       if (winner.type === 'TOP_PLAYER') return !winner.winnerUserId;
+      if (winner.type === 'RAFFLE_WINNER') return !winner.winnerUserId;
       if (winner.type === 'TOP_TEAM') return !winner.winnerTeamId;
       if (winner.type === 'TOP_GAME') return !winner.winnerGameId;
       return false;

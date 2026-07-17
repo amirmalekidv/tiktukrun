@@ -12,7 +12,7 @@ export default function StarRating({ rating, totalReviews, size = 'md', showCoun
   const stars = Math.max(0, Math.min(5, Math.round(safeRating)))
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
       <div className={`star-rating flex gap-0.5 ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
         {Array.from({ length: 5 }).map((_, i) => (
           <span key={i} className={i < stars ? 'text-yellow-400' : 'text-gray-600'}>

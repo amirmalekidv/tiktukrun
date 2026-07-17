@@ -62,6 +62,27 @@ export const categoriesApi = {
   delete: (id: string) => apiClient.delete(`/admin/categories/${id}`),
 };
 
+// ==================== Landing Sections ====================
+export const landingSectionsApi = {
+  getAll: () => apiClient.get<ApiResponse<import('../types').LandingSection[]>>('/admin/landing-sections'),
+  update: (id: string, d: Partial<import('../types').LandingSection>) =>
+    apiClient.patch<ApiResponse<import('../types').LandingSection>>(`/admin/landing-sections/${id}`, d),
+  setGames: (id: string, gameIds: string[]) =>
+    apiClient.patch(`/admin/landing-sections/${id}/games`, { gameIds }),
+};
+
+// ==================== Landing Banners ====================
+export const landingBannersApi = {
+  getAll: () => apiClient.get<ApiResponse<import('../types').LandingBanner[]>>('/admin/landing-banners'),
+  create: (d: FormData) =>
+    apiClient.post<ApiResponse<import('../types').LandingBanner>>('/admin/landing-banners', d),
+  update: (id: string, d: FormData | Partial<import('../types').LandingBanner>) =>
+    apiClient.patch<ApiResponse<import('../types').LandingBanner>>(`/admin/landing-banners/${id}`, d),
+  reorder: (bannerIds: string[]) =>
+    apiClient.patch<ApiResponse<import('../types').LandingBanner[]>>('/admin/landing-banners/order', { bannerIds }),
+  delete: (id: string) => apiClient.delete<ApiResponse<import('../types').LandingBanner>>(`/admin/landing-banners/${id}`),
+};
+
 // ==================== Reviews ====================
 // Backend: ReviewsAdminController @Controller('admin/reviews')
 //   GET  /            -> { data, total, page, limit }  (query: isApproved, gameId, page, limit, sortBy)

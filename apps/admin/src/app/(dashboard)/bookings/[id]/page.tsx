@@ -10,6 +10,8 @@ import RefundDialog from '@/components/bookings/RefundDialog';
 import { formatToman, toJalaliDateTime } from '@/lib/utils/format';
 import type { Booking, BookingEvent } from '@/lib/types';
 import { bookingsApi } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
+import { isPlatformAdmin } from '@/lib/route-permissions';
 import toast from 'react-hot-toast';
 
 // admin/bookings/:id is single-wrapped: { success, data: booking }
@@ -46,6 +48,7 @@ function normalize(b: any): Booking {
       ? new Date(b.slotDateTime).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
       : '',
     playersCount: b.playersCount ?? 0,
+    teamName: b.teamName ?? undefined,
     amount: String(b.basePrice ?? 0),
     discountAmount: String(b.discountApplied ?? 0),
     finalAmount: String(b.totalAmount ?? 0),
@@ -100,6 +103,7 @@ function buildTimeline(b: any): BookingEvent[] {
 export default function BookingDetailPage() {
   const params = useParams();
   const id = params?.id as string;
+  const user = useAuthStore((s) => s.user);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -147,7 +151,7 @@ export default function BookingDetailPage() {
     );
   }
 
-  const canRefund = booking.status === 'COMPLETED' || booking.status === 'CONFIRMED';
+  const canRefund = isPlatformAdmin(user) && (booking.status === 'COMPLETED' || booking.status === 'CONFIRMED');
 
   return (
     <div className="fade-in">

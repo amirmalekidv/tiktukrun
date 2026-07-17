@@ -125,21 +125,24 @@ async function seedBranches(cityMap: Record<string, string>) {
 // ─── Categories (شامل مافیا و لیزرتگ جدید) ─────────────────────────────────────
 async function seedCategories() {
   const cats = [
-    { name: 'سینما ترس', slug: 'cinema-horror', icon: '🎬', color: '#880E4F', displayOrder: 1 },
-    { name: 'بردگیم',    slug: 'board-games',   icon: '♟️', color: '#E65100', displayOrder: 2 },
-    { name: 'مافیا',      slug: 'mafia',         icon: '🕵️', color: '#1A237E', displayOrder: 3 },
-    { name: 'لیزرتگ',     slug: 'lasertag',      icon: '🔫', color: '#00695C', displayOrder: 4 },
+    { name: 'اتاق فرار', slug: 'escape-room', icon: '🚪', color: '#4A148C', displayOrder: 0, genre: 'HORROR' },
+    { name: 'سینما ترس', slug: 'cinema-horror', icon: '🎬', color: '#880E4F', displayOrder: 1, genre: 'HORROR' },
+    { name: 'بردگیم',    slug: 'board-games',   icon: '♟️', color: '#E65100', displayOrder: 2, genre: 'NON_HORROR' },
+    { name: 'مافیا',      slug: 'mafia',         icon: '🕵️', color: '#1A237E', displayOrder: 3, genre: 'NON_HORROR' },
+    { name: 'لیزرتگ',     slug: 'lasertag',      icon: '🔫', color: '#00695C', displayOrder: 4, genre: 'NON_HORROR' },
+    { name: 'پینت‌بال',   slug: 'paintball',     icon: '🎯', color: '#BF360C', displayOrder: 5, genre: 'NON_HORROR' },
+    { name: 'واقعیت مجازی', slug: 'vr',          icon: '🥽', color: '#1565C0', displayOrder: 6, genre: 'NON_HORROR' },
   ];
   const map: Record<string, string> = {};
   for (const cat of cats) {
     const c = await prisma.category.upsert({
       where: { slug: cat.slug },
-      update: { name: cat.name, icon: cat.icon, color: cat.color, displayOrder: cat.displayOrder },
-      create: cat,
+      update: { name: cat.name, icon: cat.icon, color: cat.color, displayOrder: cat.displayOrder, genre: cat.genre as any },
+      create: { ...cat, genre: cat.genre as any },
     });
     map[cat.slug] = c.id;
   }
-  console.log(`  ✅ ${cats.length} دسته (سینما ترس، بردگیم، مافیا، لیزرتگ)`);
+  console.log(`  ✅ ${cats.length} دسته`);
   return map;
 }
 
@@ -162,11 +165,19 @@ async function seedGames(catMap: Record<string, string>, branchIds: string[]) {
     { title: 'لیزرتگ نبرد کهکشانی', slug: 'lasertag-galaxy', category: 'lasertag',     tier: 'GOLD',     difficulty: 'MEDIUM',    fearLevel: 0, price: 200000, tags: ['لیزرتگ', 'تیمی'],     desc: 'نبرد لیزری گروهی در میدانی با تم فضایی.' },
     { title: 'لیزرتگ منطقه جنگی',  slug: 'lasertag-warzone', category: 'lasertag',     tier: 'DIAMOND',  difficulty: 'HARD',      fearLevel: 1, price: 260000, tags: ['لیزرتگ', 'رقابتی'],   desc: 'میدان جنگ لیزری حرفه‌ای با موانع و سنگرها.' },
     { title: 'لیزرتگ خانوادگی',    slug: 'lasertag-family',  category: 'lasertag',     tier: 'STANDARD', difficulty: 'EASY',      fearLevel: 0, price: 150000, tags: ['لیزرتگ', 'خانوادگی'], desc: 'بازی لیزرتگ سرگرم‌کننده برای همه سنین.' },
+    { title: 'پینت‌بال جنگل',       slug: 'paintball-jungle', category: 'paintball',    tier: 'GOLD',     difficulty: 'MEDIUM',    fearLevel: 0, price: 190000, tags: ['پینت‌بال', 'تیمی'],     desc: 'میدان پینت‌بال با موانع جنگلی.' },
+    // اتاق فرار — تهران
+    { title: 'فرار از زندان',       slug: 'escape-prison',    category: 'escape-room',  tier: 'GOLD',     difficulty: 'HARD',      fearLevel: 4, price: 290000, tags: ['ترسناک', 'اتاق فرار'], branchIdx: 0, desc: 'فرار از زندان سیاه با معماهای پیچیده.' },
+    { title: 'گنجینه گم‌شده',       slug: 'escape-treasure',  category: 'escape-room',  tier: 'SILVER',   difficulty: 'MEDIUM',    fearLevel: 2, price: 220000, tags: ['اتاق فرار'],           branchIdx: 1, desc: 'جستجوی گنج در معبد باستانی.' },
+    { title: 'آزمایشگاه مخفی',      slug: 'escape-lab',       category: 'escape-room',  tier: 'PLATINUM', difficulty: 'VERY_HARD', fearLevel: 5, price: 340000, tags: ['ترسناک', 'اتاق فرار'], branchIdx: 0, desc: 'آزمایشگاه علمی با رازهای تاریک.' },
+    // اتاق فرار — کرج
+    { title: 'قصر وحشت',            slug: 'escape-castle',    category: 'escape-room',  tier: 'DIAMOND',  difficulty: 'VERY_HARD', fearLevel: 5, price: 310000, tags: ['ترسناک', 'اتاق فرار'], branchIdx: 2, desc: 'قصر متروکه با اتاق‌های مخفی.' },
+    { title: 'موزه شب',             slug: 'escape-museum',    category: 'escape-room',  tier: 'GOLD',     difficulty: 'MEDIUM',    fearLevel: 1, price: 210000, tags: ['اتاق فرار'],           branchIdx: 2, desc: 'کشف راز موزه در تاریکی شب.' },
   ];
 
   let count = 0;
   for (const g of games) {
-    const branchId = branchIds[count % branchIds.length];
+    const branchId = branchIds[(g as any).branchIdx ?? count % branchIds.length];
     const data = {
       title: g.title,
       slug: g.slug,
@@ -195,6 +206,126 @@ async function seedGames(catMap: Record<string, string>, branchIds: string[]) {
     count++;
   }
   console.log(`  ✅ ${games.length} بازی با سطح‌بندی (tier): ${TIERS.join('، ')}`);
+}
+
+// ─── Landing page sections ─────────────────────────────────────────────────────
+async function seedLandingSections() {
+  const sections = [
+    {
+      key: 'weekly-discount',
+      title: 'تخفیف ویژه یا هفتگی',
+      description: 'بهترین تخفیف‌های این هفته',
+      icon: 'fas fa-bolt',
+      displayOrder: 1,
+      filterType: 'WEEKLY_DISCOUNT' as const,
+    },
+    {
+      key: 'our-picks',
+      title: 'پیشنهاد ما به شما',
+      description: 'انتخاب‌های ویژه تیم تیک‌تاک‌ران',
+      icon: 'fas fa-heart',
+      displayOrder: 2,
+      filterType: 'FEATURED' as const,
+    },
+    {
+      key: 'escape-room-tehran',
+      title: 'اتاق فرار های تهران',
+      description: 'بهترین اتاق فرارهای تهران',
+      icon: 'fas fa-door-open',
+      displayOrder: 3,
+      filterType: 'CATEGORY_CITY' as const,
+      categorySlug: 'escape-room',
+      citySlug: 'tehran',
+    },
+    {
+      key: 'escape-room-karaj',
+      title: 'اتاق فرار های کرج',
+      description: 'اتاق فرارهای کرج',
+      icon: 'fas fa-door-open',
+      displayOrder: 4,
+      filterType: 'CATEGORY_CITY' as const,
+      categorySlug: 'escape-room',
+      citySlug: 'karaj',
+    },
+    {
+      key: 'cinema-horror',
+      title: 'سینما ترس',
+      description: 'تجربه سینمایی ترسناک',
+      icon: 'fas fa-film',
+      displayOrder: 5,
+      filterType: 'CATEGORY' as const,
+      categorySlug: 'cinema-horror',
+    },
+    {
+      key: 'escape-room-horror',
+      title: 'اتاق فرار ترسناک',
+      description: 'اتاق فرارهای پر از هیجان و ترس',
+      icon: 'fas fa-ghost',
+      displayOrder: 6,
+      filterType: 'CATEGORY' as const,
+      categorySlug: 'escape-room',
+      tagFilter: 'horror',
+    },
+    {
+      key: 'escape-room-non-horror',
+      title: 'اتاق فرار غیرترسناک',
+      description: 'اتاق فرارهای مناسب همه',
+      icon: 'fas fa-puzzle-piece',
+      displayOrder: 7,
+      filterType: 'CATEGORY' as const,
+      categorySlug: 'escape-room',
+      tagFilter: 'non-horror',
+    },
+    {
+      key: 'popular-this-week',
+      title: 'پرفروش ترین',
+      description: 'پرطرفدارترین بازی‌های این هفته',
+      icon: 'fas fa-fire',
+      displayOrder: 8,
+      filterType: 'POPULAR_THIS_WEEK' as const,
+    },
+    {
+      key: 'other-entertainments',
+      title: 'سرگرمی های دیگر، مثل بردگیم، لیزرتگ، پینت بال، مافیا',
+      description: 'بردگیم، لیزرتگ، پینت‌بال، مافیا و بیشتر',
+      icon: 'fas fa-dice',
+      displayOrder: 9,
+      filterType: 'MULTI_CATEGORY' as const,
+      categorySlugs: ['board-games', 'lasertag', 'paintball', 'mafia'],
+    },
+  ];
+
+  for (const s of sections) {
+    await prisma.landingSection.upsert({
+      where: { key: s.key },
+      update: {
+        title: s.title,
+        description: s.description,
+        icon: s.icon,
+        displayOrder: s.displayOrder,
+        filterType: s.filterType,
+        categorySlug: (s as any).categorySlug ?? null,
+        categorySlugs: (s as any).categorySlugs ?? [],
+        citySlug: (s as any).citySlug ?? null,
+        tagFilter: (s as any).tagFilter ?? null,
+        isActive: true,
+      },
+      create: {
+        key: s.key,
+        title: s.title,
+        description: s.description,
+        icon: s.icon,
+        displayOrder: s.displayOrder,
+        filterType: s.filterType,
+        categorySlug: (s as any).categorySlug ?? null,
+        categorySlugs: (s as any).categorySlugs ?? [],
+        citySlug: (s as any).citySlug ?? null,
+        tagFilter: (s as any).tagFilter ?? null,
+        isActive: true,
+      },
+    });
+  }
+  console.log(`  ✅ ${sections.length} سکشن صفحهٔ اصلی`);
 }
 
 // ─── Admin user ────────────────────────────────────────────────────────────────
@@ -486,6 +617,7 @@ async function main() {
   const branchIds = await seedBranches(cityMap);
   const catMap = await seedCategories();
   await seedGames(catMap, branchIds);
+  await seedLandingSections();
   await seedAdmin();
   const communityUsers = await seedCommunityUsers(cityMap);
   await seedCommunityTeam(communityUsers);

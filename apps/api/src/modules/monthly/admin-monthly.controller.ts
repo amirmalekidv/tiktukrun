@@ -11,6 +11,7 @@ import { MonthlyService } from './monthly.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { IsOptional, IsObject } from 'class-validator';
 
 class DistributeDto {
@@ -23,10 +24,30 @@ class DistributeDto {
   @IsOptional()
   @IsObject()
   customPrizes?: {
+    raffleWinner?: { xp?: number; coins?: number; diamonds?: number; discountCode?: boolean; freeTicket?: boolean };
     topPlayer?: { xp?: number; coins?: number; discountCode?: boolean; freeTicket?: boolean };
     topTeam?: { coins?: number; discountPercent?: number };
     topGame?: { xp?: number; coins?: number };
   };
+}
+
+@ApiTags('Monthly Raffle')
+@Controller('monthly')
+export class MonthlyController {
+  constructor(private readonly monthlyService: MonthlyService) {}
+
+  @Public()
+  @Get('raffle')
+  @ApiOperation({ summary: 'نمای عمومی قرعه‌کشی ماهانه' })
+  async getRaffle(
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+  ) {
+    return this.monthlyService.getPublicRaffleOverview(
+      year ? Number(year) : undefined,
+      month ? Number(month) : undefined,
+    );
+  }
 }
 
 @ApiTags('Admin - Monthly Rewards')

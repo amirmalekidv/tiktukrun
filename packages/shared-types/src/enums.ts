@@ -214,9 +214,10 @@ export enum TeamMemberRole {
 }
 
 export enum MonthlyWinnerType {
-  TOP_PLAYER = 'TOP_PLAYER',
-  TOP_TEAM   = 'TOP_TEAM',
-  TOP_GAME   = 'TOP_GAME',
+  TOP_PLAYER    = 'TOP_PLAYER',
+  TOP_TEAM      = 'TOP_TEAM',
+  TOP_GAME      = 'TOP_GAME',
+  RAFFLE_WINNER = 'RAFFLE_WINNER',
 }
 
 export enum AutoDiscountRule {

@@ -21,6 +21,7 @@ function BookingContent({ params }: { params: { slug: string } }) {
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
   const [players, setPlayers] = useState(Number(searchParams.get('players') || 2))
+  const [teamName, setTeamName] = useState('')
   const [discountCode, setDiscountCode] = useState('')
   const [discountResult, setDiscountResult] = useState<{ valid: boolean; amount: number; message?: string } | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<'WALLET' | 'ZARINPAL'>('ZARINPAL')
@@ -70,6 +71,7 @@ function BookingContent({ params }: { params: { slug: string } }) {
         gameId: game.id,
         slotDateTime: selectedSlot.slotDateTime ?? selectedSlot.id,
         playersCount: players,
+        teamName: teamName.trim() || undefined,
         discountCode: discountResult?.valid ? discountCode : undefined,
         paymentMethod,
       })
@@ -134,7 +136,7 @@ function BookingContent({ params }: { params: { slug: string } }) {
 
   const steps = [
     { num: 1, label: 'انتخاب زمان', icon: 'fas fa-calendar' },
-    { num: 2, label: 'تعداد + تخفیف', icon: 'fas fa-users' },
+    { num: 2, label: 'تیم + تخفیف', icon: 'fas fa-users' },
     { num: 3, label: 'پرداخت', icon: 'fas fa-credit-card' },
     { num: 4, label: 'تأیید', icon: 'fas fa-check' },
   ]
@@ -144,10 +146,9 @@ function BookingContent({ params }: { params: { slug: string } }) {
       <div className="max-w-3xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-cinzel font-bold text-2xl text-white mb-1">
+          <h1 className="font-cinzel font-bold text-2xl text-white">
             رزرو: <span className="blood-text">{game.title}</span>
           </h1>
-          <p className="text-gray-400 text-sm">{game.branch.name} — {game.branch.city.name}</p>
         </div>
 
         {/* Step indicator */}
@@ -255,12 +256,12 @@ function BookingContent({ params }: { params: { slug: string } }) {
           </div>
         )}
 
-        {/* Step 2: Players + Discount */}
+        {/* Step 2: Players + Team + Discount */}
         {step === 2 && (
           <div className="dark-card rounded-2xl p-6 space-y-6 fade-in">
             <h2 className="font-cinzel font-bold text-lg text-white flex items-center gap-2">
               <i className="fas fa-users text-red-500" />
-              تعداد بازیکن و تخفیف
+              اطلاعات تیم و تخفیف
             </h2>
 
             {/* Selected time summary */}
@@ -298,6 +299,22 @@ function BookingContent({ params }: { params: { slug: string } }) {
                   +
                 </button>
               </div>
+            </div>
+
+            {/* Team name */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">
+                <i className="fas fa-flag text-red-500 ml-1" />
+                نام تیم (اختیاری)
+              </label>
+              <input
+                type="text"
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                maxLength={80}
+                placeholder="مثال: شکارچیان نیمه‌شب"
+                className="input-gothic w-full"
+              />
             </div>
 
             {/* Discount code */}
@@ -384,6 +401,12 @@ function BookingContent({ params }: { params: { slug: string } }) {
                 <span className="text-gray-400">تعداد</span>
                 <span className="text-white">{toPersianDigits(players)} نفر</span>
               </div>
+              {teamName.trim() && (
+                <div className="flex justify-between">
+                  <span className="text-gray-400">نام تیم</span>
+                  <span className="text-white">{teamName.trim()}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold border-t border-red-950/40 pt-2">
                 <span className="text-gray-300">مبلغ نهایی</span>
                 <span className="text-yellow-400 text-lg">{formatToman(finalAmount)} تومان</span>

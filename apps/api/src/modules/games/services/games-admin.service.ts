@@ -142,6 +142,7 @@ export class GamesAdminService {
         maxPlayers:           dto.maxPlayers,
         durationMinutes:      dto.durationMinutes,
         pricePerPerson:       Math.round(dto.pricePerPerson),
+        siteRank:             dto.siteRank,
         tags:                 dto.tags ?? [],
         isFeatured:           dto.isFeatured ?? false,
         isActive:             dto.isActive ?? true,

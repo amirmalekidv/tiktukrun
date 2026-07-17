@@ -9,9 +9,10 @@ import MobileMenu from './MobileMenu'
 
 const menuItems = [
   { label: 'اتاق فرارها', href: '/games' },
-  { label: 'برترین‌ها', href: '/section/featured' },
+  { label: 'بهترین بازی ها', href: '/section/popular-this-week' },
   { label: 'نظرات و تجربه پلیر', href: '/stories' },
   { label: 'پلیر های برتر', href: '/leaderboard' },
+  { label: 'قرعه کشی', href: '/raffle' },
   { label: 'گردونه', href: '/wheel' },
   { label: 'چت آنلاین', href: '/community' },
 ]

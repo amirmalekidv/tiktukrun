@@ -57,6 +57,7 @@ export interface Booking {
   slotDate: string;
   slotTime: string;
   playersCount: number;
+  teamName?: string;
   amount: string;
   discountAmount?: string;
   finalAmount: string;
@@ -174,6 +175,43 @@ export interface Category {
   icon?: string;
   isActive: boolean;
   gamesCount?: number;
+}
+
+export type LandingSectionFilterType =
+  | 'WEEKLY_DISCOUNT'
+  | 'FEATURED'
+  | 'CATEGORY'
+  | 'CATEGORY_CITY'
+  | 'MULTI_CATEGORY'
+  | 'POPULAR_THIS_WEEK'
+  | 'MANUAL';
+
+export interface LandingSection {
+  id: string;
+  key: string;
+  title: string;
+  description?: string;
+  icon: string;
+  displayOrder: number;
+  isActive: boolean;
+  filterType: LandingSectionFilterType;
+  categorySlug?: string;
+  categorySlugs?: string[];
+  citySlug?: string;
+  tagFilter?: string;
+  manualGames?: { gameId: string; displayOrder: number; game?: { id: string; title: string; slug: string } }[];
+}
+
+export interface LandingBanner {
+  id: string;
+  title?: string | null;
+  altText?: string | null;
+  href?: string | null;
+  imageUrl: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ==================== Review ====================
@@ -376,7 +414,7 @@ export interface MonthlyWinner {
   id: string;
   year: number;
   month: number;
-  type: 'TOP_PLAYER' | 'TOP_TEAM' | 'TOP_GAME';
+  type: 'TOP_PLAYER' | 'TOP_TEAM' | 'TOP_GAME' | 'RAFFLE_WINNER';
   winnerId: string;
   winner?: User | Game;
   prize: string;

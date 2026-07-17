@@ -3,12 +3,19 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, User, Loader2, CalendarPlus, ArrowRight } from 'lucide-react';
 import { SectionHeader } from '@/components/ui';
-import { bookingsApi, gamesApi, adminCustomersApi } from '@/lib/api';
+import { bookingsApi, branchesApi, gamesApi, adminCustomersApi } from '@/lib/api';
 import { persianNum } from '@/lib/utils/format';
 import toast from 'react-hot-toast';
 
 interface CustomerLite { id: string; fullName?: string; mobile?: string }
-interface GameLite { id: string; title: string; pricePerPerson?: number }
+interface BranchOption { id: string; name: string; city?: { name?: string | null } | null }
+interface GameLite {
+  id: string;
+  title: string;
+  branchId?: string;
+  branch?: { name?: string | null; city?: { name?: string | null } | null } | null;
+  pricePerPerson?: number | string;
+}
 
 function readList<T>(res: any): T[] {
   const body = res?.data;
@@ -38,22 +45,32 @@ export default function NewBookingPage() {
   // games
   const [games, setGames] = useState<GameLite[]>([]);
   const [gameId, setGameId] = useState('');
+  const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [branchId, setBranchId] = useState('');
 
   // form
   const [slotDateTime, setSlotDateTime] = useState('');
   const [playersCount, setPlayersCount] = useState(2);
+  const [teamName, setTeamName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'WALLET' | 'ZARINPAL'>('CASH');
   const [totalAmount, setTotalAmount] = useState<string>('');
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // load games once
+  useEffect(() => {
+    branchesApi
+      .getAll()
+      .then((res) => setBranches(readList<BranchOption>(res)))
+      .catch(() => setBranches([]));
+  }, []);
+
+  // load games, optionally scoped to the selected branch
   useEffect(() => {
     gamesApi
-      .getAll({ limit: 200 })
+      .getAll({ limit: 200, ...(branchId ? { branchId } : {}) })
       .then((res) => setGames(readList<GameLite>(res)))
       .catch(() => setGames([]));
-  }, []);
+  }, [branchId]);
 
   // debounced customer search
   useEffect(() => {
@@ -79,8 +96,12 @@ export default function NewBookingPage() {
   }, [query, customer]);
 
   const selectedGame = games.find((g) => g.id === gameId);
+  const selectedGamePrice =
+    selectedGame?.pricePerPerson != null ? Number(selectedGame.pricePerPerson) : null;
   const computedTotal =
-    selectedGame?.pricePerPerson != null ? selectedGame.pricePerPerson * playersCount : null;
+    selectedGamePrice != null && Number.isFinite(selectedGamePrice)
+      ? selectedGamePrice * playersCount
+      : null;
 
   const handleSubmit = useCallback(async () => {
     if (!customer) return toast.error('یک مشتری انتخاب کنید');
@@ -94,6 +115,7 @@ export default function NewBookingPage() {
         gameId,
         slotDateTime: new Date(slotDateTime).toISOString(),
         playersCount,
+        teamName: teamName.trim() || undefined,
         paymentMethod,
         totalAmount: totalAmount ? Number(totalAmount) : undefined,
         note: note || undefined,
@@ -105,7 +127,7 @@ export default function NewBookingPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [customer, gameId, slotDateTime, playersCount, paymentMethod, totalAmount, note, router]);
+  }, [customer, gameId, slotDateTime, playersCount, teamName, paymentMethod, totalAmount, note, router]);
 
   return (
     <div className="fade-in">
@@ -173,6 +195,26 @@ export default function NewBookingPage() {
           )}
         </div>
 
+        {/* Branch */}
+        <div>
+          <label className="block text-sm text-slate-400 mb-1.5">شعبه / ونیو</label>
+          <select
+            value={branchId}
+            onChange={(e) => {
+              setBranchId(e.target.value);
+              setGameId('');
+            }}
+            className="admin-input w-full"
+          >
+            <option value="">همه شعب مجاز</option>
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name}{branch.city?.name ? ` — ${branch.city.name}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Game */}
         <div>
           <label className="block text-sm text-slate-400 mb-1.5">بازی</label>
@@ -181,10 +223,17 @@ export default function NewBookingPage() {
             {games.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.title}
-                {g.pricePerPerson != null ? ` — ${persianNum(g.pricePerPerson.toLocaleString())} تومان/نفر` : ''}
+                {g.branch?.name ? ` — ${g.branch.name}${g.branch.city?.name ? ` / ${g.branch.city.name}` : ''}` : ''}
+                {g.pricePerPerson != null ? ` — ${persianNum(Number(g.pricePerPerson).toLocaleString())} تومان/نفر` : ''}
               </option>
             ))}
           </select>
+          {selectedGame?.branch?.name && (
+            <p className="text-xs text-slate-500 mt-1.5">
+              این رزرو برای شعبه {selectedGame.branch.name}
+              {selectedGame.branch.city?.name ? ` (${selectedGame.branch.city.name})` : ''} ثبت می‌شود.
+            </p>
+          )}
         </div>
 
         {/* Slot + players */}
@@ -239,6 +288,18 @@ export default function NewBookingPage() {
               className="admin-input w-full"
             />
           </div>
+        </div>
+
+        {/* Team */}
+        <div>
+          <label className="block text-sm text-slate-400 mb-1.5">نام تیم (اختیاری)</label>
+          <input
+            value={teamName}
+            onChange={(e) => setTeamName(e.target.value)}
+            maxLength={80}
+            className="admin-input w-full"
+            placeholder="نام تیم برای امتیازدهی بعد از بازی"
+          />
         </div>
 
         {/* Note */}

@@ -11,6 +11,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 import { MaintenanceGuard } from './common/guards/maintenance.guard';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -43,6 +44,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { CitiesModule } from './modules/cities/cities.module';
 import { BranchesModule } from './modules/branches/branches.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { LandingSectionsModule } from './modules/landing-sections/landing-sections.module';
+import { LandingBannersModule } from './modules/landing-banners/landing-banners.module';
 import { GamesModule } from './modules/games/games.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
@@ -149,6 +152,8 @@ import { PublicModule } from './modules/public/public.module';
     CitiesModule,
     BranchesModule,
     CategoriesModule,
+    LandingSectionsModule,
+    LandingBannersModule,
     GamesModule,
     BookingsModule,
     ReviewsModule,
@@ -181,6 +186,7 @@ import { PublicModule } from './modules/public/public.module';
     // چون JwtAuthGuard اعمال نشده بود. الان global اعمال می‌شه و @Public()
     // برای endpoint‌های عمومی respect می‌شه.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: MaintenanceGuard },
   ],
 })

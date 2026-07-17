@@ -5,8 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getGamesBySection } from '@/lib/api'
 import { GAME_COVER_PLACEHOLDER, shouldBypassImageOptimization } from '@/lib/games'
-import { formatToman } from '@/lib/utils'
-import FearMeter from '@/components/ui/FearMeter'
+import { formatFearPercentage, formatToman } from '@/lib/utils'
 
 export default function WeeklyDiscountSection() {
   const { data: games = [], isLoading } = useSWR('weekly-discount', () => getGamesBySection('weekly-discount'))
@@ -27,7 +26,7 @@ export default function WeeklyDiscountSection() {
           ? Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="dark-card rounded-[18px] h-48 skeleton" />
             ))
-            : games.map((game, idx) => {
+          : games.map((game, idx) => {
               // Use deterministic discount based on game index to avoid hydration mismatch
               const DISCOUNTS = [15, 20, 25, 10, 30, 18, 22, 12, 28]
               const discount = DISCOUNTS[idx % DISCOUNTS.length]
@@ -35,6 +34,7 @@ export default function WeeklyDiscountSection() {
               const discountedPrice = Math.round(originalPrice * (1 - discount / 100))
               const coverImage = game.coverImage || game.images[0]?.url || GAME_COVER_PLACEHOLDER
               const unoptimized = shouldBypassImageOptimization(coverImage)
+              const fearPercentage = formatFearPercentage(game.fearLevel)
 
               return (
                 <Link key={game.id} href={`/games/${game.slug}`}>
@@ -59,7 +59,10 @@ export default function WeeklyDiscountSection() {
                     <div className="p-4">
                       <h3 className="font-bold text-white text-base mb-1">{game.title}</h3>
                       <div className="flex items-center justify-between">
-                        <FearMeter level={game.fearLevel} size="sm" />
+                        <div className="inline-flex items-center gap-1.5 rounded-full border border-[#ff6b8f]/35 bg-[#ff6b8f]/10 px-3 py-1 text-[11px] font-black text-[#ff8aa7]">
+                          <span className="text-white/70">ترس</span>
+                          <span>{fearPercentage}</span>
+                        </div>
                         <div className="text-left">
                           <div className="text-gray-500 text-xs line-through">{formatToman(originalPrice)} ت</div>
                           <div className="price-tag text-sm">{formatToman(discountedPrice)} ت</div>

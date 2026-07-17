@@ -212,6 +212,16 @@ enum GenreFilter {
   NON_HORROR
 }
 
+enum LandingSectionFilterType {
+  WEEKLY_DISCOUNT
+  FEATURED
+  CATEGORY
+  CATEGORY_CITY
+  MULTI_CATEGORY
+  POPULAR_THIS_WEEK
+  MANUAL
+}
+
 enum ModerationActionType {
   WARN
   MUTE_24H
@@ -235,6 +245,7 @@ enum MonthlyWinnerType {
   TOP_PLAYER
   TOP_TEAM
   TOP_GAME
+  RAFFLE_WINNER
 }
 
 enum AutoDiscountRule {
@@ -317,53 +328,111 @@ model Category {
   @@map("categories")
 }
 
-model Game {
-  id          String         @id @default(auto()) @map("_id") @db.ObjectId
-  slug        String         @unique
-  title       String
-  subtitle    String?
-  categoryId  String         @db.ObjectId
-  branchId    String         @db.ObjectId
-  description String
-  scenario    String?
-  fearLevel   Int            @default(3)
-  difficulty  GameDifficulty @default(MEDIUM)
-  /// سطح‌بندی بازی — استاندارد/نقره‌ای/طلایی/پلاتینیوم/دایموند
-  tier        GameTier       @default(STANDARD)
-  minPlayers  Int            @default(2)
-  maxPlayers  Int            @default(6)
-  durationMinutes Int        @default(60)
-  /// قیمت به ازای هر نفر (تومان)
-  pricePerPerson  Int
-  siteRank        Float      @default(4.0)
-  userRankCached  Float?
-  totalReviews    Int        @default(0)
-  /// تعداد کل لایک‌های بازی (کش‌شده)
-  likesCount      Int        @default(0)
-  /// تعداد کل کامنت‌های تأییدشده (کش‌شده)
-  commentsCount   Int        @default(0)
-  teaserUrl       String?
-  coverImage      String?
-  tags            String[]
-  isFeatured      Boolean    @default(false)
-  isActive        Boolean    @default(true)
-  weeklyDiscountPercent Int?  @default(0)
-  /// شناسه کدهای تخفیف مرتبط (m2m)
-  discountCodeIds String[]   @db.ObjectId
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+/// سکشن‌های صفحهٔ اصلی — قابل مدیریت از پنل ادمین
+model LandingSection {
+  id            String                   @id @default(auto()) @map("_id") @db.ObjectId
+  key           String                   @unique
+  title         String
+  description   String?
+  icon          String                   @default("fas fa-star")
+  displayOrder  Int                      @default(0)
+  isActive      Boolean                  @default(true)
+  filterType    LandingSectionFilterType
+  /// برای CATEGORY / CATEGORY_CITY
+  categorySlug  String?
+  /// برای MULTI_CATEGORY
+  categorySlugs String[]
+  /// برای CATEGORY_CITY
+  citySlug      String?
+  /// horror | non-horror — فیلتر بر اساس تگ «ترسناک»
+  tagFilter     String?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
 
-  category      Category        @relation(fields: [categoryId], references: [id])
-  branch        Branch          @relation(fields: [branchId], references: [id])
-  images        GameImage[]
-  reviews       Review[]
-  comments      GameComment[]
-  likes         GameLike[]
-  bookings      Booking[]
-  teams         Team[]
-  discountCodes DiscountCode[]  @relation("GameDiscounts", fields: [discountCodeIds], references: [id])
-  monthlyWins   MonthlyWinner[] @relation("WinnerGame")
-  freeTickets   FreeTicket[]
+  manualGames LandingSectionGame[]
+
+  @@map("landing_sections")
+}
+
+model LandingSectionGame {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sectionId    String   @db.ObjectId
+  gameId       String   @db.ObjectId
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  section LandingSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  game    Game           @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, gameId])
+  @@index([sectionId, displayOrder])
+  @@map("landing_section_games")
+}
+
+/// بنرهای عریض صفحهٔ اصلی — قابل مدیریت از پنل ادمین
+model LandingBanner {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  title        String?
+  altText      String?
+  href         String?
+  imageUrl     String
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive, displayOrder])
+  @@map("landing_banners")
+}
+
+model Game {
+  id                    String         @id @default(auto()) @map("_id") @db.ObjectId
+  slug                  String         @unique
+  title                 String
+  subtitle              String?
+  categoryId            String         @db.ObjectId
+  branchId              String         @db.ObjectId
+  description           String
+  scenario              String?
+  fearLevel             Int            @default(3)
+  difficulty            GameDifficulty @default(MEDIUM)
+  /// سطح‌بندی بازی — استاندارد/نقره‌ای/طلایی/پلاتینیوم/دایموند
+  tier                  GameTier       @default(STANDARD)
+  minPlayers            Int            @default(2)
+  maxPlayers            Int            @default(6)
+  durationMinutes       Int            @default(60)
+  /// قیمت به ازای هر نفر (تومان)
+  pricePerPerson        Int
+  siteRank              Float          @default(4.0)
+  userRankCached        Float?
+  totalReviews          Int            @default(0)
+  /// تعداد کل لایک‌های بازی (کش‌شده)
+  likesCount            Int            @default(0)
+  /// تعداد کل کامنت‌های تأییدشده (کش‌شده)
+  commentsCount         Int            @default(0)
+  teaserUrl             String?
+  coverImage            String?
+  tags                  String[]
+  isFeatured            Boolean        @default(false)
+  isActive              Boolean        @default(true)
+  weeklyDiscountPercent Int?           @default(0)
+  /// شناسه کدهای تخفیف مرتبط (m2m)
+  discountCodeIds       String[]       @db.ObjectId
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  category            Category             @relation(fields: [categoryId], references: [id])
+  branch              Branch               @relation(fields: [branchId], references: [id])
+  images              GameImage[]
+  reviews             Review[]
+  comments            GameComment[]
+  likes               GameLike[]
+  bookings            Booking[]
+  teams               Team[]
+  discountCodes       DiscountCode[]       @relation("GameDiscounts", fields: [discountCodeIds], references: [id])
+  monthlyWins         MonthlyWinner[]      @relation("WinnerGame")
+  freeTickets         FreeTicket[]
+  landingSectionGames LandingSectionGame[]
 
   @@index([categoryId])
   @@index([branchId])
@@ -405,17 +474,17 @@ model GameLike {
 
 /// کامنت بازی (جدید) — مستقل از رزرو، با امکان تأیید توسط ادمین و لایک
 model GameComment {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  gameId       String   @db.ObjectId
-  userId       String   @db.ObjectId
-  text         String
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  gameId     String   @db.ObjectId
+  userId     String   @db.ObjectId
+  text       String
   /// شناسه کامنت والد برای پاسخ (reply)
-  parentId     String?  @db.ObjectId
-  isApproved   Boolean  @default(false)
-  isHidden     Boolean  @default(false)
-  likesCount   Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  parentId   String?  @db.ObjectId
+  isApproved Boolean  @default(false)
+  isHidden   Boolean  @default(false)
+  likesCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   game    Game              @relation(fields: [gameId], references: [id], onDelete: Cascade)
   user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -448,72 +517,72 @@ model GameCommentLike {
 // ─── کاربران ─────────────────────────────────────────────────
 
 model User {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  mobile      String   @unique
-  email       String?  @unique
-  fullName    String?
-  nickname    String?  @unique
-  avatarUrl   String?
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  mobile       String    @unique
+  email        String?   @unique
+  fullName     String?
+  nickname     String?   @unique
+  avatarUrl    String?
   avatarConfig Json?
-  isActive    Boolean  @default(true)
-  isBanned    Boolean  @default(false)
-  isMuted     Boolean  @default(false)
-  mutedUntil  DateTime?
-  inviteCode  String   @unique
-  invitedById String?  @db.ObjectId
-  lastLoginAt DateTime?
-  lastIp      String?
-  settings    Json?
+  isActive     Boolean   @default(true)
+  isBanned     Boolean   @default(false)
+  isMuted      Boolean   @default(false)
+  mutedUntil   DateTime?
+  inviteCode   String    @unique
+  invitedById  String?   @db.ObjectId
+  lastLoginAt  DateTime?
+  lastIp       String?
+  settings     Json?
   passwordHash String?
-  deletedAt   DateTime?
-  banReason   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  deletedAt    DateTime?
+  banReason    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  invitedBy          User?                @relation("InviteRelation", fields: [invitedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  invitees           User[]               @relation("InviteRelation")
-  profile            UserProfile?
-  wallet             Wallet?
-  roleAssignments    UserRoleAssignment[]
-  bookings           Booking[]
-  reviews            Review[]
-  gameComments       GameComment[]
-  gameLikes          GameLike[]
-  gameCommentLikes   GameCommentLike[]
-  ratingsGiven       PlayerRating[]       @relation("RatingGiver")
-  ratingsReceived    PlayerRating[]       @relation("RatingReceiver")
-  notifications      Notification[]
-  sessions           Session[]
-  otpRequests        OtpRequest[]
-  chatMessages       ChatMessage[]
-  chatModerations    ChatModerationAction[] @relation("Moderator")
-  chatModerated      ChatModerationAction[] @relation("ModeratedUser")
-  teamsCaptain       Team[]               @relation("TeamCaptain")
-  teamMemberships    TeamMember[]
-  userBadges         UserBadge[]
-  userAvatarItems    UserAvatarItem[]
-  wheelSpins         WheelSpin[]
-  inviteCodeRecord   InviteCode?
-  inviteUsages       InviteUsage[]
-  tickets            Ticket[]             @relation("TicketUser")
-  ticketAssignments  Ticket[]             @relation("TicketAssignee")
-  ticketMessages     TicketMessage[]
-  campaignsCreated   Campaign[]
-  pipelineDealsOwned Deal[]       @relation("DealOwner")
-  pipelineDealsCustomer Deal[]    @relation("DealCustomer")
-  payments           Payment[]
-  managedBranches    Branch[]             @relation("BranchManager")
-  auditLogsActor     AuditLog[]
-  monthlyWinnerWins  MonthlyWinner[]      @relation("WinnerUser")
-  smsLogs            SmsLog[]
-  chatReportsFiled   ChatReport[]         @relation("ChatReportReporter")
-  crmNotesAboutMe    CrmNote[]            @relation("CrmNoteUser")
-  crmNotesIWrote     CrmNote[]            @relation("CrmNoteAuthor")
-  campaignRecipients CampaignRecipient[]
-  userSegments       UserSegment[]
-  freeTickets        FreeTicket[]
-  userAccessories    UserAccessory[]
-  xpHistory          XpHistory[]
+  invitedBy             User?                  @relation("InviteRelation", fields: [invitedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  invitees              User[]                 @relation("InviteRelation")
+  profile               UserProfile?
+  wallet                Wallet?
+  roleAssignments       UserRoleAssignment[]
+  bookings              Booking[]
+  reviews               Review[]
+  gameComments          GameComment[]
+  gameLikes             GameLike[]
+  gameCommentLikes      GameCommentLike[]
+  ratingsGiven          PlayerRating[]         @relation("RatingGiver")
+  ratingsReceived       PlayerRating[]         @relation("RatingReceiver")
+  notifications         Notification[]
+  sessions              Session[]
+  otpRequests           OtpRequest[]
+  chatMessages          ChatMessage[]
+  chatModerations       ChatModerationAction[] @relation("Moderator")
+  chatModerated         ChatModerationAction[] @relation("ModeratedUser")
+  teamsCaptain          Team[]                 @relation("TeamCaptain")
+  teamMemberships       TeamMember[]
+  userBadges            UserBadge[]
+  userAvatarItems       UserAvatarItem[]
+  wheelSpins            WheelSpin[]
+  inviteCodeRecord      InviteCode?
+  inviteUsages          InviteUsage[]
+  tickets               Ticket[]               @relation("TicketUser")
+  ticketAssignments     Ticket[]               @relation("TicketAssignee")
+  ticketMessages        TicketMessage[]
+  campaignsCreated      Campaign[]
+  pipelineDealsOwned    Deal[]                 @relation("DealOwner")
+  pipelineDealsCustomer Deal[]                 @relation("DealCustomer")
+  payments              Payment[]
+  managedBranches       Branch[]               @relation("BranchManager")
+  auditLogsActor        AuditLog[]
+  monthlyWinnerWins     MonthlyWinner[]        @relation("WinnerUser")
+  smsLogs               SmsLog[]
+  chatReportsFiled      ChatReport[]           @relation("ChatReportReporter")
+  crmNotesAboutMe       CrmNote[]              @relation("CrmNoteUser")
+  crmNotesIWrote        CrmNote[]              @relation("CrmNoteAuthor")
+  campaignRecipients    CampaignRecipient[]
+  userSegments          UserSegment[]
+  freeTickets           FreeTicket[]
+  userAccessories       UserAccessory[]
+  xpHistory             XpHistory[]
 
   @@index([isActive, isBanned])
   @@map("users")
@@ -535,25 +604,25 @@ model UserRoleAssignment {
 }
 
 model UserProfile {
-  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId              String   @unique @db.ObjectId
-  levelId             Int      @default(1)
-  xp                  Int      @default(0)
-  totalBookings       Int      @default(0)
-  successfulBookings  Int      @default(0)
-  totalSpent          Int      @default(0)
-  averageRating       Float?
-  fearLevel           Float    @default(0)
-  bio                 String?
-  instagramHandle     String?
-  telegramHandle      String?
-  birthDate           DateTime?
-  gender              Gender?
-  address             String?
-  cityId              String?  @db.ObjectId
-  statsCache          Json?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String    @unique @db.ObjectId
+  levelId            Int       @default(1)
+  xp                 Int       @default(0)
+  totalBookings      Int       @default(0)
+  successfulBookings Int       @default(0)
+  totalSpent         Int       @default(0)
+  averageRating      Float?
+  fearLevel          Float     @default(0)
+  bio                String?
+  instagramHandle    String?
+  telegramHandle     String?
+  birthDate          DateTime?
+  gender             Gender?
+  address            String?
+  cityId             String?   @db.ObjectId
+  statsCache         Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   level Level @relation(fields: [levelId], references: [id])
@@ -567,14 +636,14 @@ model UserProfile {
 // ─── کیف پول و تراکنش‌ها ──────────────────────────────────
 
 model Wallet {
-  id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId           String   @unique @db.ObjectId
-  tomanBalance     Int      @default(0)
-  coinsBalance     Int      @default(0)
-  diamondsBalance  Int      @default(0)
-  isLocked         Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @unique @db.ObjectId
+  tomanBalance    Int      @default(0)
+  coinsBalance    Int      @default(0)
+  diamondsBalance Int      @default(0)
+  isLocked        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
@@ -634,27 +703,28 @@ model Payment {
 // ─── رزروها ──────────────────────────────────────────────────
 
 model Booking {
-  id              String        @id @default(auto()) @map("_id") @db.ObjectId
-  code            String        @unique
-  userId          String        @db.ObjectId
-  gameId          String        @db.ObjectId
-  branchId        String        @db.ObjectId
-  slotDateTime    DateTime
-  playersCount    Int
-  basePrice       Int
-  discountApplied Int           @default(0)
-  totalAmount     Int
-  status          BookingStatus @default(PENDING)
-  paymentMethod   PaymentMethod @default(WALLET)
-  discountCodeId  String?       @db.ObjectId
-  note            String?
-  completedAt     DateTime?
-  cancelledAt     DateTime?
-  cancelReason    String?
-  rewardsEarnedXp    Int        @default(0)
-  rewardsEarnedCoins Int        @default(0)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                 String        @id @default(auto()) @map("_id") @db.ObjectId
+  code               String        @unique
+  userId             String        @db.ObjectId
+  gameId             String        @db.ObjectId
+  branchId           String        @db.ObjectId
+  slotDateTime       DateTime
+  playersCount       Int
+  teamName           String?
+  basePrice          Int
+  discountApplied    Int           @default(0)
+  totalAmount        Int
+  status             BookingStatus @default(PENDING)
+  paymentMethod      PaymentMethod @default(WALLET)
+  discountCodeId     String?       @db.ObjectId
+  note               String?
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  cancelReason       String?
+  rewardsEarnedXp    Int           @default(0)
+  rewardsEarnedCoins Int           @default(0)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   user          User           @relation(fields: [userId], references: [id])
   game          Game           @relation(fields: [gameId], references: [id])
@@ -678,16 +748,16 @@ model Booking {
 // ─── نظرات و امتیازدهی ───────────────────────────────────────
 
 model Review {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  bookingId   String   @unique @db.ObjectId
-  userId      String   @db.ObjectId
-  gameId      String   @db.ObjectId
-  rating      Int
-  text        String?
-  isApproved  Boolean  @default(false)
-  helpfulCount Int     @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  bookingId    String   @unique @db.ObjectId
+  userId       String   @db.ObjectId
+  gameId       String   @db.ObjectId
+  rating       Int
+  text         String?
+  isApproved   Boolean  @default(false)
+  helpfulCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id])
@@ -721,12 +791,12 @@ model PlayerRating {
 // ─── گیمیفیکیشن ──────────────────────────────────────────────
 
 model Level {
-  id          Int       @id @map("_id")
-  name        String
-  tier        LevelTier
-  requiredXp  Int
-  perks       Json?
-  createdAt   DateTime  @default(now())
+  id         Int       @id @map("_id")
+  name       String
+  tier       LevelTier
+  requiredXp Int
+  perks      Json?
+  createdAt  DateTime  @default(now())
 
   profiles UserProfile[]
 
@@ -765,17 +835,17 @@ model UserBadge {
 }
 
 model AvatarItem {
-  id             String         @id @default(auto()) @map("_id") @db.ObjectId
-  code           String         @unique
-  name           String
-  type           AvatarItemType
-  icon           String
-  imageUrl       String?
-  requiredLevel  Int            @default(1)
-  priceDiamonds  Int?
-  isDefault      Boolean        @default(false)
-  isActive       Boolean        @default(true)
-  createdAt      DateTime       @default(now())
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  code          String         @unique
+  name          String
+  type          AvatarItemType
+  icon          String
+  imageUrl      String?
+  requiredLevel Int            @default(1)
+  priceDiamonds Int?
+  isDefault     Boolean        @default(false)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
 
   userItems       UserAvatarItem[]
   userAccessories UserAccessory[]
@@ -817,13 +887,13 @@ model WheelPrize {
 }
 
 model WheelSpin {
-  id             String       @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String       @db.ObjectId
-  paidWith       CurrencyType
-  costPaid       Int
-  prizeId        String       @db.ObjectId
-  prizeSnapshot  Json
-  awardedAt      DateTime     @default(now())
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String       @db.ObjectId
+  paidWith      CurrencyType
+  costPaid      Int
+  prizeId       String       @db.ObjectId
+  prizeSnapshot Json
+  awardedAt     DateTime     @default(now())
 
   user  User       @relation(fields: [userId], references: [id])
   prize WheelPrize @relation(fields: [prizeId], references: [id])
@@ -850,11 +920,11 @@ model InviteCode {
 }
 
 model InviteUsage {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  codeId         String   @db.ObjectId
-  invitedUserId  String   @unique @db.ObjectId
-  createdAt      DateTime @default(now())
-  rewardXpGiven  Int      @default(5)
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  codeId        String   @db.ObjectId
+  invitedUserId String   @unique @db.ObjectId
+  createdAt     DateTime @default(now())
+  rewardXpGiven Int      @default(5)
 
   code        InviteCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
   invitedUser User       @relation(fields: [invitedUserId], references: [id], onDelete: Cascade)
@@ -866,12 +936,12 @@ model InviteUsage {
 // ─── چت و تیم‌سازی ───────────────────────────────────────────
 
 model ChatRoom {
-  id       String       @id @default(auto()) @map("_id") @db.ObjectId
-  type     ChatRoomType
-  name     String?
-  teamId   String?      @unique @db.ObjectId
-  isActive Boolean      @default(true)
-  createdAt DateTime    @default(now())
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  type      ChatRoomType
+  name      String?
+  teamId    String?      @unique @db.ObjectId
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
 
   team     Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
@@ -890,10 +960,10 @@ model ChatMessage {
   createdAt       DateTime          @default(now())
   deletedAt       DateTime?
 
-  room          ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user          User          @relation(fields: [userId], references: [id])
-  parentMessage ChatMessage?  @relation("MessageReply", fields: [parentMessageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  replies       ChatMessage[] @relation("MessageReply")
+  room          ChatRoom               @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user          User                   @relation(fields: [userId], references: [id])
+  parentMessage ChatMessage?           @relation("MessageReply", fields: [parentMessageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies       ChatMessage[]          @relation("MessageReply")
   moderations   ChatModerationAction[]
   reports       ChatReport[]
 
@@ -921,25 +991,25 @@ model ChatModerationAction {
 }
 
 model Team {
-  id          String     @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  gameId      String     @db.ObjectId
-  branchId    String?    @db.ObjectId
-  captainId   String     @db.ObjectId
-  capacity    Int
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  gameId       String     @db.ObjectId
+  branchId     String?    @db.ObjectId
+  captainId    String     @db.ObjectId
+  capacity     Int
   slotDateTime DateTime?
-  status      TeamStatus @default(FORMING)
-  description String?
-  isPublic    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  status       TeamStatus @default(FORMING)
+  description  String?
+  isPublic     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
-  game           Game          @relation(fields: [gameId], references: [id])
-  branch         Branch?       @relation(fields: [branchId], references: [id])
-  captain        User          @relation("TeamCaptain", fields: [captainId], references: [id])
-  members        TeamMember[]
-  chatRoom       ChatRoom?
-  monthlyWins    MonthlyWinner[] @relation("WinnerTeam")
+  game        Game            @relation(fields: [gameId], references: [id])
+  branch      Branch?         @relation(fields: [branchId], references: [id])
+  captain     User            @relation("TeamCaptain", fields: [captainId], references: [id])
+  members     TeamMember[]
+  chatRoom    ChatRoom?
+  monthlyWins MonthlyWinner[] @relation("WinnerTeam")
 
   @@index([gameId])
   @@index([status])
@@ -1049,15 +1119,15 @@ model TicketMessage {
 // ─── CRM و بازاریابی ──────────────────────────────────────────
 
 model Segment {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  name            String
-  conditions      Json
-  color           String
-  icon            String
-  cachedCount     Int      @default(0)
-  lastComputedAt  DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  conditions     Json
+  color          String
+  icon           String
+  cachedCount    Int       @default(0)
+  lastComputedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   campaigns     Campaign[]
   discountCodes DiscountCode[]
@@ -1067,27 +1137,27 @@ model Segment {
 }
 
 model Campaign {
-  id            String         @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  type          CampaignType
-  status        CampaignStatus @default(DRAFT)
-  segmentId     String?        @db.ObjectId
-  content       Json
-  scheduledAt   DateTime?
-  startedAt     DateTime?
-  completedAt   DateTime?
-  budget        Int            @default(0)
-  revenue       Int            @default(0)
-  sentCount     Int            @default(0)
-  openedCount   Int            @default(0)
-  clickedCount  Int            @default(0)
-  convertedCount Int           @default(0)
-  createdBy     String         @db.ObjectId
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  type           CampaignType
+  status         CampaignStatus @default(DRAFT)
+  segmentId      String?        @db.ObjectId
+  content        Json
+  scheduledAt    DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  budget         Int            @default(0)
+  revenue        Int            @default(0)
+  sentCount      Int            @default(0)
+  openedCount    Int            @default(0)
+  clickedCount   Int            @default(0)
+  convertedCount Int            @default(0)
+  createdBy      String         @db.ObjectId
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  segment    Segment? @relation(fields: [segmentId], references: [id])
-  creator    User     @relation(fields: [createdBy], references: [id])
+  segment    Segment?            @relation(fields: [segmentId], references: [id])
+  creator    User                @relation(fields: [createdBy], references: [id])
   recipients CampaignRecipient[]
 
   @@index([status])
@@ -1096,19 +1166,19 @@ model Campaign {
 }
 
 model Deal {
-  id               String        @id @default(auto()) @map("_id") @db.ObjectId
-  name             String
-  customerId       String?       @db.ObjectId
-  value            Int
-  stage            PipelineStage @default(LEADS)
-  position         Int
-  ownerId          String        @db.ObjectId
-  tag              String?
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  customerId        String?       @db.ObjectId
+  value             Int
+  stage             PipelineStage @default(LEADS)
+  position          Int
+  ownerId           String        @db.ObjectId
+  tag               String?
   expectedCloseDate DateTime?
-  notes            String?
-  lostReason       String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  notes             String?
+  lostReason        String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   customer User? @relation("DealCustomer", fields: [customerId], references: [id])
   owner    User  @relation("DealOwner", fields: [ownerId], references: [id])
@@ -1241,14 +1311,14 @@ model AuditLog {
 // ─── احراز هویت ──────────────────────────────────────────────
 
 model Session {
-  id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId           String   @db.ObjectId
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String    @db.ObjectId
   refreshTokenHash String
   ip               String?
   ua               String?
   expiresAt        DateTime
   revokedAt        DateTime?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1258,15 +1328,15 @@ model Session {
 }
 
 model OtpRequest {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  mobile      String
-  codeHash    String
-  attempts    Int      @default(0)
-  expiresAt   DateTime
-  verifiedAt  DateTime?
-  ip          String?
-  userId      String?  @db.ObjectId
-  createdAt   DateTime @default(now())
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  mobile     String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  ip         String?
+  userId     String?   @db.ObjectId
+  createdAt  DateTime  @default(now())
 
   user User? @relation(fields: [userId], references: [id])
 
@@ -1280,15 +1350,15 @@ model OtpRequest {
 // ============================================================
 
 model ChatReport {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  messageId   String   @db.ObjectId
-  reporterId  String   @db.ObjectId
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  messageId   String    @db.ObjectId
+  reporterId  String    @db.ObjectId
   reason      String
   description String?
-  status      String   @default("PENDING")
-  resolvedBy  String?  @db.ObjectId
+  status      String    @default("PENDING")
+  resolvedBy  String?   @db.ObjectId
   resolvedAt  DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   message  ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
   reporter User        @relation("ChatReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
@@ -1312,12 +1382,12 @@ model Role {
 }
 
 model CrmNote {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId     String   @db.ObjectId
-  authorId   String   @db.ObjectId
-  note       String
-  isPinned   Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  authorId  String   @db.ObjectId
+  note      String
+  isPinned  Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   user   User @relation("CrmNoteUser", fields: [userId], references: [id], onDelete: Cascade)
   author User @relation("CrmNoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
@@ -1364,14 +1434,14 @@ model UserSegment {
 }
 
 model FreeTicket {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String    @db.ObjectId
-  gameId      String?   @db.ObjectId
-  source      String
-  expiresAt   DateTime?
-  usedAt      DateTime?
-  bookingId   String?   @db.ObjectId
-  createdAt   DateTime  @default(now())
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String    @db.ObjectId
+  gameId    String?   @db.ObjectId
+  source    String
+  expiresAt DateTime?
+  usedAt    DateTime?
+  bookingId String?   @db.ObjectId
+  createdAt DateTime  @default(now())
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   game    Game?    @relation(fields: [gameId], references: [id])
@@ -1382,11 +1452,11 @@ model FreeTicket {
 }
 
 model UserAccessory {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String   @db.ObjectId
-  avatarItemId  String   @db.ObjectId
-  isEquipped    Boolean  @default(false)
-  purchasedAt   DateTime @default(now())
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  avatarItemId String   @db.ObjectId
+  isEquipped   Boolean  @default(false)
+  purchasedAt  DateTime @default(now())
 
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   avatarItem AvatarItem @relation(fields: [avatarItemId], references: [id], onDelete: Cascade)
@@ -1396,13 +1466,13 @@ model UserAccessory {
 }
 
 model XpHistory {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
-  amount    Int
-  source    String
-  refId     String?
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  amount      Int
+  source      String
+  refId       String?
   description String?
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

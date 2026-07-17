@@ -1,7 +1,7 @@
 // ================== SHARED TYPES ==================
 
 export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT' | 'VERY_HARD' | 'LEGENDARY'
-export type GameTier = 'STANDARD' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND'
+export type GameTier = 'STANDARD' | 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND'
 export type Genre = 'HORROR' | 'ADVENTURE' | 'MYSTERY' | 'SCI_FI' | 'FANTASY' | 'ACTION'
 export type GameCategory = 'ESCAPE_ROOM' | 'CINEMA_HORROR' | 'BOARD_GAME' | 'LASER_TAG' | 'MAFIA' | 'VR' | 'PAINTBALL'
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'EXPIRED'
@@ -81,7 +81,43 @@ export interface Game {
   likesCount?: number
   commentsCount?: number
   likedByMe?: boolean
+  availableSlots?: number
   createdAt: string
+}
+
+export type LandingSectionFilterType =
+  | 'WEEKLY_DISCOUNT'
+  | 'FEATURED'
+  | 'CATEGORY'
+  | 'CATEGORY_CITY'
+  | 'MULTI_CATEGORY'
+  | 'POPULAR_THIS_WEEK'
+  | 'MANUAL'
+
+export interface LandingSection {
+  id: string
+  key: string
+  title: string
+  description?: string
+  icon: string
+  displayOrder: number
+  isActive: boolean
+  filterType: LandingSectionFilterType
+  categorySlug?: string
+  categorySlugs?: string[]
+  citySlug?: string
+  tagFilter?: string
+  games?: Game[]
+}
+
+export interface LandingBanner {
+  id: string
+  title?: string | null
+  altText?: string | null
+  href?: string | null
+  imageUrl: string
+  displayOrder: number
+  isActive: boolean
 }
 
 export interface GameComment {
@@ -160,6 +196,7 @@ export interface Booking {
   baseAmount: number
   discountAmount: number
   finalAmount: number
+  teamName?: string
   paymentUrl?: string
   discountCode?: string
   review?: Review
@@ -258,18 +295,52 @@ export const DIFFICULTY_FA: Record<Difficulty, string> = {
 
 export const TIER_FA: Record<GameTier, string> = {
   STANDARD: 'استاندارد',
+  BRONZE: 'برنزی',
   SILVER: 'نقره‌ای',
   GOLD: 'طلایی',
   PLATINUM: 'پلاتینیوم',
   DIAMOND: 'دایموند',
 }
 
-export const TIER_STYLE: Record<GameTier, { label: string; color: string; bg: string; icon: string }> = {
-  STANDARD: { label: 'استاندارد', color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', icon: '🎮' },
-  SILVER:   { label: 'نقره‌ای',   color: '#cbd5e1', bg: 'rgba(203,213,225,0.15)', icon: '🥈' },
-  GOLD:     { label: 'طلایی',     color: '#fbbf24', bg: 'rgba(251,191,36,0.15)',  icon: '🥇' },
-  PLATINUM: { label: 'پلاتینیوم', color: '#67e8f9', bg: 'rgba(103,232,249,0.15)', icon: '💠' },
-  DIAMOND:  { label: 'دایموند',   color: '#a78bfa', bg: 'rgba(167,139,250,0.18)', icon: '💎' },
+export const TIER_STYLE: Record<GameTier, { label: string; color: string; bg: string; icon: string; shine?: boolean }> = {
+  STANDARD: {
+    label: 'استاندارد',
+    color: '#ffffff',
+    bg: 'rgba(255,255,255,0.10)',
+    icon: 'fa-trophy',
+  },
+  BRONZE: {
+    label: 'برنزی',
+    color: '#c47a3a',
+    bg: 'rgba(196,122,58,0.16)',
+    icon: 'fa-trophy',
+  },
+  SILVER: {
+    label: 'نقره‌ای',
+    color: '#dbe4ef',
+    bg: 'rgba(219,228,239,0.16)',
+    icon: 'fa-trophy',
+  },
+  GOLD: {
+    label: 'طلایی',
+    color: '#f7c948',
+    bg: 'rgba(247,201,72,0.16)',
+    icon: 'fa-trophy',
+  },
+  PLATINUM: {
+    label: 'پلاتینیوم',
+    color: '#123f94',
+    bg: 'rgba(18,63,148,0.18)',
+    icon: 'fa-trophy',
+    shine: true,
+  },
+  DIAMOND: {
+    label: 'دایموند',
+    color: '#581c87',
+    bg: 'rgba(88,28,135,0.18)',
+    icon: 'fa-trophy',
+    shine: true,
+  },
 }
 
 export const CATEGORY_FA: Record<GameCategory, string> = {

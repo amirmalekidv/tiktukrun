@@ -26,6 +26,7 @@ export interface Booking {
   branchId: number;
   slotDateTime: string;
   playersCount: number;
+  teamName?: string;
   /** BigInt → string (تومان) */
   basePrice: string;
   discountApplied: string;

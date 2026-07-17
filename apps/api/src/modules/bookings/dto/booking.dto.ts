@@ -7,8 +7,12 @@ import {
   IsNumber,
   Min,
   Max,
+  MaxLength,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+
+const trimOptionalString = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() || undefined : value;
 
 export enum PaymentMethod {
   WALLET   = 'WALLET',
@@ -54,6 +58,10 @@ export class CreateBookingDto {
   @IsOptional() @IsString()
   discountCode?: string;
 
+  @Transform(trimOptionalString)
+  @IsOptional() @IsString() @MaxLength(80)
+  teamName?: string;
+
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;
 
@@ -88,6 +96,10 @@ export class AdminCreateBookingDto {
 
   @IsInt() @Type(() => Number) @Min(1)
   playersCount: number;
+
+  @Transform(trimOptionalString)
+  @IsOptional() @IsString() @MaxLength(80)
+  teamName?: string;
 
   @IsEnum(AdminPaymentMethod)
   paymentMethod: AdminPaymentMethod;

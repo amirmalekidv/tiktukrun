@@ -7,6 +7,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
+import { getAccessToken } from '@/lib/auth';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000';
 
@@ -28,7 +29,7 @@ export function useAdminSocket() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const token = localStorage.getItem('admin_token');
+    const token = getAccessToken();
     if (!token) return;
 
     if (!socketInstance || !socketInstance.connected) {

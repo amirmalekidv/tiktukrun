@@ -17,6 +17,10 @@ import { mapOverviewToDashboard } from './overview.mapper';
 
 const TTL = 300; // 5 minutes
 
+export interface AnalyticsScope {
+  branchFilter?: string | { in: string[] };
+}
+
 @Injectable()
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
@@ -51,49 +55,72 @@ export class AnalyticsService {
     return result;
   }
 
+  private scopeKey(scope?: AnalyticsScope) {
+    const filter = scope?.branchFilter;
+    if (!filter) return 'global';
+    if (typeof filter === 'string') return `branch:${filter}`;
+    return `branch:${[...filter.in].sort().join(',')}`;
+  }
+
+  private bookingWhere(base: Record<string, any> = {}, scope?: AnalyticsScope) {
+    return scope?.branchFilter ? { ...base, branchId: scope.branchFilter } : base;
+  }
+
+  private gameWhere(base: Record<string, any> = {}, scope?: AnalyticsScope) {
+    return scope?.branchFilter ? { ...base, branchId: scope.branchFilter } : base;
+  }
+
+  private paymentWhere(scope?: AnalyticsScope) {
+    if (!scope?.branchFilter) return {};
+    return { booking: { is: { branchId: scope.branchFilter } } };
+  }
+
   // ─── Dashboard overview ───────────────────────────────────────────────────────
 
-  async getOverview() {
-    return this.cached('analytics:overview:v2', async () => {
+  async getOverview(scope?: AnalyticsScope) {
+    const scopeKey = this.scopeKey(scope);
+    return this.cached(`analytics:overview:v3:${scopeKey}`, async () => {
       const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600_000);
       const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+      const completedThisMonth = this.bookingWhere({
+        status: 'COMPLETED',
+        createdAt: { gte: thisMonthStart },
+      }, scope);
+      const completedPrevMonth = this.bookingWhere({
+        status: 'COMPLETED',
+        createdAt: { gte: prevMonthStart, lt: thisMonthStart },
+      }, scope);
+      const activeBookingWhere = this.bookingWhere({
+        status: { in: ['PENDING', 'CONFIRMED'] },
+      }, scope);
+
       const [
         monthlyRevenue,
         prevMonthRevenue,
-        newCustomers,
-        prevMonthCustomers,
         activeBookings,
         recentBookings,
         recentAuditLogs,
-        topCustomers,
       ] = await Promise.all([
         this.prisma.booking.aggregate({
-          where: { status: 'COMPLETED', createdAt: { gte: thisMonthStart } },
+          where: completedThisMonth,
           _sum: { totalAmount: true },
         }),
         this.prisma.booking.aggregate({
-          where: {
-            status: 'COMPLETED',
-            createdAt: { gte: prevMonthStart, lt: thisMonthStart },
-          },
+          where: completedPrevMonth,
           _sum: { totalAmount: true },
         }),
-        this.prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
-        this.prisma.user.count({
-          where: { createdAt: { gte: prevMonthStart, lt: thisMonthStart } },
-        }),
-        this.prisma.booking.count({
-          where: { status: { in: ['PENDING', 'CONFIRMED'] } },
-        }),
+        this.prisma.booking.count({ where: activeBookingWhere }),
         this.prisma.booking.findMany({
+          where: this.bookingWhere({}, scope),
           take: 10,
           orderBy: { createdAt: 'desc' },
           include: {
             user: { select: { id: true, fullName: true } },
             game: { select: { title: true } },
+            branch: { select: { id: true, name: true } },
           },
         }),
         this.prisma.auditLog.findMany({
@@ -101,20 +128,73 @@ export class AnalyticsService {
           orderBy: { createdAt: 'desc' },
           include: { performer: { select: { id: true, fullName: true } } as any },
         } as any).catch(() => []),
-        this.prisma.userProfile.findMany({
-          take: 5,
-          orderBy: { totalSpent: 'desc' },
-          select: {
-            userId: true,
-            totalSpent: true,
-            user: { select: { id: true, fullName: true, mobile: true } },
-          } as any,
-        }),
       ]);
+
+      let newCustomers = 0;
+      let prevMonthCustomers = 0;
+      let topCustomers: Array<{ id: string; name: string; ltv: number }> = [];
+      if (scope?.branchFilter) {
+        const [newCustomerBookings, prevCustomerBookings, customerBookings] = await Promise.all([
+          this.prisma.booking.findMany({
+            where: this.bookingWhere({ createdAt: { gte: thirtyDaysAgo } }, scope),
+            select: { userId: true },
+          }),
+          this.prisma.booking.findMany({
+            where: this.bookingWhere({ createdAt: { gte: prevMonthStart, lt: thisMonthStart } }, scope),
+            select: { userId: true },
+          }),
+          this.prisma.booking.findMany({
+            where: this.bookingWhere({ status: 'COMPLETED' }, scope),
+            select: {
+              userId: true,
+              totalAmount: true,
+              user: { select: { id: true, fullName: true, mobile: true } },
+            },
+          }),
+        ]);
+        newCustomers = new Set(newCustomerBookings.map((b) => b.userId)).size;
+        prevMonthCustomers = new Set(prevCustomerBookings.map((b) => b.userId)).size;
+        const customerMap = new Map<string, { id: string; name: string; ltv: number }>();
+        for (const booking of customerBookings as any[]) {
+          const current = customerMap.get(booking.userId) ?? {
+            id: booking.user?.id ?? booking.userId,
+            name: booking.user?.fullName ?? booking.user?.mobile ?? '—',
+            ltv: 0,
+          };
+          current.ltv += Number(booking.totalAmount ?? 0);
+          customerMap.set(booking.userId, current);
+        }
+        topCustomers = Array.from(customerMap.values())
+          .sort((a, b) => b.ltv - a.ltv)
+          .slice(0, 5);
+      } else {
+        const [currentCustomers, previousCustomers, profiles] = await Promise.all([
+          this.prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+          this.prisma.user.count({
+            where: { createdAt: { gte: prevMonthStart, lt: thisMonthStart } },
+          }),
+          this.prisma.userProfile.findMany({
+            take: 5,
+            orderBy: { totalSpent: 'desc' },
+            select: {
+              userId: true,
+              totalSpent: true,
+              user: { select: { id: true, fullName: true, mobile: true } },
+            } as any,
+          }),
+        ]);
+        newCustomers = currentCustomers;
+        prevMonthCustomers = previousCustomers;
+        topCustomers = profiles.map((p: any) => ({
+          id: p.user?.id ?? p.userId,
+          name: p.user?.fullName ?? p.user?.mobile ?? '—',
+          ltv: Number(p.totalSpent ?? 0),
+        }));
+      }
 
       // Daily revenue trend last 30 days (MongoDB: aggregate in JS)
       const trendBookings = await this.prisma.booking.findMany({
-        where: { status: 'COMPLETED', createdAt: { gte: thirtyDaysAgo } },
+        where: this.bookingWhere({ status: 'COMPLETED', createdAt: { gte: thirtyDaysAgo } }, scope),
         select: { createdAt: true, totalAmount: true },
       });
       const trendMap = new Map<string, { revenue: number; bookings: number }>();
@@ -131,7 +211,7 @@ export class AnalyticsService {
 
       // Category breakdown last 30 days (group bookings by game→category in JS)
       const catBookings = await this.prisma.booking.findMany({
-        where: { status: 'COMPLETED', createdAt: { gte: thirtyDaysAgo } },
+        where: this.bookingWhere({ status: 'COMPLETED', createdAt: { gte: thirtyDaysAgo } }, scope),
         select: { game: { select: { category: { select: { name: true } } } } },
       });
       const catMap = new Map<string, number>();
@@ -163,54 +243,71 @@ export class AnalyticsService {
         activeBookings,
         revenueTrend,
         categoryBreakdown,
-        topCustomers: topCustomers.map((p: any) => ({
-          id: p.user?.id ?? p.userId,
-          name: p.user?.fullName ?? p.user?.mobile ?? '—',
-          ltv: Number(p.totalSpent ?? 0),
-        })),
+        topCustomers,
         recentBookings: this.serializeBigInt(recentBookings),
         liveActivities: recentAuditLogs,
+        scope: scopeKey,
       };
     });
   }
 
-  async getOverviewFormatted() {
+  async getOverviewFormatted(scope?: AnalyticsScope) {
     const [flat, financial] = await Promise.all([
-      this.getOverview(),
-      this.getFinancial(),
+      this.getOverview(scope),
+      this.getFinancial(scope),
     ]);
     return mapOverviewToDashboard(flat, financial);
   }
 
   // ─── Financial KPIs ───────────────────────────────────────────────────────────
 
-  async getFinancial() {
-    return this.cached('analytics:financial:v2', async () => {
+  async getFinancial(scope?: AnalyticsScope) {
+    const scopeKey = this.scopeKey(scope);
+    return this.cached(`analytics:financial:v3:${scopeKey}`, async () => {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600_000);
       const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600_000);
 
-      const [totalRevenue, totalUsers, newUsers30d] = await Promise.all([
+      const [totalRevenue, bookingUsers, newBookingUsers] = await Promise.all([
         this.prisma.booking.aggregate({
-          where: { status: 'COMPLETED' },
+          where: this.bookingWhere({ status: 'COMPLETED' }, scope),
           _sum: { totalAmount: true },
         }),
-        this.prisma.user.count(),
-        this.prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+        this.prisma.booking.findMany({
+          where: this.bookingWhere({}, scope),
+          select: { userId: true },
+        }),
+        this.prisma.booking.findMany({
+          where: this.bookingWhere({ createdAt: { gte: thirtyDaysAgo } }, scope),
+          select: { userId: true },
+        }),
       ]);
+      const totalUsers = scope?.branchFilter
+        ? new Set(bookingUsers.map((b) => b.userId)).size
+        : await this.prisma.user.count();
+      const newUsers30d = scope?.branchFilter
+        ? new Set(newBookingUsers.map((b) => b.userId)).size
+        : await this.prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo } } });
 
       const avgLTV =
         totalUsers > 0
           ? Number(totalRevenue._sum.totalAmount ?? 0) / totalUsers
           : 0;
 
-      const churnedUsers = await this.prisma.user.count({
-        where: {
-          bookings: {
-            some: {},
-            every: { createdAt: { lt: ninetyDaysAgo } },
-          },
-        },
-      });
+      const churnedUsers = scope?.branchFilter
+        ? new Set(
+            (await this.prisma.booking.findMany({
+              where: this.bookingWhere({ createdAt: { lt: ninetyDaysAgo } }, scope),
+              select: { userId: true },
+            })).map((b) => b.userId),
+          ).size
+        : await this.prisma.user.count({
+            where: {
+              bookings: {
+                some: {},
+                every: { createdAt: { lt: ninetyDaysAgo } },
+              },
+            },
+          });
 
       const churnRate =
         totalUsers > 0 ? Math.round((churnedUsers / totalUsers) * 100) : 0;
@@ -253,16 +350,46 @@ export class AnalyticsService {
         avgOrderValue: 0,
         revenuePerUser: Math.round(avgLTV),
         newUsers30d,
+        scope: scopeKey,
       };
     });
   }
 
   // ─── Cohort analysis ─────────────────────────────────────────────────────────
 
-  async getCohort() {
-    return this.cached('analytics:cohort:v2', async () => {
+  async getCohort(scope?: AnalyticsScope) {
+    const scopeKey = this.scopeKey(scope);
+    return this.cached(`analytics:cohort:v3:${scopeKey}`, async () => {
       const twelveMonthsAgo = new Date();
       twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+      if (scope?.branchFilter) {
+        const bookings = await this.prisma.booking.findMany({
+          where: this.bookingWhere({ status: 'COMPLETED', createdAt: { gte: twelveMonthsAgo } }, scope),
+          select: {
+            createdAt: true,
+            user: { select: { id: true, createdAt: true } },
+          },
+        });
+        const ym = (d: Date) => d.toISOString().slice(0, 7);
+        const cells = new Map<string, Set<string>>();
+        for (const b of bookings as any[]) {
+          if (!b.user?.createdAt) continue;
+          const key = `${ym(b.user.createdAt)}|${ym(b.createdAt)}`;
+          if (!cells.has(key)) cells.set(key, new Set());
+          cells.get(key)!.add(b.user.id);
+        }
+        return Array.from(cells.entries())
+          .map(([key, set]) => {
+            const [signupMonth, activeMonth] = key.split('|');
+            return { signupMonth, activeMonth, count: set.size };
+          })
+          .sort(
+            (a, b) =>
+              a.signupMonth.localeCompare(b.signupMonth) ||
+              a.activeMonth.localeCompare(b.activeMonth),
+          );
+      }
 
       // Users who signed up in the last 12 months + their completed bookings.
       const users = await this.prisma.user.findMany({
@@ -305,11 +432,12 @@ export class AnalyticsService {
 
   // ─── Heatmap ────────────────────────────────────────────────────────────────────
 
-  async getHeatmap() {
-    return this.cached('analytics:heatmap:v2', async () => {
+  async getHeatmap(scope?: AnalyticsScope) {
+    const scopeKey = this.scopeKey(scope);
+    return this.cached(`analytics:heatmap:v3:${scopeKey}`, async () => {
       const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600_000);
       const bookings = await this.prisma.booking.findMany({
-        where: { createdAt: { gte: ninetyDaysAgo } },
+        where: this.bookingWhere({ createdAt: { gte: ninetyDaysAgo } }, scope),
         select: { createdAt: true },
       });
 
@@ -335,16 +463,22 @@ export class AnalyticsService {
 
   // ─── Games analytics ─────────────────────────────────────────────────────────
 
-  async getGames() {
-    return this.cached('analytics:games:v2', async () => {
+  async getGames(scope?: AnalyticsScope) {
+    const scopeKey = this.scopeKey(scope);
+    return this.cached(`analytics:games:v3:${scopeKey}`, async () => {
       const games = await this.prisma.game.findMany({
-        select: { id: true, title: true },
+        where: this.gameWhere({}, scope),
+        select: {
+          id: true,
+          title: true,
+          branch: { select: { id: true, name: true, city: { select: { id: true, name: true } } } },
+        },
       });
       if (!games.length) return [];
 
       // Completed bookings per game: revenue + count + lastBooking
       const completed = await this.prisma.booking.findMany({
-        where: { status: 'COMPLETED' },
+        where: this.bookingWhere({ status: 'COMPLETED' }, scope),
         select: { gameId: true, totalAmount: true, createdAt: true },
       });
       const bkMap = new Map<
@@ -378,6 +512,7 @@ export class AnalyticsService {
           return {
             id: g.id,
             name: g.title,
+            branch: (g as any).branch,
             bookings: bk.bookings,
             revenue: bk.revenue,
             rating: (rt && rt.n > 0 ? rt.sum / rt.n : 0).toFixed(1),
@@ -391,14 +526,15 @@ export class AnalyticsService {
 
   // ─── Cash flow ───────────────────────────────────────────────────────────────
 
-  async getCashflow() {
-    return this.cached('analytics:cashflow:v2', async () => {
+  async getCashflow(scope?: AnalyticsScope) {
+    const scopeKey = this.scopeKey(scope);
+    return this.cached(`analytics:cashflow:v3:${scopeKey}`, async () => {
       const twelveMonthsAgo = new Date();
       twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
       const bookings = await this.prisma.booking.findMany({
-        where: { status: 'COMPLETED', createdAt: { gte: twelveMonthsAgo } },
-        select: { createdAt: true, totalAmount: true },
+        where: this.bookingWhere({ status: 'COMPLETED', createdAt: { gte: twelveMonthsAgo } }, scope),
+        select: { id: true, createdAt: true, totalAmount: true },
       });
 
       const incomeMap = new Map<string, number>(); // YYYY-MM → income
@@ -409,9 +545,14 @@ export class AnalyticsService {
       }
 
       // Expenses tracked as REFUND transactions (money out) if available.
+      const bookingIds = bookings.map((b) => b.id);
       const refunds = await this.prisma.transaction
         .findMany({
-          where: { type: 'REFUND', createdAt: { gte: twelveMonthsAgo } },
+          where: {
+            type: 'REFUND',
+            createdAt: { gte: twelveMonthsAgo },
+            ...(scope?.branchFilter ? { refId: { in: bookingIds } } : {}),
+          },
           select: { createdAt: true, amount: true },
         })
         .catch(() => [] as { createdAt: Date; amount: number }[]);
@@ -434,9 +575,26 @@ export class AnalyticsService {
 
   // ─── Payment methods ──────────────────────────────────────────────────────────
 
-  async getPaymentMethods() {
-    return this.cached('analytics:payment_methods:v2', async () => {
+  async getPaymentMethods(scope?: AnalyticsScope) {
+    const scopeKey = this.scopeKey(scope);
+    return this.cached(`analytics:payment_methods:v3:${scopeKey}`, async () => {
       try {
+        if (scope?.branchFilter) {
+          const payments = await this.prisma.payment.findMany({
+            where: this.paymentWhere(scope),
+            select: { method: true, amount: true },
+          });
+          const map = new Map<string, { method: string; count: number; total: number }>();
+          for (const payment of payments as any[]) {
+            const key = String(payment.method);
+            const current = map.get(key) ?? { method: key, count: 0, total: 0 };
+            current.count += 1;
+            current.total += Number(payment.amount ?? 0);
+            map.set(key, current);
+          }
+          return Array.from(map.values());
+        }
+
         const data = await (this.prisma.payment as any).groupBy({
           by: ['method'],
           _count: true,
@@ -456,8 +614,21 @@ export class AnalyticsService {
 
   // ─── Gamification analytics ───────────────────────────────────────────────────
 
-  async getGamification() {
-    return this.cached('analytics:gamification:v2', async () => {
+  async getGamification(scope?: AnalyticsScope) {
+    const scopeKey = this.scopeKey(scope);
+    return this.cached(`analytics:gamification:v3:${scopeKey}`, async () => {
+      if (scope?.branchFilter) {
+        return {
+          xpDistributed: 0,
+          badgesGiven: 0,
+          wheelSpins: 0,
+          prizeBreakdown: [],
+          topBadges: [],
+          scope: scopeKey,
+          scopeNote: 'Gamification analytics are platform-wide and are hidden for branch-scoped access.',
+        };
+      }
+
       const [xpTotal, badgesTotal, wheelSpins] = await Promise.all([
         this.prisma.xpHistory.aggregate({ _sum: { amount: true } } as any).catch(() => ({ _sum: { amount: 0 } } as any)),
         this.prisma.userBadge.count(),
@@ -487,6 +658,7 @@ export class AnalyticsService {
           name: b.name,
           count: b._count?.userBadges ?? 0,
         })),
+        scope: scopeKey,
       };
     });
   }

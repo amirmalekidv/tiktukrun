@@ -59,7 +59,14 @@ function normalizeBranch(raw: any): Game['branch'] {
   };
 }
 
+function normalizeOptionalNumber(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
 function normalizeGame(raw: any): Game {
+  const siteRank = normalizeOptionalNumber(raw?.siteRank ?? raw?.rank);
   const images = Array.isArray(raw?.images)
     ? raw.images.map((img: any, index: number) => ({
         id: String(img?.id ?? index),
@@ -115,8 +122,8 @@ function normalizeGame(raw: any): Game {
     maxPlayers: Number(raw?.maxPlayers ?? 0),
     duration: Number(raw?.duration ?? raw?.durationMinutes ?? 0),
     pricePerPerson: String(raw?.pricePerPerson ?? ''),
-    weeklyDiscountPercent: raw?.weeklyDiscountPercent != null ? Number(raw.weeklyDiscountPercent) : undefined,
-    siteRank: raw?.siteRank != null ? Number(raw.siteRank) : undefined,
+    weeklyDiscountPercent: normalizeOptionalNumber(raw?.weeklyDiscountPercent),
+    siteRank,
     tags: Array.isArray(raw?.tags) ? raw.tags : [],
     coverImage: resolveMediaUrl(raw?.coverImage) || images[0]?.url,
     images,
@@ -125,8 +132,8 @@ function normalizeGame(raw: any): Game {
     isFeatured: Boolean(raw?.isFeatured),
     rating: raw?.rating != null
       ? Number(raw.rating)
-      : raw?.siteRank != null
-        ? Number(raw.siteRank)
+      : siteRank != null
+        ? siteRank
         : raw?.userRankCached != null
           ? Number(raw.userRankCached)
           : undefined,

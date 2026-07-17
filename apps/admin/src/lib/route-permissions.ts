@@ -19,6 +19,8 @@ const ROUTE_PERMISSIONS: { prefix: string; permission: string }[] = [
   { prefix: '/branches', permission: 'branches.view' },
   { prefix: '/cities', permission: 'branches.write' },
   { prefix: '/categories', permission: 'games.write' },
+  { prefix: '/landing-banners', permission: 'games.write' },
+  { prefix: '/landing-sections', permission: 'games.write' },
   { prefix: '/reviews', permission: 'games.write' },
   { prefix: '/comments', permission: 'games.view' },
   { prefix: '/chats', permission: 'chats.view' },
@@ -36,9 +38,19 @@ const ROUTE_PERMISSIONS: { prefix: string; permission: string }[] = [
   { prefix: '/activities', permission: 'activities.view' },
 ];
 
+const PLATFORM_ADMIN_PREFIXES = [
+  '/branches/new',
+];
+
 export function canAccessPath(user: AdminUser | null, pathname: string): boolean {
   if (!user) return false;
   if (user.roles.includes('SUPER_ADMIN')) return true;
+
+  if (PLATFORM_ADMIN_PREFIXES.some((prefix) =>
+    pathname === prefix || pathname.startsWith(`${prefix}/`),
+  )) {
+    return isPlatformAdmin(user);
+  }
 
   const match = ROUTE_PERMISSIONS.find(({ prefix }) =>
     pathname === prefix || pathname.startsWith(`${prefix}/`),

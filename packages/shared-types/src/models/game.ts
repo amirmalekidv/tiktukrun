@@ -78,6 +78,7 @@ export interface Game {
   isFeatured: boolean;
   isActive: boolean;
   weeklyDiscountPercent?: number;
+  availableSlots?: number;
   createdAt: string;
   updatedAt: string;
 
@@ -125,6 +126,7 @@ export interface GameCard {
   userRankCached?: string;
   isFeatured: boolean;
   weeklyDiscountPercent?: number;
+  availableSlots?: number;
   categoryName: string;
   categoryIcon: string;
   branchName: string;

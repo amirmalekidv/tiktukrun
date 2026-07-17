@@ -15,14 +15,14 @@ const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').re
 
 export const apiClient = axios.create({
   baseURL: `${API_ROOT}/api/v1`,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { Accept: 'application/json' },
   timeout: 30000,
 });
 
 /** Admin-scoped routes under /api/v1/admin */
 export const adminApi = axios.create({
   baseURL: `${API_ROOT}/api/v1/admin`,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { Accept: 'application/json' },
   timeout: 30000,
 });
 

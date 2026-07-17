@@ -60,8 +60,10 @@ export class BookingsAdminService {
     if (query.q) {
       where.OR = [
         { code:        { contains: query.q, mode: 'insensitive' } },
-        { user:        { phone: { contains: query.q } } },
+        { teamName:    { contains: query.q, mode: 'insensitive' } },
+        { user:        { mobile: { contains: query.q } } },
         { game:        { title: { contains: query.q, mode: 'insensitive' } } },
+        { branch:      { name: { contains: query.q, mode: 'insensitive' } } },
       ];
     }
 
@@ -73,6 +75,13 @@ export class BookingsAdminService {
         include: {
           user: { select: { id: true, fullName: true, mobile: true } },
           game: { select: { id: true, title: true, coverImage: true } },
+          branch: {
+            select: {
+              id: true,
+              name: true,
+              city: { select: { id: true, name: true, slug: true } },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -101,6 +110,13 @@ export class BookingsAdminService {
       where,
       include: {
         game: { select: { title: true, coverImage: true } } as any,
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            city: { select: { id: true, name: true, slug: true } },
+          },
+        },
         user: { select: { fullName: true, mobile: true } },
       },
       orderBy: { slotDateTime: 'asc' },
@@ -277,14 +293,16 @@ export class BookingsAdminService {
       page += 1;
     }
 
-    const headers = ['code', 'user', 'game', 'status', 'totalAmount', 'slotDateTime'];
+    const headers = ['code', 'teamName', 'userMobile', 'game', 'branch', 'status', 'totalAmount', 'slotDateTime'];
     const csv = [
       headers.join(','),
       ...rows.map((r) =>
         [
           r.code,
-          r.user?.phone ?? '',
+          r.teamName ?? '',
+          r.user?.mobile ?? '',
           r.game?.title ?? '',
+          r.branch?.name ?? '',
           r.status,
           r.totalAmount?.toString() ?? '',
           r.slotDateTime?.toISOString() ?? '',
@@ -327,6 +345,7 @@ export class BookingsAdminService {
           branchId:        game.branchId,
           slotDateTime:    slotDt,
           playersCount:    dto.playersCount,
+          teamName:        dto.teamName,
           basePrice,
           discountApplied: Math.max(0, basePrice - totalAmount),
           totalAmount,

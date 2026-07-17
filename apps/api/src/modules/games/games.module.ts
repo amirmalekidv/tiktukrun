@@ -9,9 +9,10 @@ import { GamesAdminService }  from './services/games-admin.service';
 import { GameImageService }   from './services/game-image.service';
 import { GameInteractionService } from './services/game-interaction.service';
 import { ReviewsModule }      from '../reviews/reviews.module';
+import { LandingSectionsModule } from '../landing-sections/landing-sections.module';
 
 @Module({
-  imports: [ReviewsModule],
+  imports: [ReviewsModule, LandingSectionsModule],
   controllers: [
     GamesController,
     GameCommentsAdminController,

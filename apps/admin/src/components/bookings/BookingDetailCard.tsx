@@ -58,6 +58,12 @@ export default function BookingDetailCard({ booking }: { booking: Booking }) {
             <p className="text-slate-500 text-xs mb-1">تعداد بازیکنان</p>
             <p className="text-white font-bold text-2xl">{persianNum(booking.playersCount)} نفر</p>
           </div>
+          {booking.teamName && (
+            <div className="col-span-2">
+              <p className="text-slate-500 text-xs mb-1">نام تیم</p>
+              <p className="text-cyan-300 font-bold">{booking.teamName}</p>
+            </div>
+          )}
         </div>
       ),
     },

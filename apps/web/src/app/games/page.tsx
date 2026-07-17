@@ -10,11 +10,13 @@ import GameFiltersSidebar from '@/components/games/GameFiltersSidebar'
 import { GameCardSkeleton } from '@/components/ui/LoadingSkeleton'
 import { toPersianDigits } from '@/lib/utils'
 
+const gamesGridClassName =
+  'grid grid-cols-[repeat(auto-fill,minmax(220px,248px))] justify-center gap-x-5 gap-y-9 sm:grid-cols-[repeat(auto-fill,minmax(236px,248px))] lg:justify-start'
+
 function GamesContent() {
   const searchParams = useSearchParams()
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
-  const [page, setPage] = useState(1)
 
   const filter: GamesFilter = {
     cityId: searchParams.get('cityId') || undefined,
@@ -25,16 +27,14 @@ function GamesContent() {
     q: searchParams.get('q') || undefined,
     sortBy: (searchParams.get('sortBy') as any) || 'rating',
     sections: searchParams.get('sections') || undefined,
-    page,
-    limit: 9,
+    limit: 100,
   }
 
-  const cacheKey = JSON.stringify({ ...filter, page })
+  const cacheKey = JSON.stringify(filter)
   const { data, isLoading } = useSWR(['games', cacheKey], () => getGames(filter))
 
   const games = data?.data || []
   const total = data?.total || 0
-  const totalPages = data?.totalPages || 1
 
   return (
     <>
@@ -95,9 +95,19 @@ function GamesContent() {
 
             {/* Games grid/list */}
             {isLoading ? (
-              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5' : 'space-y-4'}>
-                {Array.from({ length: 6 }).map((_, i) => <GameCardSkeleton key={i} />)}
-              </div>
+              viewMode === 'grid' ? (
+                <div className={gamesGridClassName}>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <GameCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <GameCardSkeleton key={i} variant="horizontal" />
+                  ))}
+                </div>
+              )
             ) : games.length === 0 ? (
               <div className="text-center py-20">
                 <div className="text-6xl mb-4">😢</div>
@@ -106,55 +116,23 @@ function GamesContent() {
                 <a href="/games" className="btn-blood">همه بازی‌ها</a>
               </div>
             ) : (
-              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5' : 'space-y-4'}>
-                {games.map((game) => (
-                  <GameCard
-                    key={game.id}
-                    game={game}
-                    variant={viewMode === 'list' ? 'horizontal' : 'default'}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-10">
-                <button
-                  onClick={() => setPage(Math.max(1, page - 1))}
-                  disabled={page === 1}
-                  className="btn-ghost text-sm py-2 px-4 disabled:opacity-40"
-                >
-                  <i className="fas fa-chevron-right ml-1" />
-                  قبلی
-                </button>
-
-                <div className="flex gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
-                    const pageNum = i + 1
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setPage(pageNum)}
-                        className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
-                          page === pageNum ? 'tab-active-dark' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
-                        }`}
-                      >
-                        {toPersianDigits(pageNum)}
-                      </button>
-                    )
-                  })}
+              viewMode === 'grid' ? (
+                <div className={gamesGridClassName}>
+                  {games.map((game) => (
+                    <GameCard key={game.id} game={game} />
+                  ))}
                 </div>
-
-                <button
-                  onClick={() => setPage(Math.min(totalPages, page + 1))}
-                  disabled={page === totalPages}
-                  className="btn-ghost text-sm py-2 px-4 disabled:opacity-40"
-                >
-                  بعدی
-                  <i className="fas fa-chevron-left mr-1" />
-                </button>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  {games.map((game) => (
+                    <GameCard
+                      key={game.id}
+                      game={game}
+                      variant="horizontal"
+                    />
+                  ))}
+                </div>
+              )
             )}
           </div>
         </div>
@@ -186,8 +164,10 @@ export default function GamesPage() {
     <div className="min-h-screen pt-24 pb-20">
       <Suspense fallback={
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {Array.from({ length: 6 }).map((_, i) => <GameCardSkeleton key={i} />)}
+          <div className={gamesGridClassName}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <GameCardSkeleton key={i} />
+            ))}
           </div>
         </div>
       }>

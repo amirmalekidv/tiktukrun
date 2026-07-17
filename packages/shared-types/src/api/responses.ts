@@ -247,6 +247,7 @@ export interface MonthlyWinnersResponse {
   topPlayer?: MonthlyWinner;
   topTeam?: MonthlyWinner;
   topGame?: MonthlyWinner;
+  raffleWinner?: MonthlyWinner;
   history: MonthlyWinner[];
 }
 

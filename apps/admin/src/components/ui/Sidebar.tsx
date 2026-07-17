@@ -7,7 +7,7 @@ import {
   Star, MessageSquare, Ticket, CreditCard, Banknote,
   BarChart3, Database, Gift, Award, TrendingUp, User,
   Percent, Trophy, Settings, Shield, ClipboardList,
-  ChevronDown, ChevronLeft, Zap, Globe
+  ChevronDown, ChevronLeft, Zap, Globe, Images
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { can } from '@/lib/permissions';
@@ -57,8 +57,10 @@ const navGroups: { title: string; items: NavItemDef[] }[] = [
           { href: '/branches', label: 'شعب', permission: 'branches.view' },
           { href: '/cities', label: 'شهرها', permission: 'branches.write' },
           { href: '/categories', label: 'دسته‌بندی‌ها', permission: 'games.write' },
+          { href: '/landing-sections', label: 'سکشن‌های صفحهٔ اصلی', permission: 'games.write' },
         ],
       },
+      { href: '/landing-banners', label: 'بنر های صفحه اصلی', icon: Images, permission: 'games.write' },
       { href: '/reviews', label: 'نظرات', icon: Star, permission: 'games.write' },
       { href: '/comments', label: 'نظرات بازی‌ها', icon: MessageSquare, permission: 'games.view' },
       {

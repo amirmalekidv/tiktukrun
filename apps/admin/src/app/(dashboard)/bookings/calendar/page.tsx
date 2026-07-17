@@ -4,7 +4,7 @@ import { ChevronRight, ChevronLeft, RefreshCw } from 'lucide-react';
 import { SectionHeader, StatusBadge, Modal } from '@/components/ui';
 import { formatToman } from '@/lib/utils/format';
 import moment from 'moment-jalaali';
-import { bookingsApi } from '@/lib/api';
+import { bookingsApi, branchesApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 interface CalEvent {
@@ -13,6 +13,7 @@ interface CalEvent {
   game: string;
   branch: string;
   user: string;
+  teamName?: string;
   dateKey: string; // YYYY-MM-DD (gregorian)
   time: string;
   players: number;
@@ -36,6 +37,12 @@ const STATUS_FA: Record<string, string> = {
   REFUNDED: 'بازگشت وجه',
 };
 
+interface BranchOption {
+  id: string;
+  name: string;
+  city?: { name?: string | null } | null;
+}
+
 // getCalendar is single-wrapped: { success, data: { branchId, from, to, calendar } }
 function readData<T>(res: any): T {
   const body = res?.data;
@@ -43,11 +50,21 @@ function readData<T>(res: any): T {
   return body as T;
 }
 
+function readList<T>(res: any): T[] {
+  const body = res?.data;
+  const inner = body && typeof body === 'object' && 'data' in body ? body.data : body;
+  if (Array.isArray(inner?.data)) return inner.data as T[];
+  return Array.isArray(inner) ? inner as T[] : [];
+}
+
 export default function BookingCalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(moment());
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null);
   const [events, setEvents] = useState<CalEvent[]>([]);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [branchId, setBranchId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [branchesLoading, setBranchesLoading] = useState(true);
 
   const jalaliMonth = currentMonth.format('jMMMM jYYYY');
   const _endOfJMonth = moment(currentMonth).endOf('jMonth' as any);
@@ -56,12 +73,24 @@ export default function BookingCalendarPage() {
   const adjustedFirstDay = (firstDayOfWeek + 1) % 7;
   const dayNames = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
 
+  const loadBranches = useCallback(async () => {
+    setBranchesLoading(true);
+    try {
+      const res = await branchesApi.getAll();
+      setBranches(readList<BranchOption>(res));
+    } catch {
+      setBranches([]);
+    } finally {
+      setBranchesLoading(false);
+    }
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const from = moment(currentMonth).startOf('jMonth' as any).toISOString();
       const to = moment(currentMonth).endOf('jMonth' as any).toISOString();
-      const res = await bookingsApi.getCalendar({ from, to });
+      const res = await bookingsApi.getCalendar({ from, to, branchId: branchId || undefined });
       const data = readData<{ calendar?: Record<string, any[]> }>(res);
       const calendar = data?.calendar || {};
       const flat: CalEvent[] = [];
@@ -71,8 +100,11 @@ export default function BookingCalendarPage() {
             id: b.id,
             code: b.code,
             game: b.game?.title || '—',
-            branch: b.branch?.name || '—',
+            branch: b.branch?.name
+              ? `${b.branch.name}${b.branch.city?.name ? ` · ${b.branch.city.name}` : ''}`
+              : 'شعبه نامشخص',
             user: b.user?.fullName || '—',
+            teamName: b.teamName ?? undefined,
             dateKey,
             time: b.slotDateTime
               ? new Date(b.slotDateTime).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
@@ -90,11 +122,15 @@ export default function BookingCalendarPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentMonth]);
+  }, [currentMonth, branchId]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    loadBranches();
+  }, [loadBranches]);
 
   const getEventsForDay = (day: number) => {
     const dayDate = moment(currentMonth).startOf('jMonth').add(day - 1, 'days');
@@ -109,10 +145,25 @@ export default function BookingCalendarPage() {
         subtitle="نمای تقویمی رزروهای فعال (در انتظار/تأیید شده) به تفکیک تاریخ شمسی"
         breadcrumb={[{ label: 'رزروها', href: '/bookings' }, { label: 'تقویم' }]}
         actions={
-          <button onClick={load} className="btn-secondary flex items-center gap-2" disabled={loading}>
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            بروزرسانی
-          </button>
+          <div className="flex items-center gap-2">
+            <select
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              disabled={branchesLoading}
+              className="select-field w-56"
+            >
+              <option value="">همه شعب مجاز</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}{branch.city?.name ? ` — ${branch.city.name}` : ''}
+                </option>
+              ))}
+            </select>
+            <button onClick={load} className="btn-secondary flex items-center gap-2" disabled={loading}>
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              بروزرسانی
+            </button>
+          </div>
         }
       />
 
@@ -177,7 +228,7 @@ export default function BookingCalendarPage() {
                           STATUS_BG[event.status] || 'bg-slate-600'
                         } text-white truncate block`}
                       >
-                        {event.time} — {event.game}
+                        {event.time} — {event.teamName || event.game}
                       </button>
                     ))}
                     {dayEvents.length > 2 && (
@@ -225,6 +276,12 @@ export default function BookingCalendarPage() {
                 <p className="text-slate-500 text-xs mb-1">مشتری</p>
                 <p className="text-white font-medium">{selectedEvent.user}</p>
               </div>
+              {selectedEvent.teamName && (
+                <div>
+                  <p className="text-slate-500 text-xs mb-1">نام تیم</p>
+                  <p className="text-cyan-300 font-medium">{selectedEvent.teamName}</p>
+                </div>
+              )}
               <div>
                 <p className="text-slate-500 text-xs mb-1">تعداد بازیکنان</p>
                 <p className="text-white font-medium">{selectedEvent.players} نفر</p>

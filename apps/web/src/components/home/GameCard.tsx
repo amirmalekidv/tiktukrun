@@ -4,8 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Game } from '@/types'
 import { DIFFICULTY_FA, CATEGORY_FA } from '@/types'
-import { formatToman, toPersianDigits } from '@/lib/utils'
-import FearMeter from '@/components/ui/FearMeter'
+import { cn, formatFearPercentage, formatToman, toPersianDigits } from '@/lib/utils'
 import StarRating from '@/components/ui/StarRating'
 import TierBadge from '@/components/games/TierBadge'
 import { GAME_COVER_PLACEHOLDER, shouldBypassImageOptimization } from '@/lib/games'
@@ -14,42 +13,137 @@ interface GameCardProps {
   game: Game
   variant?: 'default' | 'horizontal'
   href?: string
+  className?: string
 }
 
-export default function GameCard({ game, variant = 'default', href }: GameCardProps) {
+export default function GameCard({ game, variant = 'default', href, className }: GameCardProps) {
   const coverImage = game.coverImage || game.images[0]?.url || GAME_COVER_PLACEHOLDER
   const unoptimized = shouldBypassImageOptimization(coverImage)
   const targetHref = href || `/games/${game.slug || game.id}`
+  const safeRating = Number.isFinite(Number(game.rating)) ? Number(game.rating) : 0
+  const branchName = game.branch?.name || 'شعبه نامشخص'
+  const cityName = game.branch?.city?.name || 'شهر نامشخص'
+  const compactLocation = `${cityName}، ${branchName}`
+  const addressLabel = game.branch?.address?.trim() || compactLocation
+  const fearPercentage = formatFearPercentage(game.fearLevel)
+  const posterBadge = game.hasAgeLimit && game.ageLimit
+    ? `+${toPersianDigits(game.ageLimit)}`
+    : `${toPersianDigits(game.minPlayers)}-${toPersianDigits(game.maxPlayers)}`
+  const gameTier = game.tier ?? 'STANDARD'
+  const parsedAvailableSlots = Number(game.availableSlots)
+  const availableSlots = game.availableSlots == null || !Number.isFinite(parsedAvailableSlots)
+    ? null
+    : Math.max(0, parsedAvailableSlots)
+  const availableSlotsLabel = availableSlots === null
+    ? null
+    : `${toPersianDigits(availableSlots)} سانس آزاد`
+  const hoverStats = [
+    {
+      label: 'بازیکن',
+      value: `${toPersianDigits(game.minPlayers)} تا ${toPersianDigits(game.maxPlayers)} نفر`,
+      icon: 'fas fa-users',
+      valueClassName: 'text-[#e5ebf4]',
+    },
+    {
+      label: 'زمان',
+      value: `${toPersianDigits(game.duration)} دقیقه`,
+      icon: 'fas fa-clock',
+      valueClassName: 'text-[#e5ebf4]',
+    },
+    {
+      label: 'سختی',
+      value: DIFFICULTY_FA[game.difficulty],
+      icon: 'fas fa-bolt',
+      valueClassName: 'text-[#e5ebf4]',
+    },
+    {
+      label: 'ترس',
+      value: fearPercentage,
+      icon: 'fas fa-skull',
+      valueClassName: 'text-sm font-black text-[#ff8aa7]',
+    },
+  ]
 
   if (variant === 'horizontal') {
     return (
-      <Link href={targetHref}>
-        <article className="dark-card group flex cursor-pointer gap-0 overflow-hidden rounded-[18px] transition-all hover:-translate-y-1 hover:border-[#00f5ff]/50">
-          <div className="relative w-40 flex-shrink-0 overflow-hidden">
+      <Link
+        href={targetHref}
+        draggable={false}
+        className={cn('game-card-link group block h-full min-w-0 focus-visible:outline-none', className)}
+      >
+        <article className="game-card-surface dark-card relative flex h-full min-h-[224px] overflow-hidden rounded-[24px] border border-[#f6c453]/30 bg-[radial-gradient(circle_at_top,rgba(246,196,83,0.12),transparent_45%),linear-gradient(180deg,rgba(16,21,33,0.96),rgba(9,12,20,0.98))] transition-all duration-500 hover:-translate-y-1 hover:border-[#f6c453]/65 hover:shadow-[0_18px_40px_rgba(246,196,83,0.16)] group-focus-within:-translate-y-1 group-focus-within:border-[#f6c453]/65">
+          <div className="relative min-h-[224px] w-full flex-shrink-0 overflow-hidden sm:w-52 lg:w-60">
             <Image
               src={coverImage}
               alt={game.title}
               fill
+              draggable={false}
               unoptimized={unoptimized}
               className="object-cover transition duration-500 group-hover:scale-105"
-              sizes="160px"
+              sizes="(max-width: 640px) 100vw, 240px"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#05070a]/40" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#070a12] via-[#070a12]/25 to-transparent sm:bg-gradient-to-l sm:from-[#070a12] sm:via-[#070a12]/20 sm:to-transparent" />
+            <div className="absolute right-3 top-3 rounded-full border border-[#f6c453]/45 bg-[#090c13]/78 px-3 py-1 text-[11px] font-bold text-[#f6d06b] backdrop-blur">
+              {CATEGORY_FA[game.category]}
+            </div>
+            {game.hasAgeLimit && game.ageLimit ? (
+              <div className="absolute bottom-3 right-3 rounded-full border border-white/10 bg-black/55 px-2.5 py-1 text-[11px] font-bold text-white/90 backdrop-blur">
+                +{toPersianDigits(game.ageLimit)} سال
+              </div>
+            ) : null}
           </div>
-          <div className="flex-1 p-4">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <h3 className="font-bold text-white text-base leading-snug">{game.title}</h3>
-              <span className="rounded-lg border border-[#ffd700]/40 bg-black/60 px-2 py-1 text-xs font-bold text-[#ffd700]">
-                ★ {game.rating?.toFixed?.(1) ?? game.rating}
+          <div className="flex flex-1 flex-col p-5">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="line-clamp-1 text-lg font-black text-white">{game.title}</h3>
+                <p className="mt-1 line-clamp-1 text-sm text-[#cbd5e1]/70">
+                  {branchName}، {cityName}
+                </p>
+              </div>
+              <div className="rounded-full border border-[#f6c453]/35 bg-[#090c13]/75 px-3 py-1 text-[11px] font-bold text-[#f6d06b] backdrop-blur">
+                ★ {toPersianDigits(safeRating.toFixed(1))}
+              </div>
+            </div>
+
+            <div className="mb-3 flex flex-wrap gap-2">
+              <TierBadge tier={gameTier} size="sm" />
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-white/80">
+                {DIFFICULTY_FA[game.difficulty]}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-white/80">
+                {toPersianDigits(game.duration)} دقیقه
+              </span>
+              {availableSlotsLabel ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#8fc9ff]/25 bg-[#8fc9ff]/10 px-3 py-1 text-[11px] font-bold text-[#8fc9ff]">
+                  <i className="fas fa-calendar-check text-[10px]" />
+                  {availableSlotsLabel}
+                </span>
+              ) : null}
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-white/80">
+                {toPersianDigits(game.minPlayers)} تا {toPersianDigits(game.maxPlayers)} نفر
               </span>
             </div>
-            <p className="text-gray-400 text-xs line-clamp-2 mb-3">{game.description}</p>
-            <div className="flex items-center justify-between">
-              <FearMeter level={game.fearLevel} size="sm" />
-              <span className="price-tag text-sm">
-                <span>{formatToman(game.basePrice)}</span>
-                <span className="text-[#00f5ff]/70 text-xs mr-1">ت</span>
-              </span>
+
+            <p className="mb-4 line-clamp-2 flex-1 text-sm leading-6 text-[#d7deea]/72">{game.description}</p>
+
+            <div className="mt-auto flex items-end justify-between gap-4 border-t border-white/10 pt-4">
+              <div className="[text-align:right]">
+                <div className="mb-1 text-[10px] text-[#8b95a7]">شروع از</div>
+                <div className="price-tag text-base">
+                  {formatToman(game.basePrice)}
+                  <span className="mr-1 text-[11px] text-[#f6d06b]/80">تومان</span>
+                </div>
+              </div>
+
+              <div className="text-left">
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-[#ff6b8f]/35 bg-[#ff6b8f]/10 px-3 py-1 text-[11px] font-black text-[#ff8aa7]">
+                  <span className="text-white/70">ترس</span>
+                  <span>{fearPercentage}</span>
+                </div>
+                <div className="mt-2">
+                  <StarRating rating={game.rating} totalReviews={game.totalReviews} size="sm" showCount />
+                </div>
+              </div>
             </div>
           </div>
         </article>
@@ -58,100 +152,124 @@ export default function GameCard({ game, variant = 'default', href }: GameCardPr
   }
 
   return (
-    <Link href={targetHref}>
-      <article className="dark-card group flex h-full cursor-pointer flex-col overflow-hidden rounded-[18px] transition-all hover:-translate-y-2 hover:border-[#00f5ff]/50 hover:shadow-[0_14px_40px_rgba(0,245,255,0.18)]">
-        {/* Image container */}
-        <div className="relative h-[190px] flex-shrink-0 overflow-hidden">
-          <Image
-            src={coverImage}
-            alt={game.title}
-            fill
-            unoptimized={unoptimized}
-            className="object-cover transition duration-500 group-hover:scale-110"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#05070a]/95 via-black/30 to-transparent" />
-
-          {/* Rating */}
-          <div className="absolute top-3 right-3 z-10 rounded-lg border border-[#ffd700]/40 bg-black/60 px-2.5 py-1 text-xs font-bold text-[#ffd700] backdrop-blur">
-            ★ {game.rating?.toFixed?.(1) ?? game.rating}
+    <Link
+      href={targetHref}
+      draggable={false}
+      className={cn(
+        'game-card-link group block h-full w-[220px] flex-shrink-0 snap-start min-w-0 sm:w-[236px] lg:w-[248px] focus-visible:outline-none',
+        className
+      )}
+    >
+      <div className="flex h-full flex-col">
+        <article className="game-card-surface dark-card relative isolate aspect-[3/4] overflow-hidden rounded-[24px] border border-[#f6c453]/45 bg-[linear-gradient(180deg,rgba(11,15,24,0.98),rgba(7,10,16,0.99))] transition-all duration-500 hover:-translate-y-2 hover:border-[#f6c453]/80 hover:shadow-[0_24px_60px_rgba(246,196,83,0.18)] group-focus-within:-translate-y-2 group-focus-within:border-[#f6c453]/80">
+          <div className="absolute inset-0">
+            <Image
+              src={coverImage}
+              alt={game.title}
+              fill
+              draggable={false}
+              unoptimized={unoptimized}
+              className="object-cover transition duration-700 group-hover:scale-110 group-focus-within:scale-110"
+              sizes="(max-width: 640px) 220px, (max-width: 1024px) 236px, 248px"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,8,13,0.08)_0%,rgba(6,8,13,0.14)_26%,rgba(6,8,13,0.38)_70%,rgba(6,8,13,0.9)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(246,196,83,0.14),transparent_34%),radial-gradient(circle_at_bottom,rgba(0,245,255,0.08),transparent_42%)] opacity-70 transition duration-500 group-hover:opacity-100 group-focus-within:opacity-100" />
           </div>
 
-          {/* Difficulty + Tier badges */}
-          <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
-            <div className="rounded-lg bg-[#b026ff]/85 px-2.5 py-1 text-xs font-bold text-white backdrop-blur">
-              {DIFFICULTY_FA[game.difficulty]}
-            </div>
-            {game.tier && <TierBadge tier={game.tier} size="sm" />}
+          <div className="absolute right-3 top-3 z-10 inline-flex max-w-[82%] items-center gap-1.5 rounded-full border border-[#c9bdff]/40 bg-[#755cf4]/92 px-3 py-1.5 text-[11px] font-bold leading-5 text-white shadow-[0_12px_28px_rgba(19,13,44,0.36)] backdrop-blur-md transition-all duration-500 group-hover:-translate-y-2 group-hover:opacity-0 group-focus-within:-translate-y-2 group-focus-within:opacity-0">
+            <i className="fas fa-location-dot text-[10px] text-white/88" />
+            <span className="min-w-0 truncate">{compactLocation}</span>
           </div>
 
-          {/* Category badge */}
-          {game.hasAgeLimit && game.ageLimit && (
-            <div className="absolute bottom-12 left-3 rounded-lg border border-[#ffd700]/40 bg-black/70 px-2 py-1 text-xs font-bold text-[#ffd700] backdrop-blur">
-              +{toPersianDigits(game.ageLimit)} سال
-            </div>
-          )}
-
-          {/* Title overlay */}
-          <div className="absolute bottom-3 left-3 right-3">
-            <h3 className="font-cinzel text-xl font-bold text-white drop-shadow-lg line-clamp-1">{game.title}</h3>
-            {game.subtitle && (
-              <p className="mt-0.5 line-clamp-1 text-xs text-[#00f5ff]">{game.subtitle}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex flex-1 flex-col p-5">
-          {/* Tags */}
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            <span className="badge-blood text-[10px]">{CATEGORY_FA[game.category]}</span>
-            {game.tags?.slice(0, 2).map((tag) => (
-              <span key={tag} className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] text-gray-400">
-                {tag}
+          <div className="game-card-quick-meta absolute inset-x-3 bottom-3 z-10 flex items-center justify-between gap-2 transition-all duration-500 group-hover:translate-y-3 group-hover:opacity-0 group-focus-within:translate-y-3 group-focus-within:opacity-0">
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 min-w-9 items-center justify-center rounded-full border border-white/12 bg-[#0b1018]/82 px-2 text-[#8fc9ff] shadow-[0_10px_24px_rgba(0,0,0,0.3)] backdrop-blur-md">
+                <i className="fas fa-users text-[13px]" />
               </span>
-            ))}
-          </div>
-
-          {/* Description */}
-          <p className="text-gray-400 text-sm line-clamp-2 mb-4 flex-1">{game.description}</p>
-
-          {/* Stats row */}
-          <div className="mb-4 flex items-center gap-3 border-t border-white/10 pt-3 text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <i className="fas fa-users text-[#00f5ff]" />
-              {toPersianDigits(game.minPlayers)}-{toPersianDigits(game.maxPlayers)} نفر
-            </span>
-            <span className="flex items-center gap-1">
-              <i className="fas fa-clock text-[#00f5ff]" />
-              {toPersianDigits(game.duration)} دقیقه
-            </span>
-            {(game.likesCount ?? 0) > 0 && (
-              <span className="flex items-center gap-1">
-                <i className="fas fa-heart text-[#ff00e5]" />
-                {toPersianDigits(game.likesCount ?? 0)}
+              <span className="flex h-9 min-w-9 items-center justify-center rounded-full border border-white/12 bg-[#0b1018]/82 px-2 text-[#f6d06b] shadow-[0_10px_24px_rgba(0,0,0,0.3)] backdrop-blur-md">
+                <i className="fas fa-clock text-[13px]" />
               </span>
-            )}
-            <StarRating rating={game.rating} size="sm" />
+              <span className="flex h-9 min-w-9 items-center justify-center rounded-full border border-white/12 bg-[#0b1018]/82 px-2 text-[11px] font-black text-[#ff6b8f] shadow-[0_10px_24px_rgba(0,0,0,0.3)] backdrop-blur-md">
+                {fearPercentage}
+              </span>
+            </div>
+
+            <span className="rounded-full border border-[#f6c453]/40 bg-[#f0b90b] px-3 py-1.5 text-[11px] font-black text-[#1a1e28] shadow-[0_10px_24px_rgba(240,185,11,0.3)]">
+              {posterBadge}
+            </span>
           </div>
 
-          {/* Price + CTA */}
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <div className="text-[10px] text-gray-500 mb-0.5">از</div>
-              <div className="price-tag text-base">
-                <span>{formatToman(game.basePrice)}</span>
-                <span className="text-[#00f5ff]/70 text-xs mr-1">تومان</span>
+          <div className="game-card-hover-panel pointer-events-none absolute inset-x-3 bottom-3 top-3 z-20 flex translate-y-4 items-center justify-center rounded-[20px] border border-[#f6c453]/25 bg-[linear-gradient(180deg,rgba(9,12,19,0.9),rgba(11,15,24,0.98))] p-4 opacity-0 shadow-[0_24px_50px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+            <div className="flex w-full flex-col gap-2">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-2.5 [text-align:right]">
+                <div className="mb-1 flex items-center gap-1.5 text-[10px] text-[#f6d06b]">
+                  <i className="fas fa-location-dot text-[10px]" />
+                  <span>آدرس</span>
+                </div>
+                <div className="line-clamp-2 text-[10px] leading-4 text-[#e5ebf4]/86">{addressLabel}</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px] text-[#e5ebf4]/86">
+                {hoverStats.map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex min-h-[66px] flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-2.5 [text-align:right]"
+                  >
+                    <div className="flex items-center gap-1.5 text-[#f6d06b]">
+                      <i className={`${item.icon} text-[10px]`} />
+                      <span>{item.label}</span>
+                    </div>
+                    <div className={cn('leading-5', item.valueClassName)}>{item.value}</div>
+                  </div>
+                ))}
               </div>
             </div>
-            {/* NOTE: avoid nested interactive elements inside <Link> for reliable navigation */}
-            <div className="btn-blood flex-shrink-0 px-4 py-2 text-sm" role="presentation">
-              <i className="fas fa-calendar-plus ml-1 text-xs" />
-              رزرو
+          </div>
+        </article>
+
+        <div className="px-2 pb-1 pt-3 [text-align:right]">
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <h3 className="line-clamp-2 min-w-0 flex-1 text-[1.05rem] font-black leading-8 text-white">
+              {game.title}
+            </h3>
+            <div className="mt-1 flex-shrink-0">
+              <TierBadge tier={gameTier} size="sm" />
+            </div>
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-center justify-start gap-x-3 gap-y-1 text-[11px] text-[#aab6c8]/74">
+            <span className="flex items-center gap-1">
+              <i className="fas fa-clock text-[10px] text-[#f6d06b]" />
+              {toPersianDigits(game.duration)} دقیقه
+            </span>
+            <span className="h-3 w-px bg-white/10" />
+            <span className="flex items-center gap-1">
+              <i className="fas fa-users text-[10px] text-[#8fc9ff]" />
+              {toPersianDigits(game.minPlayers)} تا {toPersianDigits(game.maxPlayers)}
+            </span>
+            {availableSlotsLabel ? (
+              <span className="flex items-center gap-1 text-[#8fc9ff]">
+                <i className="fas fa-calendar-check text-[10px]" />
+                {availableSlotsLabel}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-3 flex items-end justify-between gap-2">
+            <div className="[text-align:right]">
+              <div className="mb-1 text-[10px] text-[#8b95a7]">شروع از</div>
+              <div className="price-tag text-base leading-none">
+                {formatToman(game.basePrice)}
+                <span className="mr-1 text-[11px] text-[#f6d06b]/80">تومان</span>
+              </div>
+            </div>
+
+            <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold text-white/86">
+              ★ {toPersianDigits(safeRating.toFixed(1))}
             </div>
           </div>
         </div>
-      </article>
+      </div>
     </Link>
   )
 }

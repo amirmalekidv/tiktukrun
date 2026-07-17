@@ -1,91 +1,124 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import useSWR from 'swr'
 import { getGamesBySection } from '@/lib/api'
-import { GAME_COVER_PLACEHOLDER, shouldBypassImageOptimization } from '@/lib/games'
-import { formatToman } from '@/lib/utils'
-import FearMeter from '@/components/ui/FearMeter'
-import StarRating from '@/components/ui/StarRating'
+import type { Game } from '@/types'
+import GameCard from './GameCard'
+import CarouselRail, { CarouselNavButtons } from './CarouselRail'
+import { GameCardSkeleton } from '@/components/ui/LoadingSkeleton'
 
 interface SectionStripProps {
   sectionKey: string
   title: string
   icon?: string
+  games?: Game[]
 }
 
-export default function SectionStrip({ sectionKey, title, icon = 'fas fa-star' }: SectionStripProps) {
-  const { data: games = [], isLoading } = useSWR(
-    `section-${sectionKey}`,
+const VERTICAL_LIST_SECTIONS = new Set(['popular-this-week'])
+
+const POPULAR_GAMES_GRID_CLASSNAME =
+  'grid grid-cols-[repeat(auto-fill,minmax(220px,248px))] justify-center gap-x-5 gap-y-9 sm:grid-cols-[repeat(auto-fill,minmax(236px,248px))] lg:justify-start'
+
+export default function SectionStrip({ sectionKey, title, icon = 'fas fa-star', games: prefetchedGames }: SectionStripProps) {
+  const shouldFetch = prefetchedGames === undefined
+  const isVerticalList = VERTICAL_LIST_SECTIONS.has(sectionKey)
+  const carouselId = `section-strip-${sectionKey}`
+  const sectionContainerRef = useRef<HTMLDivElement>(null)
+  const viewAllLabelRef = useRef<HTMLSpanElement>(null)
+  const [railLeftInset, setRailLeftInset] = useState(0)
+  const { data: fetchedGames = [], isLoading } = useSWR(
+    shouldFetch ? `section-${sectionKey}` : null,
     () => getGamesBySection(sectionKey)
   )
 
-  if (!isLoading && games.length === 0) return null
+  const games = prefetchedGames ?? fetchedGames
+  const loading = shouldFetch && isLoading
+  const railAlignmentStyle: CSSProperties | undefined = railLeftInset > 0
+    ? { marginLeft: railLeftInset }
+    : undefined
+
+  const updateRailAlignment = useCallback(() => {
+    const container = sectionContainerRef.current
+    const label = viewAllLabelRef.current
+
+    if (!container || !label) return
+
+    const containerRect = container.getBoundingClientRect()
+    const containerStyles = window.getComputedStyle(container)
+    const containerContentLeft = containerRect.left + parseFloat(containerStyles.paddingLeft || '0')
+    const labelRect = label.getBoundingClientRect()
+    const nextInset = Math.max(0, Math.round(labelRect.left - containerContentLeft))
+
+    setRailLeftInset((currentInset) => (
+      currentInset === nextInset ? currentInset : nextInset
+    ))
+  }, [])
+
+  useEffect(() => {
+    updateRailAlignment()
+
+    const observedElements: Element[] = []
+    if (sectionContainerRef.current) observedElements.push(sectionContainerRef.current)
+    if (viewAllLabelRef.current) observedElements.push(viewAllLabelRef.current)
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateRailAlignment)
+      return () => window.removeEventListener('resize', updateRailAlignment)
+    }
+
+    const resizeObserver = new ResizeObserver(updateRailAlignment)
+    observedElements.forEach((element) => resizeObserver.observe(element))
+    window.addEventListener('resize', updateRailAlignment)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', updateRailAlignment)
+    }
+  }, [updateRailAlignment])
+
+  if (!loading && games.length === 0) return null
 
   return (
     <section className="py-10">
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Header */}
+      <div ref={sectionContainerRef} className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="font-cinzel font-bold text-xl text-white flex items-center gap-2">
-            <i className={`${icon} text-[#00f5ff]`} />
-            <span className="gradient-text">{title}</span>
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="font-cinzel font-bold text-xl text-white flex items-center gap-2">
+              <i className={`${icon} text-[#f6d06b]`} />
+              <span className="text-white">{title}</span>
+            </h2>
+            {!isVerticalList ? <CarouselNavButtons carouselId={carouselId} /> : null}
+          </div>
           <Link
             href={`/section/${sectionKey}`}
-            className="flex items-center gap-1 text-sm text-[#00f5ff] transition-colors hover:text-white"
+            className="flex items-center gap-1 rounded-full border border-[#f6c453]/30 bg-[#0c111a]/75 px-4 py-2 text-sm font-bold text-[#f6d06b] transition-all hover:-translate-y-0.5 hover:border-[#f6c453]/65 hover:bg-[#111827]"
           >
-            همه
+            <span ref={viewAllLabelRef}>مشاهده همه</span>
             <i className="fas fa-chevron-left text-xs" />
           </Link>
         </div>
 
-        {/* Horizontal scroll */}
-        <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory">
-          {isLoading
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex-shrink-0 w-64 dark-card rounded-[18px] h-52 skeleton snap-start" />
-              ))
-            : games.map((game) => {
-                const coverImage = game.coverImage || game.images[0]?.url || GAME_COVER_PLACEHOLDER
-                const unoptimized = shouldBypassImageOptimization(coverImage)
-
-                return (
-                  <Link
-                    key={game.id}
-                    href={`/games/${game.slug}`}
-                    className="flex-shrink-0 w-64 snap-start group"
-                  >
-                    <article className="dark-card h-full overflow-hidden rounded-[18px] transition-all group-hover:-translate-y-1 group-hover:border-[#00f5ff]/50">
-                      <div className="relative h-36 overflow-hidden">
-                        <Image
-                          src={coverImage}
-                          alt={game.title}
-                          fill
-                          unoptimized={unoptimized}
-                          className="object-cover transition duration-500 group-hover:scale-110"
-                          sizes="256px"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#05070a] via-black/30 to-transparent" />
-                        <div className="absolute top-2 right-2">
-                          <FearMeter level={game.fearLevel} size="sm" />
-                        </div>
-                      </div>
-                      <div className="p-3">
-                        <h3 className="font-bold text-white text-sm mb-1 line-clamp-1">{game.title}</h3>
-                        <div className="flex items-center justify-between">
-                          <StarRating rating={game.rating} size="sm" />
-                          <span className="price-tag text-xs">
-                            {formatToman(game.basePrice)}ت
-                          </span>
-                        </div>
-                      </div>
-                    </article>
-                  </Link>
-                )
-              })}
-        </div>
+        {isVerticalList ? (
+          <div className={POPULAR_GAMES_GRID_CLASSNAME}>
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <GameCardSkeleton key={i} />
+                ))
+              : games.map((game) => <GameCard key={game.id} game={game} />)}
+          </div>
+        ) : (
+          <div className="section-carousel-viewport" style={railAlignmentStyle}>
+            <CarouselRail carouselId={carouselId} navigationPlacement="external">
+              {loading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <GameCardSkeleton key={i} />
+                  ))
+                : games.map((game) => <GameCard key={game.id} game={game} />)}
+            </CarouselRail>
+          </div>
+        )}
       </div>
     </section>
   )

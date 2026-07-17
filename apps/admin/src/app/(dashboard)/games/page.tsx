@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Plus, Search, Grid, List, Star, Edit, Trash2, ToggleLeft, Bookmark, RefreshCw } from 'lucide-react';
 import { SectionHeader, StatsCard, FilterBar, Toggle, ConfirmDialog, Pagination, EmptyState } from '@/components/ui';
 import { formatToman, persianNum, FEAR_EMOJIS, fearLabel } from '@/lib/utils/format';
-import { gamesApi } from '@/lib/api';
+import { branchesApi, gamesApi } from '@/lib/api';
 import { readPaginatedList } from '@/lib/api/pagination';
 import toast from 'react-hot-toast';
 import type { Game } from '@/lib/types';
@@ -13,10 +13,25 @@ import { Gamepad2, TrendingUp, BookOpen } from 'lucide-react';
 
 type ViewMode = 'table' | 'grid';
 
+interface BranchOption {
+  id: string;
+  name: string;
+  city?: { name?: string | null } | null;
+}
+
+function readBranchList(res: any): BranchOption[] {
+  const body = res?.data;
+  const inner = body && typeof body === 'object' && 'data' in body ? body.data : body;
+  if (Array.isArray(inner?.data)) return inner.data as BranchOption[];
+  return Array.isArray(inner) ? inner as BranchOption[] : [];
+}
+
 export default function GamesPage() {
   const [view, setView] = useState<ViewMode>('table');
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<'active' | 'inactive' | 'all'>('active');
+  const [branchId, setBranchId] = useState('');
+  const [branches, setBranches] = useState<BranchOption[]>([]);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
 
@@ -25,6 +40,19 @@ export default function GamesPage() {
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [branchesLoading, setBranchesLoading] = useState(true);
+
+  const loadBranches = useCallback(async () => {
+    setBranchesLoading(true);
+    try {
+      const res = await branchesApi.getAll();
+      setBranches(readBranchList(res));
+    } catch {
+      setBranches([]);
+    } finally {
+      setBranchesLoading(false);
+    }
+  }, []);
 
   const loadGames = useCallback(async () => {
     setLoading(true);
@@ -32,6 +60,7 @@ export default function GamesPage() {
       const params: Record<string, unknown> = { page, limit };
       if (activeFilter === 'active') params.isActive = 'true';
       if (activeFilter === 'inactive') params.isActive = 'false';
+      if (branchId) params.branchId = branchId;
       const res = await gamesApi.getAll(params);
       const { items, total: count } = readPaginatedList<Game>(res);
       setGames(items);
@@ -43,9 +72,10 @@ export default function GamesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, activeFilter]);
+  }, [page, limit, activeFilter, branchId]);
 
   useEffect(() => { loadGames(); }, [loadGames]);
+  useEffect(() => { loadBranches(); }, [loadBranches]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -110,7 +140,7 @@ export default function GamesPage() {
     <div className="fade-in">
       <SectionHeader
         title="مدیریت بازی‌ها"
-        subtitle="لیست، ایجاد و ویرایش تمام بازی‌های پلتفرم"
+        subtitle="لیست بازی‌ها با نمایش و فیلتر شعبه/ونیو"
         breadcrumb={[{ label: 'داشبورد', href: '/dashboard' }, { label: 'بازی‌ها' }]}
         actions={
           <div className="flex items-center gap-2">
@@ -129,12 +159,12 @@ export default function GamesPage() {
         {stats.map((s, i) => <StatsCard key={i} {...s} />)}
       </div>
 
-      <FilterBar onReset={() => { setSearch(''); setActiveFilter('active'); setPage(1); }}>
+      <FilterBar onReset={() => { setSearch(''); setActiveFilter('active'); setBranchId(''); setPage(1); }}>
         <div className="relative flex-1 min-w-48">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="text"
-            placeholder="جستجو در بازی‌ها..."
+            placeholder="جستجو در بازی، دسته یا شعبه..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="input-field pr-10"
@@ -148,6 +178,19 @@ export default function GamesPage() {
           <option value="active">فعال</option>
           <option value="inactive">غیرفعال</option>
           <option value="all">همه وضعیت‌ها</option>
+        </select>
+        <select
+          value={branchId}
+          onChange={e => { setBranchId(e.target.value); setPage(1); }}
+          disabled={branchesLoading}
+          className="select-field w-56"
+        >
+          <option value="">همه شعب مجاز</option>
+          {branches.map((branch) => (
+            <option key={branch.id} value={branch.id}>
+              {branch.name}{branch.city?.name ? ` — ${branch.city.name}` : ''}
+            </option>
+          ))}
         </select>
 
         {/* View Toggle */}
@@ -212,7 +255,10 @@ export default function GamesPage() {
                     </td>
                     <td>
                       <p className="text-slate-300">{game.category?.name}</p>
-                      <p className="text-slate-500 text-xs">{game.branch?.name}</p>
+                      <p className="text-slate-500 text-xs">
+                        {game.branch?.name || 'شعبه نامشخص'}
+                        {game.branch?.city?.name ? ` · ${game.branch.city.name}` : ''}
+                      </p>
                     </td>
                     <td className="text-white font-medium">{formatToman(game.pricePerPerson)}</td>
                     <td>
@@ -292,7 +338,10 @@ export default function GamesPage() {
                 )}
               </div>
               <h3 className="text-white font-bold mb-1">{game.title}</h3>
-              <p className="text-slate-400 text-xs mb-3">{game.category?.name} — {game.branch?.name}</p>
+              <p className="text-slate-400 text-xs mb-3">
+                {game.category?.name || 'بدون دسته'} — {game.branch?.name || 'شعبه نامشخص'}
+                {game.branch?.city?.name ? ` · ${game.branch.city.name}` : ''}
+              </p>
               <div className="flex items-center justify-between">
                 <p className="text-red-400 font-bold text-sm">{formatToman(game.pricePerPerson)}</p>
                 <div className="flex items-center gap-1">

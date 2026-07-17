@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Calendar, Filter, RefreshCw } from 'lucide-react';
+import { Search, Calendar, RefreshCw, Building2 } from 'lucide-react';
 import Link from 'next/link';
-import { bookingsApi } from '@/lib/api';
+import { bookingsApi, branchesApi } from '@/lib/api';
 import { SectionHeader, FilterBar } from '@/components/ui';
 import BookingsTable from '@/components/bookings/BookingsTable';
 import type { Booking } from '@/lib/types';
@@ -19,6 +19,12 @@ const STATUS_OPTIONS = [
 
 const PAGE_SIZE = 20;
 
+interface BranchOption {
+  id: string;
+  name: string;
+  city?: { name?: string | null } | null;
+}
+
 // admin/bookings list is double-wrapped: { success, data: { data, total, page, limit } }
 function unwrapPaginated(res: any): { items: any[]; total: number } {
   const body = res?.data;
@@ -26,6 +32,13 @@ function unwrapPaginated(res: any): { items: any[]; total: number } {
   const items = Array.isArray(inner?.data) ? inner.data : Array.isArray(inner) ? inner : [];
   const total = Number(inner?.total ?? body?.total ?? items.length) || 0;
   return { items, total };
+}
+
+function unwrapList<T>(res: any): T[] {
+  const body = res?.data;
+  const inner = body && typeof body === 'object' && 'data' in body ? body.data : body;
+  if (Array.isArray(inner?.data)) return inner.data as T[];
+  return Array.isArray(inner) ? inner as T[] : [];
 }
 
 // Normalize the raw Prisma booking payload into the shape BookingsTable expects.
@@ -44,13 +57,16 @@ function normalize(b: any): Booking {
     gameId: b.gameId,
     game: b.game ? ({ id: b.game.id, title: b.game.title } as any) : undefined,
     branchId: b.branchId,
-    branch: b.branch ? ({ id: b.branchId, name: b.branch?.name } as any) : undefined,
+    branch: b.branch
+      ? ({ id: b.branch.id ?? b.branchId, name: b.branch.name, city: b.branch.city } as any)
+      : undefined,
     slotId: b.slotId ?? '',
     slotDate: b.slotDateTime ?? b.slotDate ?? b.createdAt,
     slotTime: b.slotDateTime
       ? new Date(b.slotDateTime).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
       : '',
     playersCount: b.playersCount ?? b.players ?? 0,
+    teamName: b.teamName ?? undefined,
     amount: String(b.basePrice ?? b.amount ?? 0),
     discountAmount: String(b.discountApplied ?? b.discountAmount ?? 0),
     finalAmount: String(b.totalAmount ?? b.finalAmount ?? 0),
@@ -67,8 +83,23 @@ export default function BookingsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [branchId, setBranchId] = useState('');
+  const [branches, setBranches] = useState<BranchOption[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [branchesLoading, setBranchesLoading] = useState(true);
+
+  const loadBranches = useCallback(async () => {
+    setBranchesLoading(true);
+    try {
+      const res = await branchesApi.getAll();
+      setBranches(unwrapList<BranchOption>(res));
+    } catch {
+      setBranches([]);
+    } finally {
+      setBranchesLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -76,6 +107,7 @@ export default function BookingsPage() {
       const params: Record<string, unknown> = { page, limit: PAGE_SIZE };
       if (search) params.q = search;
       if (status) params.status = status;
+      if (branchId) params.branchId = branchId;
       const res = await bookingsApi.getAll(params);
       const { items, total } = unwrapPaginated(res);
       setBookings(items.map(normalize));
@@ -87,11 +119,15 @@ export default function BookingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, status]);
+  }, [page, search, status, branchId]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    loadBranches();
+  }, [loadBranches]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -99,7 +135,7 @@ export default function BookingsPage() {
     <div className="fade-in">
       <SectionHeader
         title="مدیریت رزروها"
-        subtitle="نمایش، فیلتر و مدیریت تمام رزروهای پلتفرم"
+        subtitle="نمایش، فیلتر و مدیریت رزروها همراه با شعبه/ونیو مرتبط"
         breadcrumb={[{ label: 'داشبورد', href: '/dashboard' }, { label: 'رزروها' }]}
         actions={
           <>
@@ -120,6 +156,7 @@ export default function BookingsPage() {
         onReset={() => {
           setSearch('');
           setStatus('');
+          setBranchId('');
           setPage(1);
         }}
       >
@@ -127,7 +164,7 @@ export default function BookingsPage() {
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="text"
-            placeholder="جستجو (کد، نام، موبایل)..."
+            placeholder="جستجو (کد، نام، موبایل، شعبه)..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -150,6 +187,25 @@ export default function BookingsPage() {
             </option>
           ))}
         </select>
+        <div className="relative min-w-56">
+          <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+          <select
+            value={branchId}
+            onChange={(e) => {
+              setBranchId(e.target.value);
+              setPage(1);
+            }}
+            disabled={branchesLoading}
+            className="select-field w-full pr-10"
+          >
+            <option value="">همه شعب مجاز</option>
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name}{branch.city?.name ? ` — ${branch.city.name}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
       </FilterBar>
 
       {/* Table */}

@@ -260,6 +260,7 @@ export class AuthService {
     });
 
     if (!user || !user.passwordHash) return null;
+    if (user.deletedAt || !user.isActive || user.isBanned) return null;
 
     const isValid = await compareHash(password, user.passwordHash);
     if (!isValid) return null;

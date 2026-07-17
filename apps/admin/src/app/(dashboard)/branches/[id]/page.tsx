@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { SectionHeader, StatusBadge } from '@/components/ui';
+import BranchLocationPicker from '@/components/branches/BranchLocationPicker';
 import { FiMapPin, FiEdit2, FiSave, FiArrowRight, FiPhone } from 'react-icons/fi';
 import { RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { branchesApi } from '@/lib/api';
+import { branchesApi, staffApi } from '@/lib/api';
 import { persianNum } from '@/lib/utils/format';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '@/stores/authStore';
+import { isPlatformAdmin } from '@/lib/route-permissions';
 
 interface BranchGame {
   id: string;
@@ -24,11 +27,30 @@ interface Branch {
   name: string;
   address: string;
   phone?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   isActive: boolean;
   cityId: string;
   city?: { id: string; name: string } | null;
+  managerId?: string | null;
+  manager?: { id: string; fullName?: string | null; mobile?: string | null } | null;
   games?: BranchGame[];
   createdAt?: string;
+}
+
+interface StaffOption {
+  id: string;
+  fullName?: string | null;
+  mobile?: string | null;
+}
+
+interface BranchFormState {
+  name: string;
+  address: string;
+  phone: string;
+  lat: string;
+  lng: string;
+  managerId: string;
 }
 
 function unwrap<T = any>(res: any): T {
@@ -37,12 +59,51 @@ function unwrap<T = any>(res: any): T {
   return d as T;
 }
 
+function unwrapList<T = any>(res: any): T[] {
+  const body = res?.data;
+  const inner = body && typeof body === 'object' && 'data' in body ? body.data : body;
+  if (Array.isArray(inner?.data)) return inner.data as T[];
+  return Array.isArray(inner) ? inner as T[] : [];
+}
+
+function coordToString(value?: number | null) {
+  return typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
+}
+
+function readCoordinate(value: string, min: number, max: number, label: string) {
+  const raw = value.trim();
+  if (!raw) return null;
+  const num = Number(raw);
+  if (!Number.isFinite(num) || num < min || num > max) {
+    throw new Error(`${label} معتبر نیست`);
+  }
+  return num;
+}
+
+function readCoordinateForMap(value: string, min: number, max: number) {
+  const raw = value.trim();
+  if (!raw) return null;
+  const num = Number(raw);
+  return Number.isFinite(num) && num >= min && num <= max ? num : null;
+}
+
 export default function BranchDetailPage({ params }: { params: { id: string } }) {
+  const user = useAuthStore((s) => s.user);
+  const canAssignManager = isPlatformAdmin(user);
   const [branch, setBranch] = useState<Branch | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: '', address: '', phone: '' });
+  const [form, setForm] = useState<BranchFormState>({ name: '', address: '', phone: '', lat: '', lng: '', managerId: '' });
+  const [managers, setManagers] = useState<StaffOption[]>([]);
+
+  useEffect(() => {
+    if (!canAssignManager) return;
+    staffApi
+      .getAll({ role: 'BRANCH_MANAGER', limit: 100 })
+      .then((res) => setManagers(unwrapList<StaffOption>(res)))
+      .catch(() => setManagers([]));
+  }, [canAssignManager]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,7 +111,14 @@ export default function BranchDetailPage({ params }: { params: { id: string } })
       const res = await branchesApi.getById(params.id);
       const b = unwrap<Branch>(res);
       setBranch(b);
-      setForm({ name: b?.name ?? '', address: b?.address ?? '', phone: b?.phone ?? '' });
+      setForm({
+        name: b?.name ?? '',
+        address: b?.address ?? '',
+        phone: b?.phone ?? '',
+        lat: coordToString(b?.lat),
+        lng: coordToString(b?.lng),
+        managerId: b?.managerId ?? b?.manager?.id ?? '',
+      });
     } catch {
       toast.error('خطا در بارگذاری شعبه');
       setBranch(null);
@@ -65,16 +133,28 @@ export default function BranchDetailPage({ params }: { params: { id: string } })
     if (!branch) return;
     setSaving(true);
     try {
-      await branchesApi.update(branch.id, {
+      const lat = readCoordinate(form.lat, -90, 90, 'عرض جغرافیایی');
+      const lng = readCoordinate(form.lng, -180, 180, 'طول جغرافیایی');
+      const payload: Record<string, unknown> = {
         name: form.name,
         address: form.address,
         phone: form.phone || undefined,
-      } as any);
-      setBranch(prev => prev ? { ...prev, ...form } : prev);
+        lat,
+        lng,
+      };
+      if (canAssignManager) {
+        payload.managerId = form.managerId || null;
+      }
+
+      const res = await branchesApi.update(branch.id, payload as any);
+      const updated = unwrap<Branch>(res);
+      setBranch(prev => prev
+        ? { ...prev, ...updated, games: updated?.games ?? prev.games, phone: form.phone || null }
+        : updated);
       setEditing(false);
       toast.success('تغییرات ذخیره شد');
-    } catch {
-      toast.error('خطا در ذخیره تغییرات');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'خطا در ذخیره تغییرات');
     } finally {
       setSaving(false);
     }
@@ -162,6 +242,62 @@ export default function BranchDetailPage({ params }: { params: { id: string } })
                 </div>
               )}
             </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">مالک / مدیر شعبه</label>
+              {editing && canAssignManager ? (
+                <select
+                  value={form.managerId}
+                  onChange={e => setForm(p => ({ ...p, managerId: e.target.value }))}
+                  className="select-field w-full"
+                >
+                  <option value="">بدون مدیر</option>
+                  {managers.map((manager) => (
+                    <option key={manager.id} value={manager.id}>
+                      {manager.fullName || manager.mobile || manager.id}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-white text-sm">
+                  {branch.manager?.fullName || branch.manager?.mobile || '—'}
+                </p>
+              )}
+            </div>
+            {editing ? (
+              <BranchLocationPicker
+                lat={readCoordinateForMap(form.lat, -90, 90)}
+                lng={readCoordinateForMap(form.lng, -180, 180)}
+                onChange={(coords) => {
+                  setForm(p => ({
+                    ...p,
+                    lat: String(coords.lat),
+                    lng: String(coords.lng),
+                  }));
+                }}
+              />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">عرض جغرافیایی</label>
+                  <p className="text-white ltr-num">{branch.lat ?? '—'}</p>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">طول جغرافیایی</label>
+                  <p className="text-white ltr-num">{branch.lng ?? '—'}</p>
+                </div>
+              </div>
+            )}
+            {!editing && branch.lat != null && branch.lng != null && (
+              <a
+                href={`https://www.openstreetmap.org/?mlat=${branch.lat}&mlon=${branch.lng}#map=17/${branch.lat}/${branch.lng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 text-sm text-cyan-300 hover:text-cyan-200"
+              >
+                <FiMapPin className="w-4 h-4" />
+                مشاهده موقعیت روی نقشه
+              </a>
+            )}
             <div className="flex items-center justify-between">
               <div>
                 <label className="block text-xs text-slate-400 mb-1">وضعیت</label>

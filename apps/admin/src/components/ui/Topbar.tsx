@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { Bell, Search, Menu, LogOut, User, Settings, ChevronDown } from 'lucide-react';
-import { useAuthStore } from '@/lib/store/auth';
+import { useAuthStore } from '@/stores/authStore';
+import { getRoleLabel } from '@/lib/permissions';
 import Link from 'next/link';
 
 interface TopbarProps {
@@ -14,6 +15,7 @@ export default function Topbar({ onToggleSidebar, pageTitle }: TopbarProps) {
   const logout = useAuthStore((s) => s.logout);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const primaryRoleLabel = user?.roles?.[0] ? getRoleLabel(user.roles[0]) : 'Super Admin';
 
   const mockNotifications = [
     { id: 1, text: 'رزرو جدید #BK-001234 ثبت شد', time: '۲ دقیقه پیش', type: 'booking' },
@@ -94,7 +96,7 @@ export default function Topbar({ onToggleSidebar, pageTitle }: TopbarProps) {
             </div>
             <div className="hidden md:block text-right">
               <p className="text-white text-sm font-medium leading-none">{user?.name || 'ادمین'}</p>
-              <p className="text-slate-500 text-xs mt-0.5">{user?.roles?.[0]?.label || 'Super Admin'}</p>
+              <p className="text-slate-500 text-xs mt-0.5">{primaryRoleLabel}</p>
             </div>
             <ChevronDown className="w-4 h-4 text-slate-500 hidden md:block" />
           </button>

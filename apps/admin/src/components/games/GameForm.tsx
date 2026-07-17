@@ -44,7 +44,20 @@ const schema = z.object({
   duration: z.number().min(15),
   pricePerPerson: z.string().min(1, 'قیمت را وارد کنید'),
   weeklyDiscountPercent: z.number().min(0).max(100).optional(),
-  siteRank: z.number().optional(),
+  siteRank: z.preprocess(
+    (value) => {
+      if (value === '' || value === null || value === undefined) return undefined;
+      if (typeof value === 'number' && Number.isNaN(value)) return undefined;
+      return value;
+    },
+    z
+      .number({
+        required_error: 'رتبه را وارد کنید',
+        invalid_type_error: 'رتبه معتبر نیست',
+      })
+      .min(0, 'رتبه نمی‌تواند کمتر از ۰ باشد')
+      .max(5, 'رتبه نمی‌تواند بیشتر از ۵ باشد'),
+  ),
   tags: z.array(z.string()),
   teaserUrl: z.string().optional(),
   isActive: z.boolean(),
@@ -64,6 +77,8 @@ function mergeById<T extends { id: string }>(items: T[], extra?: T | null): T[] 
 }
 
 function buildDefaultValues(game?: Game): FormData {
+  const siteRank = game?.siteRank == null ? undefined : Number(game.siteRank);
+
   return {
     title: game?.title || '',
     subtitle: game?.subtitle || '',
@@ -80,7 +95,7 @@ function buildDefaultValues(game?: Game): FormData {
     duration: game?.duration || 60,
     pricePerPerson: game?.pricePerPerson || '',
     weeklyDiscountPercent: game?.weeklyDiscountPercent || 0,
-    siteRank: game?.siteRank != null ? Number(game.siteRank) : undefined,
+    siteRank: siteRank !== undefined && Number.isFinite(siteRank) ? siteRank : 4,
     tags: game?.tags || [],
     teaserUrl: game?.teaserUrl || '',
     isActive: game?.isActive ?? true,
@@ -224,7 +239,7 @@ export default function GameForm({ game, onSuccess }: GameFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
       {/* Basic Info */}
       <div className="admin-card">
         <h3 className="section-title">اطلاعات پایه</h3>
@@ -363,8 +378,17 @@ export default function GameForm({ game, onSuccess }: GameFormProps) {
           </div>
 
           <div>
-            <label className="label-field">رتبه سایت</label>
-            <input type="number" {...register('siteRank', { valueAsNumber: true })} className="input-field" min={1} />
+            <label className="label-field">رتبه سایت *</label>
+            <input
+              type="number"
+              {...register('siteRank', { valueAsNumber: true })}
+              className="input-field"
+              min={0}
+              max={5}
+              step={0.1}
+              inputMode="decimal"
+            />
+            {errors.siteRank && <p className="text-red-400 text-xs mt-1">{errors.siteRank.message}</p>}
           </div>
         </div>
       </div>

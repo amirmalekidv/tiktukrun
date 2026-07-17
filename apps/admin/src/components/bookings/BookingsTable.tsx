@@ -34,7 +34,7 @@ export default function BookingsTable({
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const headers = ['', 'کد رزرو', 'مشتری', 'بازی / شعبه', 'تاریخ و ساعت', 'نفرات', 'مبلغ', 'پرداخت', 'وضعیت', 'عملیات'];
+  const headers = ['', 'کد رزرو', 'مشتری / تیم', 'بازی / شعبه', 'تاریخ و ساعت', 'نفرات', 'مبلغ', 'پرداخت', 'وضعیت', 'عملیات'];
 
   const handleSelect = (id: string) => {
     if (!onSelectIds) return;
@@ -140,13 +140,23 @@ export default function BookingsTable({
                       {booking.user?.name || '—'}
                     </Link>
                     <p className="text-slate-500 text-xs font-mono">{booking.user?.mobile}</p>
+                    {booking.teamName && (
+                      <p className="text-cyan-300 text-xs mt-0.5">تیم: {booking.teamName}</p>
+                    )}
                   </div>
                 </div>
               </td>
               <td>
                 <div>
                   <p className="text-white text-sm font-medium">{booking.game?.title || '—'}</p>
-                  <p className="text-slate-500 text-xs">{booking.branch?.name || '—'}</p>
+                  {booking.branch?.name ? (
+                    <Link href={`/branches/${booking.branchId}`} className="text-slate-500 hover:text-red-400 text-xs">
+                      {booking.branch.name}
+                      {booking.branch.city?.name ? ` · ${booking.branch.city.name}` : ''}
+                    </Link>
+                  ) : (
+                    <p className="text-red-300 text-xs">شعبه نامشخص</p>
+                  )}
                 </div>
               </td>
               <td>
