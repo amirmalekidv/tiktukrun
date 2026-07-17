@@ -1,18 +1,25 @@
-import type { Metadata } from 'next'
-import './globals.css'
-import 'swiper/css'
-import { Providers } from './providers'
-import Navbar from '@/components/layout/Navbar'
-import Footer from '@/components/layout/Footer'
-import FogEffect from '@/components/layout/FogEffect'
-import { Toaster } from 'react-hot-toast'
+import type { Metadata, Viewport } from 'next';
+import './globals.css';
+import 'swiper/css';
+import { Providers } from './providers';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
+import FogEffect from '@/components/layout/FogEffect';
+import { Toaster } from 'react-hot-toast';
+import ServiceWorkerRegistration from '@/components/pwa/ServiceWorkerRegistration';
+
+const appName = 'تیک تاک ران';
+const appDescription =
+  'پلتفرم رزرو آنلاین اتاق فرار، سینما ترس، لیزرتگ، واقعیت مجازی، پینت بال و بازی های رومیزی در ایران';
 
 export const metadata: Metadata = {
+  applicationName: appName,
+  manifest: '/manifest.webmanifest',
   title: {
-    default: 'تیک تاک ران | TIK TAK RUN — سرگرمی‌های هیجانی',
+    default: `${appName} | TIK TAK RUN - سرگرمی های هیجانی`,
     template: '%s | TIK TAK RUN',
   },
-  description: 'پلتفرم رزرو اتاق فرار، سینما ترس، لیزرتگ، واقعیت مجازی، پینت‌بال و بازی‌های رومیزی در ایران',
+  description: appDescription,
   keywords: ['اتاق فرار', 'سرگرمی', 'تیک تاک ران', 'escape room', 'لیزرتگ', 'VR', 'رزرو آنلاین'],
   openGraph: {
     type: 'website',
@@ -24,15 +31,31 @@ export const metadata: Metadata = {
     follow: true,
   },
   icons: {
-    icon: [{ url: '/tiktakrun-logo.svg', type: 'image/svg+xml' }],
+    icon: [
+      { url: '/tiktakrun-logo.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    other: [
+      {
+        rel: 'mask-icon',
+        url: '/tiktakrun-logo.svg',
+      },
+    ],
   },
-}
+  appleWebApp: {
+    capable: true,
+    title: appName,
+    statusBarStyle: 'black-translucent',
+  },
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export const viewport: Viewport = {
+  themeColor: '#05070a',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning>
       <head>
@@ -44,27 +67,26 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"
           rel="stylesheet"
         />
-        <meta name="theme-color" content="#05070a" />
       </head>
       <body className="bg-bg-dark min-h-screen relative font-fa antialiased">
+        <ServiceWorkerRegistration />
+
         {/* Fixed background */}
         <div className="vignette" />
-        
+
         {/* Neon starfield */}
         <FogEffect />
-        
+
         <Providers>
           {/* Navbar */}
           <Navbar />
-          
+
           {/* Main content */}
-          <main className="relative z-10 min-h-screen">
-            {children}
-          </main>
-          
+          <main className="relative z-10 min-h-screen">{children}</main>
+
           {/* Footer */}
           <Footer />
-          
+
           {/* Toast notifications */}
           <Toaster
             position="top-center"
@@ -96,5 +118,5 @@ export default function RootLayout({
         </Providers>
       </body>
     </html>
-  )
+  );
 }
