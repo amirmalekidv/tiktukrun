@@ -70,6 +70,7 @@ case "$SYNC_MODE" in
             --exclude node_modules \
             --exclude .git \
             --exclude .env \
+            --exclude .env.local \
             --exclude .env.deploy \
             --exclude storage/uploads \
             --exclude storage/backups \

@@ -1,3 +1,22 @@
+function remotePatternFromUrl(value) {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    return {
+      protocol: url.protocol.replace(':', ''),
+      hostname: url.hostname,
+      port: url.port,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const envRemotePatterns = [
+  remotePatternFromUrl(process.env.NEXT_PUBLIC_API_URL),
+].filter(Boolean);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -12,6 +31,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'api.tiktakrun.ir' },
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'http', hostname: 'api' },
+      ...envRemotePatterns,
     ],
   },
 

@@ -1,3 +1,22 @@
+function remotePatternFromUrl(value) {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    return {
+      protocol: url.protocol.replace(':', ''),
+      hostname: url.hostname,
+      port: url.port,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const envRemotePatterns = [
+  remotePatternFromUrl(process.env.NEXT_PUBLIC_API_URL),
+].filter(Boolean);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -13,6 +32,7 @@ const nextConfig = {
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'http', hostname: '127.0.0.1' },
       { protocol: 'http', hostname: 'api' },
+      ...envRemotePatterns,
     ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [360, 640, 750, 828, 1080, 1200, 1920],

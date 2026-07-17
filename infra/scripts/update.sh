@@ -38,6 +38,10 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
+echo "📁 Preparing persistent storage..."
+mkdir -p storage/uploads storage/backups
+chown -R 1001:1001 storage
+
 # ─── [1/6] Backup ─────────────────────────────────────────────────────────
 if [ "${SKIP_BACKUP:-0}" != "1" ]; then
     echo "[1/6] Pre-update backup..."

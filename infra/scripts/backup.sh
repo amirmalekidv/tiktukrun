@@ -9,26 +9,26 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-BACKUP_DIR="${BACKUP_PATH:-/var/backups/tiktakrun}"
-RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
-mkdir -p "$BACKUP_DIR"
 cd "$PROJECT_ROOT"
 
-# Load env
-if [ -f .env ]; then
-    set -a
-    source .env
-    set +a
-fi
+# Load env without shell-sourcing unquoted values such as "TIK TAK RUN".
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/compose.sh"
+deploy_compose_init
+
+BACKUP_DIR="${BACKUP_PATH:-/var/backups/tiktakrun}"
+RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
+
+mkdir -p "$BACKUP_DIR"
 
 echo "📦 Starting backup at $TIMESTAMP"
 
 # ─── DB Dump (MongoDB) ──────────────────────────────────────────────────────
 DB_BACKUP="$BACKUP_DIR/db_${TIMESTAMP}.archive.gz"
 echo "  → Dumping MongoDB to $DB_BACKUP"
-docker compose exec -T mongo mongodump \
+dc exec -T mongo mongodump \
     -u "${MONGO_USER:-tiktakrun}" \
     -p "${MONGO_PASSWORD}" \
     --authenticationDatabase admin \
