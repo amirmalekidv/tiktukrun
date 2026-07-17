@@ -51,6 +51,26 @@ const nextConfig = {
   async headers() {
     return [
       {
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+        ],
+      },
+      {
+        source: '/icons/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+        ],
+      },
+      {
         source: '/(.*)',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -64,9 +84,7 @@ const nextConfig = {
   // Allow API rewrites for dev (in production Nginx handles this)
   async rewrites() {
     if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_API_PROXY === 'true') {
-      return [
-        { source: '/api/:path*', destination: 'http://localhost:4000/api/:path*' },
-      ];
+      return [{ source: '/api/:path*', destination: 'http://localhost:4000/api/:path*' }];
     }
     return [];
   },
