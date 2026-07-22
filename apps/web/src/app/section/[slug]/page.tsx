@@ -3,18 +3,26 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
-import { getLandingSection } from '@/lib/api'
+import { getGames, getLandingSection } from '@/lib/api'
 import CarouselRail from '@/components/home/CarouselRail'
 import GameCard from '@/components/home/GameCard'
 import { GameCardSkeleton } from '@/components/ui/LoadingSkeleton'
 import { toPersianDigits } from '@/lib/utils'
 
-const VERTICAL_LIST_SECTIONS = new Set(['popular-this-week'])
+const VERTICAL_LIST_SECTIONS = new Set(['popular-this-week', 'newest-escape-rooms'])
 
 const SECTION_REDIRECTS: Record<string, string> = {
   stories: '/stories',
   leaderboard: '/leaderboard',
   wheel: '/wheel',
+}
+
+const SECTION_META_OVERRIDES: Record<string, { title: string; description: string; icon: string }> = {
+  'newest-escape-rooms': {
+    title: 'جدید ترین اتااق فرارها',
+    description: 'جدیدترین اتاق‌های فرار اضافه شده',
+    icon: 'fas fa-clock',
+  },
 }
 
 const POPULAR_GAMES_GRID_CLASSNAME =
@@ -24,20 +32,30 @@ export default function SectionPage({ params }: { params: { slug: string } }) {
   const { slug } = params
   const router = useRouter()
   const redirectTo = SECTION_REDIRECTS[slug]
+  const isNewestEscapeRooms = slug === 'newest-escape-rooms'
 
   useEffect(() => {
     if (redirectTo) router.replace(redirectTo)
   }, [redirectTo, router])
 
-  const { data: section, isLoading } = useSWR(
-    redirectTo ? null : `landing-section-${slug}`,
+  const { data: section, isLoading: sectionLoading } = useSWR(
+    redirectTo || isNewestEscapeRooms ? null : `landing-section-${slug}`,
     () => getLandingSection(slug)
+  )
+
+  const { data: newestGamesData, isLoading: newestLoading } = useSWR(
+    isNewestEscapeRooms ? 'newest-escape-rooms-games' : null,
+    () => getGames({ category: 'ESCAPE_ROOM', sortBy: 'newest', limit: 100 })
   )
 
   if (redirectTo) return null
 
-  const meta = section ?? { title: slug, description: 'بازی‌ها', icon: 'fas fa-gamepad' }
-  const games = section?.games ?? []
+  const isLoading = isNewestEscapeRooms ? newestLoading : sectionLoading
+  const meta =
+    SECTION_META_OVERRIDES[slug] ??
+    section ??
+    { title: slug, description: 'بازی‌ها', icon: 'fas fa-gamepad' }
+  const games = isNewestEscapeRooms ? (newestGamesData?.data ?? []) : (section?.games ?? [])
   const isVerticalList = VERTICAL_LIST_SECTIONS.has(slug)
 
   return (

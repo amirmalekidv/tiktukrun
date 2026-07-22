@@ -10,6 +10,7 @@ import MobileMenu from './MobileMenu'
 const menuItems = [
   { label: 'اتاق فرارها', href: '/games' },
   { label: 'بهترین بازی ها', href: '/section/popular-this-week' },
+  { label: 'جدید ترین اتااق فرارها', href: '/section/newest-escape-rooms' },
   { label: 'نظرات و تجربه پلیر', href: '/stories' },
   { label: 'پلیر های برتر', href: '/leaderboard' },
   { label: 'قرعه کشی', href: '/raffle' },

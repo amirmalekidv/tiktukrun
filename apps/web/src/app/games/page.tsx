@@ -41,9 +41,9 @@ function GamesContent() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Page header */}
         <div className="mb-8 text-center lg:text-right">
-          <span className="font-cinzel text-xs font-bold text-[#00f5ff] glow-teal">EXPLORE</span>
+          <span className="font-cinzel text-xs font-bold text-[#00f5ff] glow-teal">جستجو</span>
           <h1 className="mt-3 font-cinzel font-black text-3xl md:text-4xl text-white mb-2">
-            <span className="gradient-text">قلمرو</span> بازی‌ها
+            <span className="gradient-text">بازی‌ها</span>
           </h1>
           <p className="text-gray-400">
             {isLoading ? '...' : `${toPersianDigits(total)} بازی یافت شد`}
