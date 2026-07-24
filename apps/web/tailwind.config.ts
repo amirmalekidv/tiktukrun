@@ -51,11 +51,11 @@ const config: Config = {
         },
       },
       fontFamily: {
-        fa: ['Vazirmatn', 'Tahoma', 'sans-serif'],
-        cinzel: ['Orbitron', 'Vazirmatn', 'sans-serif'],
-        creepster: ['Orbitron', 'Vazirmatn', 'sans-serif'],
-        horror: ['Orbitron', 'Vazirmatn', 'sans-serif'],
-        vazir: ['Vazirmatn', 'sans-serif'],
+        fa: ['Vazirmatn', 'Tahoma', 'Segoe UI', 'system-ui', 'sans-serif'],
+        cinzel: ['Orbitron', 'Vazirmatn', 'Tahoma', 'Segoe UI', 'system-ui', 'sans-serif'],
+        creepster: ['Orbitron', 'Vazirmatn', 'Tahoma', 'Segoe UI', 'system-ui', 'sans-serif'],
+        horror: ['Orbitron', 'Vazirmatn', 'Tahoma', 'Segoe UI', 'system-ui', 'sans-serif'],
+        vazir: ['Vazirmatn', 'Tahoma', 'Segoe UI', 'system-ui', 'sans-serif'],
       },
       animation: {
         flicker: 'flicker 4s ease-in-out infinite',

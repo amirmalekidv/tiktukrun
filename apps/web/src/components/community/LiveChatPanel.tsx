@@ -10,12 +10,14 @@ interface LiveChatPanelProps {
   roomType?: 'global' | 'team';
   teamId?: string;
   title?: string;
+  className?: string;
 }
 
 export default function LiveChatPanel({
   roomType = 'global',
   teamId,
   title = 'چت زنده',
+  className = '',
 }: LiveChatPanelProps) {
   const currentUserId = useAuthStore((state) =>
     state.user?.id ? String(state.user.id) : null
@@ -48,8 +50,7 @@ export default function LiveChatPanel({
 
   return (
     <div
-      className="dark-card rounded-[18px] flex flex-col"
-      style={{ height: 500 }}
+      className={`dark-card flex h-[min(500px,70vh)] min-h-[360px] flex-col rounded-[18px] sm:h-[500px] ${className}`.trim()}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/10">

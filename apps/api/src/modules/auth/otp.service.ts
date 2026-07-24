@@ -21,7 +21,6 @@ import { generateOtpCode, hashString, compareHash, OTP_CODE_LENGTH } from '../..
 const DEFAULT_OTP_TTL_SECONDS = 120;
 const DEFAULT_RATE_LIMIT_COUNT = 3;
 const DEFAULT_MAX_ATTEMPTS = 5;
-const DEFAULT_DEMO_OTP_CODE = '123456';
 
 /** MongoDB + Prisma: unset optional fields are not matched by `verifiedAt: null`. */
 function unverifiedOtpWhere(mobile: string) {
@@ -46,14 +45,6 @@ export class OtpService {
     private readonly config: ConfigService,
   ) {}
 
-  private getDemoOtpCode(): string {
-    const configuredCode = this.config.get<string>('AUTH_DEMO_OTP_CODE')?.trim();
-    if (configuredCode) return configuredCode;
-
-    const nodeEnv = this.config.get<string>('NODE_ENV', 'development');
-    return nodeEnv === 'production' ? '' : DEFAULT_DEMO_OTP_CODE;
-  }
-
   private async getOtpTtlSeconds(): Promise<number> {
     const value = await this.settings.get('security.otpExpiry', String(DEFAULT_OTP_TTL_SECONDS));
     const parsed = parseInt(value, 10);
@@ -76,7 +67,6 @@ export class OtpService {
     const otpTtl = await this.getOtpTtlSeconds();
     const rateLimitCount = DEFAULT_RATE_LIMIT_COUNT;
     const lockoutSeconds = await this.getLockoutSeconds();
-    const demoOtpCode = this.getDemoOtpCode();
 
     const mobileRateLimitKey = `otp:rate:mobile:${mobile}`;
     const mobileCount = await this.redis.incr(mobileRateLimitKey);
@@ -119,18 +109,11 @@ export class OtpService {
       },
     });
 
-    try {
-      await this.smsService.sendOtp(mobile, code);
-    } catch (error) {
-      if (demoOtpCode) {
-        const message = error instanceof Error ? error.message : String(error);
-        this.logger.warn(
-          `OTP SMS failed for ${mobile}; continuing with demo OTP mode: ${message}`,
-        );
-      } else {
-        throw error;
-      }
+    if (this.config.get<string>('NODE_ENV', 'development') !== 'production') {
+      this.logger.warn(`[DEV OTP] mobile=${mobile} code=${code}`);
     }
+
+    await this.smsService.sendOtp(mobile, code);
 
     this.logger.log(`OTP requested for ${mobile}`);
     return { expiresInSeconds: otpTtl };
@@ -150,28 +133,6 @@ export class OtpService {
       throw new TooManyRequestsException(
         'تعداد تلاش‌های ناموفق بیش از حد. لطفاً کد جدید درخواست دهید',
       );
-    }
-
-    const demoOtpCode = this.getDemoOtpCode();
-    if (demoOtpCode && code === demoOtpCode) {
-      const activeOtpRequest = await this.prisma.otpRequest.findFirst({
-        where: {
-          ...unverifiedOtpWhere(mobile),
-          expiresAt: { gt: new Date() },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (activeOtpRequest) {
-        await this.prisma.otpRequest.update({
-          where: { id: activeOtpRequest.id },
-          data: { verifiedAt: new Date() },
-        });
-      }
-
-      await this.redis.del(attemptKey);
-      this.logger.warn(`Demo OTP used for ${mobile}`);
-      return true;
     }
 
     const otpRequest = await this.prisma.otpRequest.findFirst({

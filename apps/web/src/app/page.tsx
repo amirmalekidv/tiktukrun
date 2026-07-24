@@ -1,10 +1,53 @@
+import dynamic from 'next/dynamic'
 import HeroSection from '@/components/home/HeroSection'
 import BannerCarousel from '@/components/home/BannerCarousel'
 import StatsRow from '@/components/home/StatsRow'
 import CategoryFilter from '@/components/home/CategoryFilter'
-import LandingSections from '@/components/home/LandingSections'
-import TopPlayersSection from '@/components/home/TopPlayersSection'
-import StoriesSection from '@/components/home/StoriesSection'
+
+const LandingSections = dynamic(() => import('@/components/home/LandingSections'), {
+  loading: () => (
+    <div className="border-t border-white/10 my-4">
+      {Array.from({ length: 2 }).map((_, i) => (
+        <section key={i} className="py-10">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="h-8 w-48 skeleton rounded mb-6" />
+            <div className="flex gap-4 overflow-hidden">
+              {Array.from({ length: 4 }).map((_, j) => (
+                <div key={j} className="h-64 w-56 flex-shrink-0 skeleton rounded-[18px]" />
+              ))}
+            </div>
+          </div>
+        </section>
+      ))}
+    </div>
+  ),
+})
+
+const TopPlayersSection = dynamic(() => import('@/components/home/TopPlayersSection'), {
+  loading: () => <div className="h-80 skeleton rounded-[18px]" />,
+})
+
+const StoriesSection = dynamic(() => import('@/components/home/StoriesSection'), {
+  loading: () => (
+    <div className="grid grid-cols-1 gap-4">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="h-48 skeleton rounded-[20px]" />
+      ))}
+    </div>
+  ),
+})
+
+const OnlineChatSection = dynamic(() => import('@/components/home/OnlineChatSection'), {
+  loading: () => <div className="mx-auto max-w-7xl px-4 py-10"><div className="h-64 skeleton rounded-[18px]" /></div>,
+})
+
+const PlatformIntroSection = dynamic(() => import('@/components/home/PlatformIntroSection'), {
+  loading: () => (
+    <section className="relative z-10 mx-auto max-w-7xl px-4 py-10 md:py-14">
+      <div className="aspect-video w-full rounded-2xl skeleton" />
+    </section>
+  ),
+})
 
 export default function HomePage() {
   return (
@@ -36,6 +79,10 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Online chat */}
+      <div className="border-t border-white/10 my-4" />
+      <OnlineChatSection />
+
       {/* Bottom CTA */}
       <section className="relative py-20 mt-10 overflow-hidden">
         <div className="relative z-10 max-w-3xl mx-auto px-4">
@@ -59,6 +106,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Platform intro: video + FAQ — last section before footer */}
+      <PlatformIntroSection />
     </div>
   )
 }

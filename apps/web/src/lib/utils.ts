@@ -42,6 +42,28 @@ export function toPersianDigits(n: number | string | null | undefined): string {
   return String(n).replace(/\d/g, (d) => persianDigits[parseInt(d)])
 }
 
+const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹'
+const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩'
+
+/** Convert Persian/Arabic digits to Western digits. */
+export function toEnglishDigits(value: string): string {
+  return value.replace(/[۰-۹٠-٩]/g, (d) => {
+    const persianIndex = PERSIAN_DIGITS.indexOf(d)
+    if (persianIndex >= 0) return String(persianIndex)
+    const arabicIndex = ARABIC_DIGITS.indexOf(d)
+    return arabicIndex >= 0 ? String(arabicIndex) : d
+  })
+}
+
+/** Normalize Iranian mobile to `09xxxxxxxxx`. */
+export function normalizeMobile(mobile: string): string {
+  let value = toEnglishDigits(mobile.trim()).replace(/[\s-]/g, '')
+  if (value.startsWith('+98')) value = `0${value.slice(3)}`
+  else if (value.startsWith('0098')) value = `0${value.slice(4)}`
+  else if (value.startsWith('98') && value.length === 12) value = `0${value.slice(2)}`
+  return value.replace(/\D/g, '').slice(0, 11)
+}
+
 /**
  * Format fear level from the 0-5 scale as a percentage
  */
@@ -92,7 +114,7 @@ export function getRelativeTime(dateStr: string): string {
  * Validate Iranian mobile number
  */
 export function isValidIranianMobile(mobile: string): boolean {
-  return /^09\d{9}$/.test(mobile)
+  return /^09\d{9}$/.test(normalizeMobile(mobile))
 }
 
 /**

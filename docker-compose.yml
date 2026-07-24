@@ -94,7 +94,6 @@ services:
       SMS_IR_API_KEY: ${SMS_IR_API_KEY}
       SMS_IR_TEMPLATE_ID: ${SMS_IR_TEMPLATE_ID}
       SMS_IR_TEMPLATE_PARAM: ${SMS_IR_TEMPLATE_PARAM:-OTP}
-      AUTH_DEMO_OTP_CODE: ${AUTH_DEMO_OTP_CODE:-}
       ZARINPAL_MERCHANT_ID: ${ZARINPAL_MERCHANT_ID}
       ZARINPAL_SANDBOX: ${ZARINPAL_SANDBOX}
       ZARINPAL_CALLBACK_URL: ${ZARINPAL_CALLBACK_URL}
@@ -132,7 +131,6 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
         NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-TIK TAK RUN}
-        NEXT_PUBLIC_DEMO_OTP_CODE: ${NEXT_PUBLIC_DEMO_OTP_CODE:-}
     container_name: tiktakrun-web
     restart: unless-stopped
     environment:
@@ -142,7 +140,6 @@ services:
       HOSTNAME: 0.0.0.0
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
-      NEXT_PUBLIC_DEMO_OTP_CODE: ${NEXT_PUBLIC_DEMO_OTP_CODE:-}
     ports:
       - "${APP_BIND_IP:-127.0.0.1}:${WEB_PORT:-3010}:3000"
     depends_on:
@@ -165,7 +162,6 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
-        NEXT_PUBLIC_DEMO_OTP_CODE: ${NEXT_PUBLIC_DEMO_OTP_CODE:-}
     container_name: tiktakrun-admin
     restart: unless-stopped
     environment:
@@ -175,7 +171,6 @@ services:
       HOSTNAME: 0.0.0.0
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
-      NEXT_PUBLIC_DEMO_OTP_CODE: ${NEXT_PUBLIC_DEMO_OTP_CODE:-}
     ports:
       - "${APP_BIND_IP:-127.0.0.1}:${ADMIN_PORT:-3011}:3001"
     depends_on:

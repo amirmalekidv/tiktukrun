@@ -14,16 +14,17 @@ interface SectionStripProps {
   title: string
   icon?: string
   games?: Game[]
+  isLoading?: boolean
 }
 
-const VERTICAL_LIST_SECTIONS = new Set(['popular-this-week'])
-
-const POPULAR_GAMES_GRID_CLASSNAME =
-  'grid grid-cols-[repeat(auto-fill,minmax(220px,248px))] justify-center gap-x-5 gap-y-9 sm:grid-cols-[repeat(auto-fill,minmax(236px,248px))] lg:justify-start'
-
-export default function SectionStrip({ sectionKey, title, icon = 'fas fa-star', games: prefetchedGames }: SectionStripProps) {
-  const shouldFetch = prefetchedGames === undefined
-  const isVerticalList = VERTICAL_LIST_SECTIONS.has(sectionKey)
+export default function SectionStrip({
+  sectionKey,
+  title,
+  icon = 'fas fa-star',
+  games: prefetchedGames,
+  isLoading: externalLoading = false,
+}: SectionStripProps) {
+  const shouldFetch = prefetchedGames === undefined && !externalLoading
   const carouselId = `section-strip-${sectionKey}`
   const sectionContainerRef = useRef<HTMLDivElement>(null)
   const viewAllLabelRef = useRef<HTMLSpanElement>(null)
@@ -34,7 +35,7 @@ export default function SectionStrip({ sectionKey, title, icon = 'fas fa-star', 
   )
 
   const games = prefetchedGames ?? fetchedGames
-  const loading = shouldFetch && isLoading
+  const loading = externalLoading || (shouldFetch && isLoading)
   const railAlignmentStyle: CSSProperties | undefined = railLeftInset > 0
     ? { marginLeft: railLeftInset }
     : undefined
@@ -89,7 +90,7 @@ export default function SectionStrip({ sectionKey, title, icon = 'fas fa-star', 
               <i className={`${icon} text-[#f6d06b]`} />
               <span className="text-white">{title}</span>
             </h2>
-            {!isVerticalList ? <CarouselNavButtons carouselId={carouselId} /> : null}
+            <CarouselNavButtons carouselId={carouselId} />
           </div>
           <Link
             href={`/section/${sectionKey}`}
@@ -100,25 +101,15 @@ export default function SectionStrip({ sectionKey, title, icon = 'fas fa-star', 
           </Link>
         </div>
 
-        {isVerticalList ? (
-          <div className={POPULAR_GAMES_GRID_CLASSNAME}>
+        <div className="section-carousel-viewport" style={railAlignmentStyle}>
+          <CarouselRail carouselId={carouselId} navigationPlacement="external">
             {loading
               ? Array.from({ length: 4 }).map((_, i) => (
                   <GameCardSkeleton key={i} />
                 ))
               : games.map((game) => <GameCard key={game.id} game={game} />)}
-          </div>
-        ) : (
-          <div className="section-carousel-viewport" style={railAlignmentStyle}>
-            <CarouselRail carouselId={carouselId} navigationPlacement="external">
-              {loading
-                ? Array.from({ length: 4 }).map((_, i) => (
-                    <GameCardSkeleton key={i} />
-                  ))
-                : games.map((game) => <GameCard key={game.id} game={game} />)}
-            </CarouselRail>
-          </div>
-        )}
+          </CarouselRail>
+        </div>
       </div>
     </section>
   )

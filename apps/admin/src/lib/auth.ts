@@ -5,6 +5,8 @@
 const ACCESS_TOKEN_KEY = 'ttr_admin_access_token'
 const REFRESH_TOKEN_KEY = 'ttr_admin_refresh_token'
 const ADMIN_USER_KEY = 'ttr_admin_user'
+/** Zustand persist key — must stay in sync with authStore */
+export const ADMIN_AUTH_PERSIST_KEY = 'ttr-admin-auth'
 
 export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null
@@ -27,6 +29,8 @@ export function clearTokens(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
   localStorage.removeItem(ADMIN_USER_KEY)
+  // Drop persisted auth identity so a new login cannot revive a previous role
+  localStorage.removeItem(ADMIN_AUTH_PERSIST_KEY)
 }
 
 export function isAuthenticated(): boolean {
@@ -65,4 +69,21 @@ export function isTokenExpired(token: string, skewMs = 0): boolean {
   const payload = parseJwt(token)
   if (!payload || !payload.exp) return true
   return Date.now() + skewMs >= (payload.exp as number) * 1000
+}
+
+/** JWT `sub` (user id), or null if the token is unreadable. */
+export function getTokenSubject(token: string | null | undefined): string | null {
+  if (!token) return null
+  const payload = parseJwt(token)
+  return typeof payload?.sub === 'string' ? payload.sub : null
+}
+
+/** True when cached user id matches the access-token subject. */
+export function isUserBoundToToken(
+  user: { id?: string } | null | undefined,
+  token: string | null | undefined,
+): boolean {
+  if (!user?.id || !token) return false
+  const sub = getTokenSubject(token)
+  return !!sub && user.id === sub
 }

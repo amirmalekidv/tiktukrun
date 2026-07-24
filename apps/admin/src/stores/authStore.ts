@@ -3,11 +3,13 @@ import { persist } from 'zustand/middleware'
 import { apiClient } from '@/lib/api/client'
 import type { AdminUser } from '@/types'
 import {
+  ADMIN_AUTH_PERSIST_KEY,
   clearTokens,
   getAccessToken,
   getAdminUser,
   getRefreshToken,
   isTokenExpired,
+  isUserBoundToToken,
   saveAdminUser,
   setTokens,
 } from '@/lib/auth'
@@ -117,14 +119,24 @@ export const useAuthStore = create<AuthState>()(
       hasHydrated: false,
 
       setUser: (user) => {
-        saveAdminUser(user)
-        set({ user, isAuthenticated: true })
+        const normalized = normalizeAdminUser(user)
+        if (!normalized) return
+        saveAdminUser(normalized)
+        set({ user: normalized, isAuthenticated: true })
       },
 
       setAuth: (user, accessToken, refreshToken) => {
+        const normalized = normalizeAdminUser(user)
+        if (!normalized || !hasAdminRole(normalized)) {
+          clearTokens()
+          set({ user: null, isAuthenticated: false })
+          return
+        }
+        // Replace any previous identity atomically (tokens + cached user + store)
+        clearTokens()
         setTokens(accessToken, refreshToken)
-        saveAdminUser(user)
-        set({ user, isAuthenticated: true })
+        saveAdminUser(normalized)
+        set({ user: normalized, isAuthenticated: true })
       },
 
       logout: () => {
@@ -149,7 +161,14 @@ export const useAuthStore = create<AuthState>()(
           return false
         }
 
-        if (accessToken && !isTokenExpired(accessToken, 30_000) && storedUser && hasAdminRole(storedUser)) {
+        // Only trust the cache when it matches the JWT subject (prevents stale Super Admin after BM login)
+        if (
+          accessToken &&
+          !isTokenExpired(accessToken, 30_000) &&
+          storedUser &&
+          hasAdminRole(storedUser) &&
+          isUserBoundToToken(storedUser, accessToken)
+        ) {
           saveAdminUser(storedUser)
           set({ user: storedUser, isAuthenticated: true, isLoading: false })
           return true
@@ -168,6 +187,14 @@ export const useAuthStore = create<AuthState>()(
             return false
           }
 
+          // Prefer the latest access token (may have been refreshed by the API client)
+          const latestAccess = getAccessToken()
+          if (latestAccess && !isUserBoundToToken(user, latestAccess)) {
+            clearTokens()
+            set({ user: null, isAuthenticated: false, isLoading: false })
+            return false
+          }
+
           saveAdminUser(user)
           set({ user, isAuthenticated: true, isLoading: false })
           return true
@@ -179,7 +206,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'ttr-admin-auth',
+      name: ADMIN_AUTH_PERSIST_KEY,
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true)

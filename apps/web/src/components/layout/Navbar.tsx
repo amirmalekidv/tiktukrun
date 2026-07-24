@@ -10,7 +10,6 @@ import MobileMenu from './MobileMenu'
 const menuItems = [
   { label: 'اتاق فرارها', href: '/games' },
   { label: 'بهترین بازی ها', href: '/section/popular-this-week' },
-  { label: 'جدید ترین اتااق فرارها', href: '/section/newest-escape-rooms' },
   { label: 'نظرات و تجربه پلیر', href: '/stories' },
   { label: 'پلیر های برتر', href: '/leaderboard' },
   { label: 'قرعه کشی', href: '/raffle' },
@@ -56,7 +55,7 @@ export default function Navbar() {
             : 'border-white/10 bg-[#05070a]/70 backdrop-blur-xl'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 h-[72px] flex items-center gap-4">
+        <div className="mx-auto flex h-[72px] max-w-[1600px] items-center gap-3 px-4 xl:px-6">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
             <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-[11px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.18)]">
@@ -73,12 +72,12 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Menu */}
-          <ul className="hidden lg:flex items-center gap-1 flex-1 justify-center">
+          <ul className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 lg:flex xl:gap-1">
             {desktopMenuItems.map((item) => (
-              <li key={item.href}>
+              <li key={item.href} className="shrink-0">
                 <Link
                   href={item.href}
-                  className={`px-3 py-2 rounded-lg text-sm font-fa font-medium transition-all duration-300 ${
+                  className={`whitespace-nowrap rounded-lg px-2 py-2 text-sm font-fa font-medium transition-all duration-300 xl:px-3 ${
                     pathname === item.href || pathname.startsWith(item.href + '/')
                       ? 'text-[#00f5ff] bg-white/[0.04] shadow-[inset_0_0_14px_rgba(0,245,255,0.16)]'
                       : 'text-[#9aa3b2] hover:text-white hover:bg-white/[0.04]'

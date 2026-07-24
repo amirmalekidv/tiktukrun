@@ -47,6 +47,11 @@ export class SmsService {
       return;
     }
 
+    if (await this.useMockMode()) {
+      this.logger.warn(`[SMS-MOCK] OTP → ${phone} | Code: ${code}`);
+      return;
+    }
+
     await this.provider.sendOtp(phone, code);
   }
 

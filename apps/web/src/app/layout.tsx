@@ -1,12 +1,20 @@
 import type { Metadata, Viewport } from 'next';
+import dynamic from 'next/dynamic';
 import './globals.css';
-import 'swiper/css';
+import { FONT_FA } from '@/styles/fonts';
+import '@fortawesome/fontawesome-free/css/fontawesome.min.css';
+import '@fortawesome/fontawesome-free/css/solid.min.css';
+import '@fortawesome/fontawesome-free/css/regular.min.css';
+import '@fortawesome/fontawesome-free/css/brands.min.css';
 import { Providers } from './providers';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import FogEffect from '@/components/layout/FogEffect';
 import { Toaster } from 'react-hot-toast';
 import ServiceWorkerRegistration from '@/components/pwa/ServiceWorkerRegistration';
+
+const FogEffect = dynamic(() => import('@/components/layout/FogEffect'), {
+  ssr: false,
+});
 
 const appName = 'تیک تاک ران';
 const appDescription =
@@ -58,23 +66,13 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning>
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
-        <link
-          href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"
-          rel="stylesheet"
-        />
-      </head>
       <body className="bg-bg-dark min-h-screen relative font-fa antialiased">
         <ServiceWorkerRegistration />
 
         {/* Fixed background */}
         <div className="vignette" />
 
-        {/* Neon starfield */}
+        {/* Neon starfield — client-only, non-blocking */}
         <FogEffect />
 
         <Providers>
@@ -96,7 +94,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 background: '#0e121a',
                 color: '#fff',
                 border: '1px solid rgba(0,245,255,0.35)',
-                fontFamily: 'Vazirmatn, sans-serif',
+                fontFamily: FONT_FA,
                 direction: 'rtl',
                 borderRadius: '12px',
                 boxShadow: '0 14px 40px rgba(0,0,0,0.5)',

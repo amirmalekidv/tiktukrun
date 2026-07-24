@@ -61,6 +61,9 @@ export function useLiveActivities(maxItems = 20) {
         setActivities((res.data as ActivityItem[]).slice(0, maxItems))
       }
       setIsLoading(false)
+    }).catch(() => {
+      setActivities([])
+      setIsLoading(false)
     })
 
     // Cleanup references

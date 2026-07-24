@@ -7,18 +7,26 @@ import {
   Star, MessageSquare, Ticket, CreditCard, Banknote,
   BarChart3, Database, Gift, Award, TrendingUp, User,
   Percent, Trophy, Settings, Shield, ClipboardList,
-  ChevronDown, ChevronLeft, Zap, Globe, Images
+  ChevronDown, ChevronLeft, Globe, Images, CirclePlay, UserCog
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { can } from '@/lib/permissions';
+import { isPlatformAdmin } from '@/lib/route-permissions';
 import type { AdminUser } from '@/types';
 
-type NavChild = { href: string; label: string; permission?: string };
+type NavChild = {
+  href: string;
+  label: string;
+  permission?: string;
+  /** Hide from branch managers / non-platform staff */
+  platformAdminOnly?: boolean;
+};
 type NavItemDef = {
   href?: string;
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
   permission?: string;
+  platformAdminOnly?: boolean;
   children?: NavChild[];
 };
 
@@ -27,9 +35,7 @@ const navGroups: { title: string; items: NavItemDef[] }[] = [
     title: 'CRM',
     items: [
       { href: '/customers', label: 'مشتریان', icon: User, permission: 'customers.view' },
-      { href: '/segments', label: 'سگمنت‌ها', icon: Globe, permission: 'segments.view' },
-      { href: '/pipeline', label: 'پایپ‌لاین', icon: TrendingUp, permission: 'pipeline.view' },
-      { href: '/campaigns', label: 'کمپین‌ها', icon: Zap, permission: 'campaigns.view' },
+      { href: '/branch-managers', label: 'مدیران شعبه', icon: UserCog, permission: 'users.read' },
     ],
   },
   {
@@ -52,15 +58,16 @@ const navGroups: { title: string; items: NavItemDef[] }[] = [
         ],
       },
       {
-        label: 'شعب و مکان', icon: Building2,
+        label: 'شعب و مکان', icon: Building2, platformAdminOnly: true,
         children: [
-          { href: '/branches', label: 'شعب', permission: 'branches.view' },
-          { href: '/cities', label: 'شهرها', permission: 'branches.write' },
+          { href: '/branches', label: 'شعب', permission: 'branches.view', platformAdminOnly: true },
+          { href: '/cities', label: 'شهرها', permission: 'branches.write', platformAdminOnly: true },
           { href: '/categories', label: 'دسته‌بندی‌ها', permission: 'games.write' },
           { href: '/landing-sections', label: 'سکشن‌های صفحهٔ اصلی', permission: 'games.write' },
         ],
       },
       { href: '/landing-banners', label: 'بنر های صفحه اصلی', icon: Images, permission: 'games.write' },
+      { href: '/platform-intro', label: 'معرفی پلتفرم', icon: CirclePlay, permission: 'games.write' },
       { href: '/reviews', label: 'نظرات', icon: Star, permission: 'games.write' },
       { href: '/comments', label: 'نظرات بازی‌ها', icon: MessageSquare, permission: 'games.view' },
       {
@@ -155,15 +162,28 @@ function userCan(user: AdminUser | null, permission?: string): boolean {
   return can(user, permission);
 }
 
+function navAllowed(user: AdminUser | null, opts: {
+  permission?: string;
+  platformAdminOnly?: boolean;
+}): boolean {
+  if (opts.platformAdminOnly && !isPlatformAdmin(user)) return false;
+  return userCan(user, opts.permission);
+}
+
 function filterNavItems(items: NavItemDef[], user: AdminUser | null): NavItemDef[] {
   return items
     .map((item) => {
+      if (item.platformAdminOnly && !isPlatformAdmin(user)) return null;
       if (item.children) {
-        const children = item.children.filter((c) => userCan(user, c.permission));
+        const children = item.children.filter((c) =>
+          navAllowed(user, { permission: c.permission, platformAdminOnly: c.platformAdminOnly }),
+        );
         if (children.length === 0) return null;
         return { ...item, children };
       }
-      if (!userCan(user, item.permission)) return null;
+      if (!navAllowed(user, { permission: item.permission, platformAdminOnly: item.platformAdminOnly })) {
+        return null;
+      }
       return item;
     })
     .filter(Boolean) as NavItemDef[];

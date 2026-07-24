@@ -19,13 +19,15 @@ const rankIcons = ['👑', '🥈', '🥉']
 
 export default function TopPlayersSection() {
   const [period, setPeriod] = useState<Period>('ALL_TIME')
-  const { data: leaderboard = [], isLoading } = useSWR(`leaderboard-${period}`, () => getLeaderboard(period))
+  const { data: leaderboard = [], isLoading } = useSWR(`leaderboard-home-${period}`, () =>
+    getLeaderboard(period, 5)
+  )
 
   return (
     <section className="py-8">
       <div className="section-header mb-8">
         <h2 className="font-cinzel font-black text-2xl text-white text-center">
-          <span className="gradient-text">شجاعان</span> قلمرو
+          <span className="gradient-text">پلیرهای</span> برتر
         </h2>
       </div>
 
@@ -61,7 +63,7 @@ export default function TopPlayersSection() {
                   <div className="skeleton h-5 w-16 rounded" />
                 </div>
               ))
-            : (leaderboard as any[]).slice(0, 5).map((entry: any, i: number) => {
+            : (leaderboard as any[]).map((entry: any, i: number) => {
                 const u = entry?.user || {}
                 const name: string = u.fullName || u.name || u.nickname || ''
                 const avatar: string | null = u.avatar || u.avatarUrl || null

@@ -22,6 +22,47 @@ export const adminCustomersApi = {
   getById: (id: string) => apiClient.get<ApiResponse<User>>(`/admin/customers/${id}`),
 };
 
+export type BranchManagerCredentials = {
+  mobile: string;
+  password: string;
+  role: string;
+  branch: { id: string; name: string };
+};
+
+export type BranchManagerUser = {
+  id: string;
+  fullName?: string | null;
+  mobile?: string | null;
+  email?: string | null;
+  isActive?: boolean;
+  isBanned?: boolean;
+  createdAt?: string;
+  roles?: string[];
+  managedBranches?: { id: string; name: string }[];
+};
+
+export type CreateBranchManagerPayload = {
+  mobile: string;
+  fullName: string;
+  branchId: string;
+  email?: string;
+};
+
+export type CreateBranchManagerResult = {
+  user: BranchManagerUser;
+  temporaryPassword: string;
+  credentials: BranchManagerCredentials;
+};
+
+// ==================== Branch Managers (admin) ====================
+// Backend: AdminBranchManagersController @Controller('admin/branch-managers')
+export const branchManagersApi = {
+  getAll: (p?: Record<string, unknown>) =>
+    apiClient.get<ApiResponse<BranchManagerUser[]>>('/admin/branch-managers', { params: p }),
+  create: (d: CreateBranchManagerPayload) =>
+    apiClient.post<ApiResponse<CreateBranchManagerResult>>('/admin/branch-managers', d),
+};
+
 // ==================== Notifications ====================
 // Backend: NotificationsController @Controller('notifications')
 //   GET   /me                -> { success, data: { items, pagination } }
@@ -81,6 +122,21 @@ export const landingBannersApi = {
   reorder: (bannerIds: string[]) =>
     apiClient.patch<ApiResponse<import('../types').LandingBanner[]>>('/admin/landing-banners/order', { bannerIds }),
   delete: (id: string) => apiClient.delete<ApiResponse<import('../types').LandingBanner>>(`/admin/landing-banners/${id}`),
+};
+
+// ==================== Platform Intro ====================
+export const platformIntroApi = {
+  get: () => apiClient.get<ApiResponse<import('../types').PlatformIntro>>('/admin/platform-intro'),
+  update: (d: FormData | Partial<import('../types').PlatformIntro> & { clearVideo?: boolean }) =>
+    apiClient.patch<ApiResponse<import('../types').PlatformIntro>>('/admin/platform-intro', d),
+  createFaq: (d: Partial<import('../types').PlatformFaq>) =>
+    apiClient.post<ApiResponse<import('../types').PlatformFaq>>('/admin/platform-intro/faqs', d),
+  updateFaq: (id: string, d: Partial<import('../types').PlatformFaq>) =>
+    apiClient.patch<ApiResponse<import('../types').PlatformFaq>>(`/admin/platform-intro/faqs/${id}`, d),
+  reorderFaqs: (faqIds: string[]) =>
+    apiClient.patch<ApiResponse<import('../types').PlatformIntro>>('/admin/platform-intro/faqs/order', { faqIds }),
+  deleteFaq: (id: string) =>
+    apiClient.delete<ApiResponse<import('../types').PlatformFaq>>(`/admin/platform-intro/faqs/${id}`),
 };
 
 // ==================== Reviews ====================

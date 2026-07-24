@@ -30,11 +30,25 @@ export default function HeroSection() {
     <section className="relative overflow-hidden pt-28 pb-16 md:pt-32">
       <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="text-center lg:text-right">
-          <h1 className="font-cinzel text-5xl font-black leading-[1.05] text-white md:text-7xl">
-            TIK TAK
-            <br />
-            <span className={`gradient-text block transition-opacity duration-500 ${fade ? 'opacity-100' : 'opacity-0'}`}>
-              {heroTexts[textIndex]}
+          <h1 className="font-cinzel text-5xl font-black text-white md:text-7xl">
+            <span className="block leading-[1.05]">TIK TAK</span>
+            <span className="mt-1 grid">
+              {heroTexts.map((text) => (
+                <span
+                  key={text}
+                  className="invisible col-start-1 row-start-1 px-1 pb-2.5 pt-1.5 text-balance leading-[1.4]"
+                  aria-hidden
+                >
+                  {text}
+                </span>
+              ))}
+              <span
+                className={`gradient-text col-start-1 row-start-1 flex items-center justify-center overflow-visible px-1 pb-2.5 pt-1.5 leading-[1.4] transition-opacity duration-500 lg:justify-end ${fade ? 'opacity-100' : 'opacity-0'}`}
+              >
+                <span className="block w-full text-balance text-center lg:text-right">
+                  {heroTexts[textIndex]}
+                </span>
+              </span>
             </span>
           </h1>
 
@@ -51,7 +65,7 @@ export default function HeroSection() {
             </Link>
             <Link href="/stories" className="btn-ghost px-8 py-4 text-base">
               <i className="fas fa-book-open ml-2 text-[#b026ff]" />
-              داستان‌های شجاعان
+              نظرات پلیرها
             </Link>
           </div>
 

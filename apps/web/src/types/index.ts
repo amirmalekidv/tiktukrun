@@ -120,6 +120,21 @@ export interface LandingBanner {
   isActive: boolean
 }
 
+export interface PlatformFaqItem {
+  id: string
+  question: string
+  answer: string
+  displayOrder: number
+}
+
+export interface PlatformIntro {
+  id: string
+  title: string
+  faqTitle: string
+  videoUrl?: string | null
+  faqs: PlatformFaqItem[]
+}
+
 export interface GameComment {
   id: string
   gameId: string

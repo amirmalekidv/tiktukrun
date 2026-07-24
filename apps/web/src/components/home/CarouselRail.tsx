@@ -3,6 +3,7 @@
 import { Children, type ReactNode, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { A11y, Navigation } from 'swiper/modules'
 import { Swiper, SwiperSlide } from 'swiper/react'
+import 'swiper/css'
 import { cn } from '@/lib/utils'
 
 interface CarouselRailProps {

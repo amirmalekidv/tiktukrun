@@ -608,6 +608,53 @@ async function seedWheelPrizes() {
   }
 }
 
+// ─── Platform intro (video + FAQ) ──────────────────────────────────────────────
+async function seedPlatformIntro() {
+  const existing = await prisma.platformIntro.findUnique({ where: { key: 'default' } });
+  if (existing) {
+    console.log('  ⏭️  معرفی پلتفرم از قبل موجود است');
+    return;
+  }
+
+  await prisma.platformIntro.create({
+    data: {
+      key: 'default',
+      title: 'معرفی پلتفرم تیک‌تاک‌ران',
+      faqTitle: 'سوالات متداول اتاق فرار - اسکیپ روم',
+      isActive: true,
+      faqs: {
+        create: [
+          {
+            question: 'ترسناک‌ترین بازی کدام است؟!',
+            answer:
+              'بسته به سلیقهٔ شما فرق می‌کند، اما اتاق‌فرارهای با سطح ترس بالا در بخش «اتاق فرار ترسناک» قابل فیلتر و مشاهده هستند. قبل از رزرو، سطح ترس هر بازی را در صفحهٔ جزئیات ببینید.',
+            displayOrder: 0,
+          },
+          {
+            question: 'حداقل و حداکثر تعداد بازیکن چقدر است؟',
+            answer:
+              'هر بازی ظرفیت مخصوص خودش را دارد (معمولاً ۲ تا ۸ نفر). این عدد در کارت بازی و صفحهٔ جزئیات مشخص شده است.',
+            displayOrder: 1,
+          },
+          {
+            question: 'چطور رزرو کنم؟',
+            answer:
+              'بازی موردنظر را انتخاب کنید، تاریخ و ساعت را مشخص کنید، تعداد نفرات را وارد کنید و پرداخت را آنلاین انجام دهید. بلیت شما بلافاصله در پنل کاربری‌تان ثبت می‌شود.',
+            displayOrder: 2,
+          },
+          {
+            question: 'آیا امکان لغو یا تغییر رزرو وجود دارد؟',
+            answer:
+              'بسته به قوانین هر شعبه و زمان باقی‌مانده تا سانس، امکان تغییر یا لغو وجود دارد. جزئیات را در صفحهٔ رزرو یا پشتیبانی بررسی کنید.',
+            displayOrder: 3,
+          },
+        ],
+      },
+    },
+  });
+  console.log('  ✅ معرفی پلتفرم + سوالات متداول');
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   console.log('🌱 شروع seed (MongoDB)...\n');
@@ -618,6 +665,7 @@ async function main() {
   const catMap = await seedCategories();
   await seedGames(catMap, branchIds);
   await seedLandingSections();
+  await seedPlatformIntro();
   await seedAdmin();
   const communityUsers = await seedCommunityUsers(cityMap);
   await seedCommunityTeam(communityUsers);

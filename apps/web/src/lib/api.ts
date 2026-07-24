@@ -15,6 +15,7 @@ import type {
   Game,
   LandingSection,
   LandingBanner,
+  PlatformIntro,
   City,
   Availability,
   DiscountValidation,
@@ -209,6 +210,31 @@ export async function getLandingBanners(): Promise<LandingBanner[]> {
     }))
 }
 
+export async function getPlatformIntro(): Promise<PlatformIntro | null> {
+  try {
+    const { data } = await httpClient.get('/platform-intro')
+    const raw = data.data ?? data
+    if (!raw || typeof raw !== 'object') return null
+    const faqs = Array.isArray(raw.faqs)
+      ? raw.faqs.map((faq: { id?: string; question?: string; answer?: string; displayOrder?: number }) => ({
+          id: String(faq.id ?? ''),
+          question: String(faq.question ?? ''),
+          answer: String(faq.answer ?? ''),
+          displayOrder: Number(faq.displayOrder ?? 0),
+        }))
+      : []
+    return {
+      id: String(raw.id ?? ''),
+      title: String(raw.title ?? 'معرفی پلتفرم تیک‌تاک‌ران'),
+      faqTitle: String(raw.faqTitle ?? 'سوالات متداول'),
+      videoUrl: resolveMediaUrl(raw.videoUrl as string | undefined) ?? null,
+      faqs,
+    }
+  } catch {
+    return null
+  }
+}
+
 // ==================== AVAILABILITY ====================
 export async function getAvailability(gameId: string, date: string): Promise<Availability> {
   const { data } = await httpClient.get(`/games/availability/${gameId}`, { params: { date } })
@@ -296,9 +322,11 @@ export async function getReviews(gameId: string): Promise<Review[]> {
   return items.map(normalizeReview)
 }
 
-export async function getAllReviews(): Promise<Review[]> {
+export async function getAllReviews(limit?: number): Promise<Review[]> {
   try {
-    const { data } = await httpClient.get('/reviews/public')
+    const { data } = await httpClient.get('/reviews/public', {
+      params: limit ? { limit } : undefined,
+    })
     const items = Array.isArray(data?.data) ? data.data : []
     return items.map(normalizeReview)
   } catch {
@@ -399,12 +427,15 @@ export async function deleteGameComment(commentId: string): Promise<void> {
 }
 
 // ==================== LEADERBOARD ====================
-export async function getLeaderboard(period: 'WEEKLY' | 'MONTHLY' | 'ALL_TIME' = 'WEEKLY'): Promise<LeaderboardEntry[]> {
+export async function getLeaderboard(
+  period: 'WEEKLY' | 'MONTHLY' | 'ALL_TIME' = 'WEEKLY',
+  limit = 10,
+): Promise<LeaderboardEntry[]> {
   try {
     // Map UI period names → API period names
     const apiPeriod = period === 'WEEKLY' ? 'week' : period === 'MONTHLY' ? 'month' : 'all'
     const { data } = await httpClient.get('/profile/leaderboard', {
-      params: { type: 'xp', period: apiPeriod, limit: 10 },
+      params: { type: 'xp', period: apiPeriod, limit },
     })
     const raw = Array.isArray(data?.data) ? data.data : []
     // Map flat API shape → frontend's nested shape

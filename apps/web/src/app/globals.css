@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --font-fa-primary: "Vazirmatn", "Tahoma", sans-serif;
-  --font-fa-display: "Orbitron", "Vazirmatn", sans-serif;
-  --font-fa-horror: "Orbitron", "Vazirmatn", sans-serif;
-  --font-fa-numbers: "Orbitron", "Vazirmatn", sans-serif;
+  --font-fa-primary: "Vazirmatn", Tahoma, "Segoe UI", system-ui, sans-serif;
+  --font-fa-display: "Orbitron", "Vazirmatn", Tahoma, "Segoe UI", system-ui, sans-serif;
+  --font-fa-horror: "Orbitron", "Vazirmatn", Tahoma, "Segoe UI", system-ui, sans-serif;
+  --font-fa-numbers: "Orbitron", "Vazirmatn", Tahoma, "Segoe UI", system-ui, sans-serif;
   --bg: #05070a;
   --bg-2: #0a0d16;
   --panel: rgba(14, 18, 26, 0.62);
@@ -33,6 +33,7 @@
 
 html {
   scroll-behavior: smooth;
+  font-family: var(--font-fa-primary);
 }
 
 body {
@@ -41,8 +42,21 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-fa-primary);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.7;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   direction: rtl;
   position: relative;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 body::before {
@@ -66,13 +80,6 @@ img,
 video {
   display: block;
   max-width: 100%;
-}
-
-button,
-input,
-select,
-textarea {
-  font-family: inherit;
 }
 
 ::selection {
@@ -106,6 +113,13 @@ textarea {
   background: #fff;
   opacity: 0.5;
   animation: twinkle 4s infinite ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star {
+    animation: none;
+    opacity: 0.35;
+  }
 }
 
 @keyframes twinkle {
@@ -189,6 +203,12 @@ textarea {
 .cinzel-text,
 .en {
   font-family: var(--font-fa-display);
+  letter-spacing: 0.02em;
+}
+
+/* Persian glyphs in display headings: avoid Latin tracking breaking connected script */
+:lang(fa) .font-cinzel,
+html[lang='fa'] .font-cinzel {
   letter-spacing: 0;
 }
 

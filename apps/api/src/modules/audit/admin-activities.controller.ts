@@ -1,15 +1,23 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { CurrentUserPayload } from '@tiktakrun/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { BRANCH_OPS_ROLES } from '../../common/constants/admin-roles';
+import {
+  isBranchManagerRole,
+  resolveBranchFilter,
+  toBranchScope,
+} from '../../common/helpers/branch-scope.helper';
 
 @ApiTags('Admin - Activities')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN', 'SUPER_ADMIN', 'MARKETING', 'SUPPORT')
+@Roles(...BRANCH_OPS_ROLES, 'MARKETING', 'SUPPORT')
 @Controller('admin/activities')
 export class AdminActivitiesController {
   constructor(
@@ -20,15 +28,22 @@ export class AdminActivitiesController {
   @Get()
   @ApiOperation({ summary: 'فید فعالیت‌های اخیر (audit + bookings + tickets)' })
   async findAll(
+    @CurrentUser() user: CurrentUserPayload,
     @Query('page') page = '1',
     @Query('limit') limit = '30',
   ) {
     const take = Math.min(Number(limit), 100);
     const items: any[] = [];
+    const scope = toBranchScope(user);
+    const branchOnly = isBranchManagerRole(scope.role);
+    const branchFilter = resolveBranchFilter(scope);
+
+    const scopedWhere = branchFilter ? { branchId: branchFilter } : {};
 
     const [auditLogs, recentBookings, recentTickets] = await Promise.all([
-      this.audit.findAll({}, 1, take),
+      branchOnly ? Promise.resolve({ data: [] as any[] }) : this.audit.findAll({}, 1, take),
       this.prisma.booking.findMany({
+        where: scopedWhere,
         take,
         orderBy: { createdAt: 'desc' },
         include: {
@@ -37,6 +52,7 @@ export class AdminActivitiesController {
         },
       }),
       this.prisma.ticket.findMany({
+        where: scopedWhere,
         take,
         orderBy: { createdAt: 'desc' },
         include: {

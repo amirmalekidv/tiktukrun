@@ -214,6 +214,29 @@ export interface LandingBanner {
   updatedAt?: string;
 }
 
+export interface PlatformFaq {
+  id: string;
+  introId?: string;
+  question: string;
+  answer: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PlatformIntro {
+  id: string;
+  key: string;
+  title: string;
+  faqTitle: string;
+  videoUrl?: string | null;
+  isActive: boolean;
+  faqs: PlatformFaq[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // ==================== Review ====================
 export type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 

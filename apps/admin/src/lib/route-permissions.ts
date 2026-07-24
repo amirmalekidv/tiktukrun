@@ -9,6 +9,7 @@ const ROUTE_PERMISSIONS: { prefix: string; permission: string }[] = [
   { prefix: '/backup', permission: 'settings.read' },
   { prefix: '/settings', permission: 'settings.read' },
   { prefix: '/customers', permission: 'customers.view' },
+  { prefix: '/branch-managers', permission: 'users.read' },
   { prefix: '/segments', permission: 'segments.view' },
   { prefix: '/pipeline', permission: 'pipeline.view' },
   { prefix: '/campaigns', permission: 'campaigns.view' },
@@ -20,6 +21,7 @@ const ROUTE_PERMISSIONS: { prefix: string; permission: string }[] = [
   { prefix: '/cities', permission: 'branches.write' },
   { prefix: '/categories', permission: 'games.write' },
   { prefix: '/landing-banners', permission: 'games.write' },
+  { prefix: '/platform-intro', permission: 'games.write' },
   { prefix: '/landing-sections', permission: 'games.write' },
   { prefix: '/reviews', permission: 'games.write' },
   { prefix: '/comments', permission: 'games.view' },
@@ -38,8 +40,10 @@ const ROUTE_PERMISSIONS: { prefix: string; permission: string }[] = [
   { prefix: '/activities', permission: 'activities.view' },
 ];
 
+/** Branch/city catalog & location admin — not for branch-scoped managers */
 const PLATFORM_ADMIN_PREFIXES = [
-  '/branches/new',
+  '/branches',
+  '/cities',
 ];
 
 export function canAccessPath(user: AdminUser | null, pathname: string): boolean {

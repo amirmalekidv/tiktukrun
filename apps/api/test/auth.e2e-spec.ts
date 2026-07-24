@@ -76,17 +76,6 @@ describe('Auth (e2e)', () => {
     expect(res.body.success).toBe(false);
   });
 
-  it('POST /api/v1/auth/otp/verify — should accept the demo code', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ mobile: testMobile, code: '123456' })
-      .expect(200);
-
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.accessToken).toBeDefined();
-    expect(res.body.data.refreshToken).toBeDefined();
-  });
-
   it('POST /api/v1/auth/otp/verify — should fail with invalid code format', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/otp/verify')

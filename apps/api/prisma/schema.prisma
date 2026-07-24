@@ -385,6 +385,40 @@ model LandingBanner {
   @@map("landing_banners")
 }
 
+/// معرفی پلتفرم در صفحهٔ اصلی (ویدئو + FAQ) — سینگلتون با key=default
+model PlatformIntro {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  /// همیشه "default" — فقط یک رکورد فعال
+  key       String   @unique @default("default")
+  title     String   @default("معرفی پلتفرم تیک‌تاک‌ران")
+  faqTitle  String   @default("سوالات متداول اتاق فرار - اسکیپ روم")
+  videoUrl  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  faqs PlatformFaq[]
+
+  @@map("platform_intro")
+}
+
+model PlatformFaq {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  introId      String   @db.ObjectId
+  question     String
+  answer       String
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  intro PlatformIntro @relation(fields: [introId], references: [id], onDelete: Cascade)
+
+  @@index([introId, displayOrder])
+  @@index([isActive, displayOrder])
+  @@map("platform_faqs")
+}
+
 model Game {
   id                    String         @id @default(auto()) @map("_id") @db.ObjectId
   slug                  String         @unique

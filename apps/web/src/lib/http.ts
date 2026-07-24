@@ -122,7 +122,3 @@ export async function apiFetch<T = unknown>(
 
 export const USE_MOCK =
   process.env.NEXT_PUBLIC_USE_MOCK === 'true';
-
-export const DEMO_OTP_CODE =
-  process.env.NEXT_PUBLIC_DEMO_OTP_CODE ||
-  (process.env.NODE_ENV !== 'production' ? '123456' : '');

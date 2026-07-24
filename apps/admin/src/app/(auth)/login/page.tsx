@@ -9,10 +9,7 @@ type OtpStep = 'phone' | 'verify'
 export default function LoginPage() {
   const router = useRouter()
   const { sendOtp, verifyOtp, loginWithPassword, isLoading } = useAuth()
-  const demoOtpCode =
-    process.env.NEXT_PUBLIC_DEMO_OTP_CODE ||
-    (process.env.NODE_ENV !== 'production' ? '123456' : '')
-  
+
   const [tab, setTab] = useState<Tab>('otp')
   const [otpStep, setOtpStep] = useState<OtpStep>('phone')
   const [mobile, setMobile] = useState('')
@@ -270,12 +267,6 @@ export default function LoginPage() {
           <span dir="ltr" className="font-mono text-sky-400">09120000001</span>
           <span> | رمز </span>
           <span dir="ltr" className="font-mono text-sky-400">Admin@123456</span>
-          {demoOtpCode && (
-            <>
-              <span> | OTP دمو </span>
-              <span dir="ltr" className="font-mono text-sky-400">{demoOtpCode}</span>
-            </>
-          )}
         </div>
       </div>
 

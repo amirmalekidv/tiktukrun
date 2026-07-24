@@ -44,7 +44,7 @@ const nextConfig = {
 
   experimental: {
     serverActions: { bodySizeLimit: '5mb' },
-    optimizePackageImports: ['lucide-react', 'react-icons', 'framer-motion'],
+    optimizePackageImports: ['framer-motion', 'swiper'],
   },
 
   // Security headers (Nginx also sets these, but defense-in-depth)
@@ -68,6 +68,31 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-DNS-Prefetch-Control', value: 'on' },
+        ],
+      },
+      {
+        source: '/images/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+        ],
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/placeholder-game.svg',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/tiktakrun-logo.svg',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
       {

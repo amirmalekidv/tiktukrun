@@ -2,7 +2,8 @@
 import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/lib/api/auth'
-import { can, getRoleLabel } from '@/lib/permissions'
+import { getAccessToken } from '@/lib/auth'
+import { can } from '@/lib/permissions'
 import toast from 'react-hot-toast'
 import type { AdminUser, AdminRole } from '@/types'
 
@@ -47,7 +48,34 @@ function getAdminRoles(user: AdminUser & { roleAssignments?: { role: AdminRole }
 const ADMIN_ROLES: AdminRole[] = ['SUPER_ADMIN', 'ADMIN', 'BRANCH_MANAGER', 'SUPPORT', 'MARKETING']
 
 export function useAuth() {
-  const { user, isAuthenticated, isLoading, setAuth, logout, setLoading } = useAuthStore()
+  const { user, isAuthenticated, isLoading, setAuth, setUser, logout, setLoading } = useAuthStore()
+
+  /** Drop any previous admin identity before accepting a new login. */
+  const clearPreviousSession = async () => {
+    const previous = useAuthStore.getState()
+    try {
+      if (previous.isAuthenticated || previous.user || getAccessToken()) {
+        await authApi.logout()
+      }
+    } catch {
+      // Ignore — previous session may already be invalid
+    }
+    previous.logout()
+  }
+
+  /** Prefer /auth/me as the source of truth after tokens are set. */
+  const refreshIdentity = async (fallbackUser: AdminUser) => {
+    try {
+      const me = await authApi.getMe()
+      if (me && typeof me === 'object') {
+        setUser(me as AdminUser)
+        return
+      }
+    } catch {
+      // Login response user is already in the store via setAuth
+    }
+    setUser(fallbackUser)
+  }
 
   const sendOtp = async (mobile: string) => {
     setLoading(true)
@@ -83,7 +111,9 @@ export function useAuth() {
           toast.error('شما دسترسی به پنل مدیریت ندارید')
           return false
         }
+        await clearPreviousSession()
         setAuth(u, accessToken, refreshToken)
+        await refreshIdentity(u)
         toast.success('ورود موفق')
         return true
       }
@@ -110,7 +140,9 @@ export function useAuth() {
           toast.error('شما دسترسی به پنل مدیریت ندارید')
           return false
         }
+        await clearPreviousSession()
         setAuth(u, accessToken, refreshToken)
+        await refreshIdentity(u)
         toast.success('ورود موفق')
         return true
       }

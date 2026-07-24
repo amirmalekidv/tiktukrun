@@ -7,7 +7,7 @@ import { toPersianDigits } from '@/lib/utils'
 import ReviewCard from '@/components/stories/ReviewCard'
 
 export default function StoriesPage() {
-  const { data: reviews = [], isLoading } = useSWR('all-reviews-page', getAllReviews)
+  const { data: reviews = [], isLoading } = useSWR('all-reviews-page', () => getAllReviews(24))
 
   return (
     <div className="min-h-screen pt-24">

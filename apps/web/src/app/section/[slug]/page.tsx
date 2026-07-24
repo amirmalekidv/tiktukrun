@@ -9,7 +9,7 @@ import GameCard from '@/components/home/GameCard'
 import { GameCardSkeleton } from '@/components/ui/LoadingSkeleton'
 import { toPersianDigits } from '@/lib/utils'
 
-const VERTICAL_LIST_SECTIONS = new Set(['popular-this-week', 'newest-escape-rooms'])
+const VERTICAL_LIST_SECTIONS = new Set(['newest-escape-rooms'])
 
 const SECTION_REDIRECTS: Record<string, string> = {
   stories: '/stories',
@@ -19,7 +19,7 @@ const SECTION_REDIRECTS: Record<string, string> = {
 
 const SECTION_META_OVERRIDES: Record<string, { title: string; description: string; icon: string }> = {
   'newest-escape-rooms': {
-    title: 'جدید ترین اتااق فرارها',
+    title: 'جدیدترین اتاق فرارها',
     description: 'جدیدترین اتاق‌های فرار اضافه شده',
     icon: 'fas fa-clock',
   },

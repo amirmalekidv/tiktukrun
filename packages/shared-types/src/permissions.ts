@@ -44,7 +44,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   ],
   BRANCH_MANAGER: [
     'bookings.read', 'bookings.write', 'games.read',
-    'branch.read', 'branch.write', 'analytics.read',
+    // branch.read: scoped reads for filters / own branch context — not catalog admin UI
+    'branch.read', 'analytics.read',
   ],
   CUSTOMER: [],
 };

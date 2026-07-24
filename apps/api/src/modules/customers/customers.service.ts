@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { notSoftDeletedWhere } from '../../common/utils/prisma-mongo';
 
 /**
  * CustomersService — admin-side CRM for users
@@ -26,8 +27,8 @@ export class CustomersService {
   async findAll(filter: any, page = 1, limit = 20) {
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
-    const where: any = { deletedAt: null };
-    const and: any[] = [];
+    // Prisma MongoDB: unset deletedAt is not matched by `deletedAt: null`
+    const and: any[] = [notSoftDeletedWhere()];
     const query = String(filter.q ?? '').trim();
 
     if (query) {
@@ -76,9 +77,7 @@ export class CustomersService {
       });
     }
 
-    if (and.length > 0) {
-      where.AND = and;
-    }
+    const where: any = { AND: and };
 
     // Ordering — fields are on User unless they live on UserProfile
     const orderBy: any = {};
@@ -251,25 +250,26 @@ export class CustomersService {
   async getStats() {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600_000);
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600_000);
+    const alive = notSoftDeletedWhere();
 
     const [total, active, platinum, activeLast30] = await Promise.all([
-      this.prisma.user.count({ where: { deletedAt: null } as any }),
-      this.prisma.user.count({ where: { isActive: true, deletedAt: null } as any }),
+      this.prisma.user.count({ where: alive as any }),
+      this.prisma.user.count({ where: { isActive: true, ...alive } as any }),
       this.prisma.user.count({
         where: {
-          deletedAt: null,
+          ...alive,
           profile: { totalSpent: { gte: BigInt(10_000_000) } },
         } as any,
       }),
       this.prisma.user.count({
-        where: { lastLoginAt: { gte: thirtyDaysAgo }, deletedAt: null } as any,
+        where: { lastLoginAt: { gte: thirtyDaysAgo }, ...alive } as any,
       }),
     ]);
 
     // Churning: at least one booking AND last booking > 90 days ago
     const churning = await this.prisma.user.count({
       where: {
-        deletedAt: null,
+        ...alive,
         bookings: {
           some: {},
           every: { createdAt: { lt: ninetyDaysAgo } },
@@ -352,7 +352,7 @@ export class CustomersService {
 
   async getTopLtv(limit = 10) {
     const users: any[] = await this.prisma.user.findMany({
-      where: { deletedAt: null, profile: { isNot: null } } as any,
+      where: { ...notSoftDeletedWhere(), profile: { isNot: null } } as any,
       orderBy: { profile: { totalSpent: 'desc' } } as any,
       take: Number(limit),
       include: {

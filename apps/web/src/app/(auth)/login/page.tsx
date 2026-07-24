@@ -6,9 +6,8 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { requestOtp, verifyOtp } from '@/lib/api'
 import { setRefreshTokenCookie } from '@/lib/auth'
-import { DEMO_OTP_CODE } from '@/lib/http'
 import { useAuthStore } from '@/store/auth.store'
-import { isValidIranianMobile, toPersianDigits } from '@/lib/utils'
+import { isValidIranianMobile, normalizeMobile, toEnglishDigits, toPersianDigits } from '@/lib/utils'
 
 function LoginForm() {
   const router = useRouter()
@@ -36,13 +35,15 @@ function LoginForm() {
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isValidIranianMobile(mobile)) {
+    const normalizedMobile = normalizeMobile(mobile)
+    if (!isValidIranianMobile(normalizedMobile)) {
       toast.error('شماره موبایل نامعتبر است (مثال: ۰۹۱۲۳۴۵۶۷۸۹)')
       return
     }
+    setMobile(normalizedMobile)
     setIsLoading(true)
     try {
-      const res = await requestOtp(mobile, inviteCode || undefined)
+      const res = await requestOtp(normalizedMobile, inviteCode || undefined)
       if (res.success) {
         setPhase('otp')
         setCountdown(120)
@@ -57,9 +58,10 @@ function LoginForm() {
   }
 
   const handleOtpChange = (idx: number, value: string) => {
-    if (value.length > 1) {
+    const englishValue = toEnglishDigits(value)
+    if (englishValue.length > 1) {
       // Handle paste
-      const digits = value.replace(/\D/g, '').split('').slice(0, 6)
+      const digits = englishValue.replace(/\D/g, '').split('').slice(0, 6)
       const newOtp = [...otp]
       digits.forEach((d, i) => { if (idx + i < 6) newOtp[idx + i] = d })
       setOtp(newOtp)
@@ -67,11 +69,11 @@ function LoginForm() {
       otpRefs.current[nextIdx]?.focus()
       return
     }
-    if (!/^\d?$/.test(value)) return
+    if (!/^\d?$/.test(englishValue)) return
     const newOtp = [...otp]
-    newOtp[idx] = value
+    newOtp[idx] = englishValue
     setOtp(newOtp)
-    if (value && idx < 5) otpRefs.current[idx + 1]?.focus()
+    if (englishValue && idx < 5) otpRefs.current[idx + 1]?.focus()
   }
 
   const handleOtpKeyDown = (idx: number, e: React.KeyboardEvent) => {
@@ -107,9 +109,10 @@ function LoginForm() {
       toast.error('تعداد درخواست‌ها بیش از حد مجاز است')
       return
     }
+    const normalizedMobile = normalizeMobile(mobile)
     setIsLoading(true)
     try {
-      await requestOtp(mobile, inviteCode || undefined)
+      await requestOtp(normalizedMobile, inviteCode || undefined)
       setCountdown(120)
       setOtp(['', '', '', '', '', ''])
       setResendCount(prev => prev + 1)
@@ -156,10 +159,11 @@ function LoginForm() {
             <input
               type="tel"
               value={mobile}
-              onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 11))}
+              onChange={(e) => setMobile(normalizeMobile(e.target.value))}
               placeholder="09xxxxxxxxx"
               className="input-gothic text-lg tracking-widest text-center"
               dir="ltr"
+              inputMode="numeric"
               required
               autoFocus
             />
@@ -225,11 +229,6 @@ function LoginForm() {
                 />
               ))}
             </div>
-            {DEMO_OTP_CODE && (
-              <p className="text-gray-500 text-xs text-center mt-2">
-                کد demo: <span className="text-[#00f5ff] font-bold" dir="ltr">{DEMO_OTP_CODE}</span>
-              </p>
-            )}
           </div>
 
           {/* Countdown */}

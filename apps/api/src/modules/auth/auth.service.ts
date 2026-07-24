@@ -223,6 +223,7 @@ export class AuthService {
         profile: true,
         wallet: true,
         roleAssignments: true,
+        managedBranches: { select: { id: true, name: true } },
         userBadges: {
           include: { badge: true },
           take: 10,
@@ -236,6 +237,13 @@ export class AuthService {
     });
 
     if (!user) throw new UnauthorizedException('کاربر یافت نشد');
+
+    const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'BRANCH_MANAGER', 'SUPPORT', 'MARKETING'];
+    const isAdmin = user.roleAssignments.some((r) => adminRoles.includes(r.role));
+
+    if (isAdmin) {
+      return this.formatAdminUser(user);
+    }
 
     return {
       ...this.sanitizeUser(user),

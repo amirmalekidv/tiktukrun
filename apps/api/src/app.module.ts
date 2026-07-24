@@ -46,6 +46,7 @@ import { BranchesModule } from './modules/branches/branches.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { LandingSectionsModule } from './modules/landing-sections/landing-sections.module';
 import { LandingBannersModule } from './modules/landing-banners/landing-banners.module';
+import { PlatformIntroModule } from './modules/platform-intro/platform-intro.module';
 import { GamesModule } from './modules/games/games.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
@@ -154,6 +155,7 @@ import { PublicModule } from './modules/public/public.module';
     CategoriesModule,
     LandingSectionsModule,
     LandingBannersModule,
+    PlatformIntroModule,
     GamesModule,
     BookingsModule,
     ReviewsModule,

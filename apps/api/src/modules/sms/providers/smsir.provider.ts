@@ -51,9 +51,17 @@ export class SmsIrProvider implements SmsProvider {
         throw new Error(`SMS.ir error: ${JSON.stringify(response.data)}`);
       }
 
-      this.logger.log(`OTP sent to ${mobile}`);
+      const messageId = response.data?.data?.messageId;
+      this.logger.log(
+        `OTP sent to ${mobile}` +
+          (messageId ? ` (messageId=${messageId})` : '') +
+          ` via template=${this.otpTemplateId} param=${this.otpTemplateParam}`,
+      );
     } catch (error: any) {
-      this.logger.error(`Failed to send OTP to ${mobile}: ${error.message}`);
+      const details = error?.response?.data
+        ? ` | provider=${JSON.stringify(error.response.data)}`
+        : '';
+      this.logger.error(`Failed to send OTP to ${mobile}: ${error.message}${details}`);
       throw error;
     }
   }

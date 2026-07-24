@@ -19,6 +19,9 @@ import { LevelingService } from './leveling.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { parsePagination, paginate } from '../../common/utils/pagination.helper';
 import { serializeBigInts } from '../../common/utils/bigint';
+import { notSoftDeletedWhere } from '../../common/utils/prisma-mongo';
+import { generateInviteCode, hashString } from '../../common/utils/crypto';
+import { randomBytes } from 'crypto';
 import {
   AuditAction,
   Role,
@@ -27,6 +30,7 @@ import {
   NotificationType,
 } from '@tiktakrun/shared-types';
 import { TransactionType } from '@prisma/client';
+import type { CreateBranchManagerDto } from './dto/create-branch-manager.dto';
 
 @Injectable()
 export class UsersService {
@@ -143,27 +147,31 @@ export class UsersService {
     const { page, limit, skip } = parsePagination(query);
     const { q, role, status, level, sortBy = 'createdAt' } = query;
 
-    const where: any = { deletedAt: null };
+    // Prisma MongoDB: nest soft-delete filter so search OR cannot overwrite it
+    const and: any[] = [notSoftDeletedWhere()];
+    const where: any = { AND: and };
 
     if (q) {
-      where.OR = [
-        { mobile: { contains: q } },
-        { fullName: { contains: q, mode: 'insensitive' } },
-        { nickname: { contains: q, mode: 'insensitive' } },
-        { email: { contains: q, mode: 'insensitive' } },
-      ];
+      and.push({
+        OR: [
+          { mobile: { contains: q } },
+          { fullName: { contains: q, mode: 'insensitive' } },
+          { nickname: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+        ],
+      });
     }
 
-    if (status === 'banned') where.isBanned = true;
-    if (status === 'muted') where.isMuted = true;
-    if (status === 'active') where.isBanned = false;
+    if (status === 'banned') and.push({ isBanned: true });
+    if (status === 'muted') and.push({ isMuted: true });
+    if (status === 'active') and.push({ isBanned: false });
 
     if (role) {
-      where.roleAssignments = { some: { role } };
+      and.push({ roleAssignments: { some: { role } } });
     }
 
     if (level) {
-      where.profile = { levelId: parseInt(level) };
+      and.push({ profile: { levelId: parseInt(level) } });
     }
 
     const orderBy: any = {};
@@ -179,6 +187,7 @@ export class UsersService {
           profile: { select: { levelId: true, xp: true } } as any,
           roleAssignments: { select: { role: true } },
           wallet: { select: { tomanBalance: true, coinsBalance: true, diamondsBalance: true } },
+          managedBranches: { select: { id: true, name: true, cityId: true } },
         } as any,
       }),
       this.prisma.user.count({ where }),
@@ -201,7 +210,7 @@ export class UsersService {
   async adminGetUser(id: string) {
     const uid = id;
     const user = await this.prisma.user.findFirst({
-      where: { id: uid, deletedAt: null } as any,
+      where: { id: uid, ...notSoftDeletedWhere() } as any,
       include: {
         profile: true,
         wallet: true,
@@ -526,13 +535,14 @@ export class UsersService {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600_000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600_000);
 
+    const alive = notSoftDeletedWhere();
     const [total, active, banned, muted, newLast7, newLast30, withProfile] = await Promise.all([
-      this.prisma.user.count({ where: { deletedAt: null } as any }),
-      this.prisma.user.count({ where: { isActive: true, isBanned: false, deletedAt: null } as any }),
-      this.prisma.user.count({ where: { isBanned: true, deletedAt: null } as any }),
-      this.prisma.user.count({ where: { isMuted: true, deletedAt: null } as any }),
-      this.prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo }, deletedAt: null } as any }),
-      this.prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo }, deletedAt: null } as any }),
+      this.prisma.user.count({ where: alive as any }),
+      this.prisma.user.count({ where: { isActive: true, isBanned: false, ...alive } as any }),
+      this.prisma.user.count({ where: { isBanned: true, ...alive } as any }),
+      this.prisma.user.count({ where: { isMuted: true, ...alive } as any }),
+      this.prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo }, ...alive } as any }),
+      this.prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo }, ...alive } as any }),
       this.prisma.userProfile.count(),
     ]);
 
@@ -545,5 +555,223 @@ export class UsersService {
       newLast30,
       withProfile,
     };
+  }
+
+  /**
+   * List users with BRANCH_MANAGER role (CRM tab: مدیران شعبه)
+   */
+  async adminListBranchManagers(query: any) {
+    return this.adminListUsers({ ...query, role: Role.BRANCH_MANAGER, sortBy: query?.sortBy ?? 'createdAt' });
+  }
+
+  /**
+   * Create (or promote) a Branch Manager with a temporary password and branch assignment.
+   * Password is returned once so Super Admin can share login credentials.
+   */
+  async adminCreateBranchManager(dto: CreateBranchManagerDto, adminId: string) {
+    const mobile = dto.mobile;
+    // Mongo unique index on email allows only ONE document with unset/null email.
+    // Always persist a unique value; use a stable placeholder when admin leaves it blank.
+    const email =
+      dto.email?.trim() ||
+      `bm-${mobile}@users.tiktakrun.local`;
+    const emailProvidedByAdmin = Boolean(dto.email?.trim());
+
+    const branch = await this.prisma.branch.findUnique({
+      where: { id: dto.branchId },
+      select: { id: true, name: true, managerId: true, isActive: true },
+    });
+    if (!branch) throw new NotFoundException('شعبه یافت نشد');
+
+    if (emailProvidedByAdmin) {
+      const emailTaken = await this.prisma.user.findFirst({
+        where: {
+          AND: [
+            { email },
+            { NOT: { mobile } },
+            notSoftDeletedWhere(),
+          ],
+        } as any,
+      });
+      if (emailTaken) throw new ConflictException('این ایمیل قبلاً ثبت شده است');
+    }
+
+    const temporaryPassword = this.generateTemporaryPassword();
+    const passwordHash = await hashString(temporaryPassword);
+
+    const existing = await this.prisma.user.findUnique({
+      where: { mobile },
+      include: {
+        roleAssignments: { select: { role: true } },
+        managedBranches: { select: { id: true, name: true } },
+      },
+    });
+
+    if (existing?.deletedAt) {
+      throw new ConflictException('این شماره متعلق به کاربر حذف‌شده است');
+    }
+
+    try {
+      const user = await this.prisma.$transaction(async (tx) => {
+        let target = existing;
+
+        if (!target) {
+          let inviteCode = generateInviteCode(8);
+          for (let i = 0; i < 5; i++) {
+            const clash = await tx.user.findUnique({ where: { inviteCode } });
+            if (!clash) break;
+            inviteCode = generateInviteCode(8);
+          }
+
+          // Do not write email/nickname as null — Mongo unique indexes reject duplicate nulls.
+          const nickname = `bm-${mobile}`;
+          const nicknameTaken = await tx.user.findFirst({
+            where: { nickname } as any,
+            select: { id: true },
+          });
+
+          target = await tx.user.create({
+            data: {
+              mobile,
+              email,
+              fullName: dto.fullName,
+              ...(nicknameTaken ? {} : { nickname }),
+              inviteCode,
+              passwordHash,
+              profile: { create: { levelId: 1 } },
+              wallet: { create: {} },
+              roleAssignments: {
+                create: { role: Role.BRANCH_MANAGER as any, grantedBy: adminId },
+              },
+            },
+            include: {
+              roleAssignments: { select: { role: true } },
+              managedBranches: { select: { id: true, name: true } },
+            },
+          });
+        } else {
+          const roles = target.roleAssignments.map((r) => r.role);
+          const elevated = roles.some((r) =>
+            [Role.SUPER_ADMIN, Role.ADMIN].includes(r as Role),
+          );
+          if (elevated) {
+            throw new ForbiddenException('نمی‌توان نقش مدیر شعبه را به ادمین سیستم اختصاص داد');
+          }
+
+          await tx.user.update({
+            where: { id: target.id },
+            data: {
+              fullName: dto.fullName,
+              ...(emailProvidedByAdmin ? { email } : {}),
+              passwordHash,
+              isActive: true,
+              isBanned: false,
+            },
+          });
+
+          if (!roles.includes(Role.BRANCH_MANAGER)) {
+            await tx.userRoleAssignment.create({
+              data: {
+                userId: target.id,
+                role: Role.BRANCH_MANAGER as any,
+                grantedBy: adminId,
+              },
+            });
+          }
+
+          target = await tx.user.findUniqueOrThrow({
+            where: { id: target.id },
+            include: {
+              roleAssignments: { select: { role: true } },
+              managedBranches: { select: { id: true, name: true } },
+            },
+          });
+        }
+
+        // Assign branch → required for Branch Manager admin login
+        if (branch.managerId && branch.managerId !== target.id) {
+          this.logger.log(
+            `Reassigning branch ${branch.id} from manager ${branch.managerId} to ${target.id}`,
+          );
+        }
+        await tx.branch.update({
+          where: { id: branch.id },
+          data: { managerId: target.id },
+        });
+
+        try {
+          await tx.auditLog.create({
+            data: {
+              actorId: adminId,
+              action: 'users.create_branch_manager',
+              entity: 'User',
+              entityId: target.id,
+              afterJson: {
+                mobile,
+                branchId: branch.id,
+                promoted: !!existing,
+              } as any,
+            } as any,
+          });
+        } catch (e: any) {
+          this.logger.warn(`auditLog skipped: ${e?.message}`);
+        }
+
+        return tx.user.findUniqueOrThrow({
+          where: { id: target.id },
+          include: {
+            roleAssignments: { select: { role: true } },
+            managedBranches: { select: { id: true, name: true } },
+          },
+        });
+      });
+
+      return {
+        user: serializeBigInts({
+          id: user.id,
+          fullName: user.fullName,
+          mobile: user.mobile,
+          email: user.email,
+          roles: user.roleAssignments.map((r) => r.role),
+          managedBranches: user.managedBranches,
+          createdAt: user.createdAt,
+        }),
+        temporaryPassword,
+        credentials: {
+          mobile: user.mobile,
+          password: temporaryPassword,
+          role: Role.BRANCH_MANAGER,
+          branch: { id: branch.id, name: branch.name },
+        },
+      };
+    } catch (err: any) {
+      if (err instanceof ConflictException || err instanceof ForbiddenException || err instanceof NotFoundException) {
+        throw err;
+      }
+      if (err?.code === 'P2002') {
+        const fields = (err?.meta?.target as string[] | string | undefined) ?? [];
+        const target = Array.isArray(fields) ? fields.join(',') : String(fields);
+        if (target.includes('email')) {
+          throw new ConflictException('این ایمیل قبلاً ثبت شده است');
+        }
+        if (target.includes('mobile')) {
+          throw new ConflictException('این شماره موبایل قبلاً ثبت شده است');
+        }
+        if (target.includes('nickname')) {
+          throw new ConflictException('شناسه کاربری تکراری است؛ دوباره تلاش کنید');
+        }
+        throw new ConflictException('اطلاعات وارد شده تکراری است');
+      }
+      throw err;
+    }
+  }
+
+  /** Shareable temporary password for new Branch Managers */
+  private generateTemporaryPassword(): string {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    const bytes = randomBytes(8);
+    let body = '';
+    for (let i = 0; i < 8; i++) body += alphabet[bytes[i] % alphabet.length];
+    return `Bm@${body}1`;
   }
 }

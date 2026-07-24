@@ -48,7 +48,7 @@ function WheelSlice({ index, total, prize }: WheelSliceProps) {
           textAnchor="middle"
           fill="rgba(255,255,255,0.9)"
           fontSize="9"
-          fontFamily="Vazirmatn, sans-serif"
+          fontFamily="Vazirmatn, Tahoma, sans-serif"
           fontWeight="bold"
         >
           {display.emoji}
@@ -59,7 +59,7 @@ function WheelSlice({ index, total, prize }: WheelSliceProps) {
           textAnchor="middle"
           fill="rgba(255,255,255,0.88)"
           fontSize="7"
-          fontFamily="Vazirmatn, sans-serif"
+          fontFamily="Vazirmatn, Tahoma, sans-serif"
         >
           {sliceValue || prize.label.slice(0, 8)}
         </text>
