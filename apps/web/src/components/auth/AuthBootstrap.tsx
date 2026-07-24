@@ -3,7 +3,13 @@
 import { useEffect, useRef } from 'react'
 import { getCurrentUser } from '@/lib/api'
 import { normalizeAuthUser } from '@/lib/auth-user'
-import { clearAuthTokens, getAccessToken, refreshAccessToken } from '@/lib/auth'
+import {
+  clearAuthTokens,
+  clearRefreshTokenCookie,
+  getAccessToken,
+  isLoggedOutFlagSet,
+  refreshAccessToken,
+} from '@/lib/auth'
 import { useAuthStore } from '@/store/auth.store'
 
 export default function AuthBootstrap() {
@@ -23,6 +29,17 @@ export default function AuthBootstrap() {
       setLoading(true)
 
       try {
+        // Honor an in-progress / recent logout so a lingering cookie cannot restore the session.
+        if (isLoggedOutFlagSet()) {
+          clearAuthTokens()
+          await clearRefreshTokenCookie()
+          if (!cancelled) {
+            setAccessToken(null)
+            setUser(null)
+          }
+          return
+        }
+
         let accessToken = getAccessToken()
 
         if (!accessToken) {

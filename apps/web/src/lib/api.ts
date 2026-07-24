@@ -52,6 +52,10 @@ httpClient.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
+      const hadSession =
+        typeof localStorage !== 'undefined' &&
+        (!!localStorage.getItem(AUTH_TOKEN_KEY) || !!localStorage.getItem(REFRESH_TOKEN_KEY))
+
       try {
         const accessToken = await refreshAccessToken()
         if (error.config && accessToken) {
@@ -60,13 +64,16 @@ httpClient.interceptors.response.use(
           return httpClient(error.config)
         }
       } catch {
-        if (typeof localStorage !== 'undefined') {
-          localStorage.removeItem(AUTH_TOKEN_KEY)
-          localStorage.removeItem(REFRESH_TOKEN_KEY)
-        }
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login'
-        }
+        // fall through to clear + optional redirect
+      }
+
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(AUTH_TOKEN_KEY)
+        localStorage.removeItem(REFRESH_TOKEN_KEY)
+      }
+      // Only force navigation when an existing session failed to refresh.
+      if (hadSession && typeof window !== 'undefined') {
+        window.location.href = '/login'
       }
     }
     const msg = getApiErrorMessage(error)

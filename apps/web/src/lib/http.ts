@@ -53,6 +53,11 @@ export function getAuthHeaders(): Record<string, string> {
 export async function refreshAccessToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
 
+  // Block refresh while logout is clearing the httpOnly cookie.
+  if (sessionStorage.getItem('tiktakrun-logged-out') === '1') {
+    return null;
+  }
+
   const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
 
   try {
@@ -96,6 +101,9 @@ export async function apiFetch<T = unknown>(
   });
 
   if (res.status === 401 && retry && !normalized.startsWith('/auth/refresh')) {
+    const hadSession =
+      typeof window !== 'undefined' &&
+      (!!localStorage.getItem(AUTH_TOKEN_KEY) || !!localStorage.getItem(REFRESH_TOKEN_KEY));
     const refreshedToken = await refreshAccessToken();
 
     if (refreshedToken) {
@@ -103,7 +111,9 @@ export async function apiFetch<T = unknown>(
     }
 
     clearAuthTokens();
-    if (typeof window !== 'undefined') {
+    // Only force navigation when an existing session failed to refresh.
+    // Anonymous 401s (e.g. optional chat) must not open the login page.
+    if (hadSession && typeof window !== 'undefined') {
       window.location.href = '/login';
     }
   }

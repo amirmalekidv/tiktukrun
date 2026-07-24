@@ -34,7 +34,13 @@ export async function POST(request: NextRequest) {
 
     if (!upstream.ok) {
       const response = NextResponse.json(json, { status: upstream.status })
-      response.cookies.delete('refreshToken')
+      response.cookies.set('refreshToken', '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 0,
+        path: '/',
+      })
       return response
     }
 

@@ -79,8 +79,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Online chat */}
-      <div className="border-t border-white/10 my-4" />
+      {/* Online chat — only rendered when authenticated (see OnlineChatSection) */}
       <OnlineChatSection />
 
       {/* Bottom CTA */}

@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User } from '@/types'
-import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, clearAuthTokens, setAuthTokens } from '@/lib/http'
+import { clearLoggedOutFlag, clearSession } from '@/lib/auth'
+import { setAuthTokens } from '@/lib/http'
 
 interface AuthState {
   user: User | null
@@ -28,12 +29,13 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       setAccessToken: (token) => set({ accessToken: token }),
       login: (user, token, refreshToken) => {
+        clearLoggedOutFlag()
         set({ user, accessToken: token, isAuthenticated: true, isLoading: false })
         setAuthTokens(token, refreshToken)
       },
       logout: () => {
         set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false })
-        clearAuthTokens()
+        void clearSession()
       },
       setLoading: (isLoading) => set({ isLoading }),
       setHydrated: (hasHydrated) => set({ hasHydrated }),

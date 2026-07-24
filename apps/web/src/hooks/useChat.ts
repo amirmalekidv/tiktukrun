@@ -15,6 +15,7 @@ interface UseChatOptions {
 
 export function useChat({ roomType, teamId }: UseChatOptions) {
   const router = useRouter();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const currentUserId = useAuthStore((state) =>
     state.user?.id ? String(state.user.id) : null
   );
@@ -36,6 +37,11 @@ export function useChat({ roomType, teamId }: UseChatOptions) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!isAuthenticated) {
+      resetRoom();
+      setConnected(false);
+      return;
+    }
 
     resetRoom();
 
@@ -226,7 +232,7 @@ export function useChat({ roomType, teamId }: UseChatOptions) {
       cleanup();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomType, teamId, currentUserId, router]);
+  }, [roomType, teamId, currentUserId, isAuthenticated, router]);
 
   const send = useCallback(
     (text: string) => {
